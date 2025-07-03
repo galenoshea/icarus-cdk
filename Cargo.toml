@@ -1,0 +1,47 @@
+[workspace]
+members = [
+    "crates/icarus-core",
+    "crates/icarus-derive", 
+    "crates/icarus-canister",
+    "crates/icarus-types",
+    "crates/icarus",
+    "crates/icarus-test",
+    "examples/memory-server",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+authors = ["Icarus SDK Contributors"]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/icarus-sdk/icarus-sdk"
+
+[workspace.dependencies]
+# External dependencies
+rmcp = "0.2.1"
+ic-cdk = "0.18.5"
+ic-cdk-macros = "0.18.5"
+ic-stable-structures = "0.6"
+candid = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "2.0"
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+tracing = "0.1"
+syn = { version = "2.0", features = ["full"] }
+quote = "1.0"
+proc-macro2 = "1.0"
+
+# Internal dependencies
+icarus-core = { path = "crates/icarus-core", version = "0.1.0" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.1.0" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.1.0" }
+icarus-types = { path = "crates/icarus-types", version = "0.1.0" }
+icarus-test = { path = "crates/icarus-test", version = "0.1.0" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1

@@ -1,0 +1,31 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+*.wasm
+*.did
+
+# Test artifacts
+tarpaulin-report.html
+cobertura.xml
+
+# Sensitive data
+.env
+.env.local
+secrets/
+*.key
+*.pem

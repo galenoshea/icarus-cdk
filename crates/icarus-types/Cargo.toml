@@ -1,0 +1,22 @@
+[package]
+name = "icarus-types"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Protocol types for MCP-ICP translation (bridge service is in icarus-cli)"
+
+[dependencies]
+icarus-core = { workspace = true }
+rmcp = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+# Bridge service components have been moved to icarus-cli project
+# This crate now only contains protocol types for SDK use
+
+[dev-dependencies]
+tokio = { workspace = true }

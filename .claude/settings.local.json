@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(cargo check:*)",
+      "Bash(cargo fix:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(cargo tree:*)",
+      "Bash(cat:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)"
+    ],
+    "deny": []
+  }
+}

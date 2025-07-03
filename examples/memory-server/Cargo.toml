@@ -1,0 +1,20 @@
+[package]
+name = "memory-server"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+icarus = { path = "../../crates/icarus" }
+icarus-core = { path = "../../crates/icarus-core" }
+icarus-canister = { path = "../../crates/icarus-canister" }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
+ic-stable-structures = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = { workspace = true }
+rmcp = { workspace = true }
+
+[lib]
+crate-type = ["cdylib"]
