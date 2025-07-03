@@ -141,8 +141,83 @@ async fn handle_resource_read(params: Value) -> Result<String, String> {
 /// Query server capabilities
 #[query]
 pub fn icarus_capabilities() -> IcarusServerCapabilities {
-    STATE.with(|s| {
-        let state = s.borrow();
-        state.as_ref().unwrap().capabilities()
-    })
+    crate::state::IcarusCanisterState::with(|state| state.capabilities())
+}
+
+/// Main MCP request handler with custom tool registry
+pub async fn icarus_mcp_request_with_registry<F, Fut>(
+    request: IcarusMcpRequest,
+    tool_executor: F,
+) -> IcarusMcpResponse
+where
+    F: FnOnce(&str, Value) -> Fut,
+    Fut: std::future::Future<Output = Result<Value, icarus_core::error::ToolError>>,
+{
+    let request_id = request.id.clone();
+    match handle_mcp_request_with_registry(request, tool_executor).await {
+        Ok(result) => IcarusMcpResponse {
+            result: Some(result),
+            error: None,
+            id: request_id,
+        },
+        Err(e) => IcarusMcpResponse {
+            result: None,
+            error: Some(IcarusMcpError {
+                code: -32603,
+                message: e.to_string(),
+                data: None,
+            }),
+            id: request_id,
+        }
+    }
+}
+
+/// Handle different MCP request methods with custom tool registry
+async fn handle_mcp_request_with_registry<F, Fut>(
+    request: IcarusMcpRequest,
+    tool_executor: F,
+) -> Result<String, String>
+where
+    F: FnOnce(&str, Value) -> Fut,
+    Fut: std::future::Future<Output = Result<Value, icarus_core::error::ToolError>>,
+{
+    let params: Value = serde_json::from_str(&request.params)
+        .map_err(|e| format!("Failed to parse params: {}", e))?;
+    
+    match request.method.as_str() {
+        "initialize" => handle_initialize(params).await,
+        "tools/list" => handle_tools_list().await,
+        "tools/call" => handle_tool_call_with_registry(params, tool_executor).await,
+        "resources/list" => handle_resources_list().await,
+        "resources/read" => handle_resource_read(params).await,
+        _ => Err(format!("Unknown method: {}", request.method)),
+    }
+}
+
+/// Handle tools/call request with custom registry
+async fn handle_tool_call_with_registry<F, Fut>(
+    params: Value,
+    tool_executor: F,
+) -> Result<String, String>
+where
+    F: FnOnce(&str, Value) -> Fut,
+    Fut: std::future::Future<Output = Result<Value, icarus_core::error::ToolError>>,
+{
+    let tool_name = params.get("name")
+        .and_then(|n| n.as_str())
+        .ok_or("Missing tool name")?;
+    
+    let args = params.get("arguments")
+        .cloned()
+        .unwrap_or(json!({}));
+    
+    match tool_executor(tool_name, args).await {
+        Ok(result) => Ok(json!({
+            "content": [{
+                "type": "text",
+                "text": result.to_string()
+            }]
+        }).to_string()),
+        Err(e) => Err(e.to_string()),
+    }
 }

@@ -19,7 +19,13 @@ icarus-types = { workspace = true }
 rmcp = { workspace = true }
 ic-cdk = { workspace = true }
 candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [features]
 default = []
 test-utils = []
+
+[dev-dependencies]
+ic-cdk-macros = { workspace = true }
+tokio = { workspace = true, features = ["test-util", "macros"] }

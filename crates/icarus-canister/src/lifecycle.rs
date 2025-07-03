@@ -9,7 +9,7 @@ pub fn init() {
     let config = ServerConfig {
         name: "Icarus MCP Server".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        canister_id: ic_cdk::api::canister_self(),
+        canister_id: ic_cdk::id(),
     };
     
     IcarusCanisterState::init(config);

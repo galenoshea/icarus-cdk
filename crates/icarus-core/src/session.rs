@@ -81,6 +81,8 @@ impl Default for SessionConfig {
 pub struct MemorySessionManager {
     sessions: HashMap<String, Session>,
     config: SessionConfig,
+    #[cfg(test)]
+    mock_time: Option<u64>,
 }
 
 impl MemorySessionManager {
@@ -89,7 +91,22 @@ impl MemorySessionManager {
         Self {
             sessions: HashMap::new(),
             config,
+            #[cfg(test)]
+            mock_time: None,
         }
+    }
+    
+    #[cfg(test)]
+    fn get_time(&self) -> u64 {
+        self.mock_time.unwrap_or_else(|| std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos() as u64)
+    }
+    
+    #[cfg(not(test))]
+    fn get_time(&self) -> u64 {
+        ic_cdk::api::time()
     }
     
     fn generate_session_id() -> String {
@@ -105,7 +122,7 @@ impl MemorySessionManager {
 #[async_trait]
 impl SessionManager for MemorySessionManager {
     async fn create_session(&mut self, principal: Option<String>) -> Result<Session> {
-        let now = ic_cdk::api::time();
+        let now = self.get_time();
         let session = Session {
             id: Self::generate_session_id(),
             principal,
@@ -141,7 +158,7 @@ impl SessionManager for MemorySessionManager {
     }
     
     async fn cleanup_expired(&mut self, max_age_secs: u64) -> Result<u32> {
-        let now = ic_cdk::api::time();
+        let now = self.get_time();
         let cutoff = now.saturating_sub(max_age_secs * 1_000_000_000); // Convert to nanos
         
         let expired: Vec<String> = self.sessions.iter()

@@ -3,21 +3,6 @@
 //! Icarus SDK enables developers to create Model Context Protocol (MCP) servers
 //! that run as Internet Computer Protocol (ICP) canisters, combining AI tool
 //! integration with blockchain persistence.
-//! 
-//! # Quick Start
-//! 
-//! ```ignore
-//! use icarus::prelude::*;
-//! 
-//! #[derive(IcarusTool)]
-//! #[icarus_tool(name = "remember", description = "Store a fact")]
-//! struct RememberTool;
-//! 
-//! #[icarus_server(name = "memory-server", version = "1.0.0")]
-//! pub struct MemoryServer {
-//!     facts: Vec<String>,
-//! }
-//! ```
 
 // Re-export all subcrates
 pub use icarus_core as core;
@@ -26,8 +11,17 @@ pub use icarus_canister as canister;
 pub use icarus_types as types;
 
 // Re-export commonly used items
-pub use icarus_core::{IcarusError, IcarusServer, IcarusTool, IcarusResource};
+pub use icarus_core::{
+    IcarusError, IcarusServer, IcarusTool, IcarusResource,
+    error::ToolError,
+    response::{ToolSuccess, ToolStatus, tool_success, tool_ok}
+};
 pub use icarus_derive::{IcarusTool, icarus_server, icarus_tools, icarus_tool, IcarusStorable};
+
+// Re-export storage utilities
+pub mod storage {
+    pub use icarus_canister::storage::*;
+}
 
 // Re-export key dependencies
 pub use rmcp;
@@ -38,6 +32,7 @@ pub use candid;
 pub mod prelude {
     pub use crate::{
         IcarusError,
+        ToolError,
         IcarusServer,
         IcarusTool,
         IcarusResource,
@@ -46,15 +41,24 @@ pub mod prelude {
         icarus_tools,
         icarus_tool,
         IcarusStorable,
+        ToolSuccess,
+        ToolStatus,
+        tool_success,
+        tool_ok,
     };
     
-    // Common types needed for examples
+    // Common types needed for development
     pub use serde::{Serialize, Deserialize as SerdeDeserialize};
     pub use candid::{CandidType, Deserialize};
     pub use ic_cdk::api;
     
     // Type aliases for common return types
-    pub type ToolResult = Result<serde_json::Value, IcarusError>;
+    /// Result type for tool execution that bridges ICP and MCP
+    /// 
+    /// Tools can return any serializable type, which will be automatically
+    /// converted to JSON for the MCP protocol. The default type parameter
+    /// is `serde_json::Value` for maximum flexibility.
+    pub type ToolResult<T = serde_json::Value> = Result<T, crate::ToolError>;
 }
 
 /// Generate Candid interface for the canister

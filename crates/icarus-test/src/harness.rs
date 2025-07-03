@@ -1,9 +1,10 @@
 //! Test harness for running integration tests
 
-use icarus_core::protocol::{IcarusMcpRequest, IcarusMcpResponse};
+use icarus_core::protocol::{IcarusMcpRequest, IcarusMcpResponse, IcarusMcpError};
 use icarus_core::tool::IcarusTool;
 use icarus_core::resource::IcarusResource;
 use std::collections::HashMap;
+use serde_json;
 
 /// Test harness for running MCP server tests
 pub struct TestHarness {
@@ -41,22 +42,21 @@ impl TestHarness {
             "resources/list" => self.handle_resources_list(request),
             "resources/read" => self.handle_resource_read(request).await,
             _ => IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32601,
-                    "message": "Method not found"
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32601,
+                    message: "Method not found".to_string(),
+                    data: None,
+                }),
             },
         }
     }
     
     fn handle_initialize(&self, request: IcarusMcpRequest) -> IcarusMcpResponse {
         IcarusMcpResponse {
-            jsonrpc: "2.0".to_string(),
             id: request.id,
-            result: Some(serde_json::json!({
+            result: Some(serde_json::to_string(&serde_json::json!({
                 "protocolVersion": "1.0.0",
                 "serverInfo": {
                     "name": "icarus-test-harness",
@@ -66,7 +66,7 @@ impl TestHarness {
                     "tools": !self.tools.is_empty(),
                     "resources": !self.resources.is_empty()
                 }
-            })),
+            })).unwrap()),
             error: None,
         }
     }
@@ -77,39 +77,39 @@ impl TestHarness {
             .collect();
             
         IcarusMcpResponse {
-            jsonrpc: "2.0".to_string(),
             id: request.id,
-            result: Some(serde_json::json!({
+            result: Some(serde_json::to_string(&serde_json::json!({
                 "tools": tools
-            })),
+            })).unwrap()),
             error: None,
         }
     }
     
     async fn handle_tool_call(&self, request: IcarusMcpRequest) -> IcarusMcpResponse {
-        let params = match request.params {
-            Some(p) => p,
-            None => return IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
+        // Parse params from JSON string
+        let params: serde_json::Value = match serde_json::from_str(&request.params) {
+            Ok(p) => p,
+            Err(_) => return IcarusMcpResponse {
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": "Invalid params"
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: "Invalid params".to_string(),
+                    data: None,
+                }),
             },
         };
         
         let tool_name = match params.get("name").and_then(|n| n.as_str()) {
             Some(name) => name,
             None => return IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": "Missing tool name"
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: "Missing tool name".to_string(),
+                    data: None,
+                }),
             },
         };
         
@@ -119,35 +119,34 @@ impl TestHarness {
             Some(tool) => {
                 match tool.execute(args).await {
                     Ok(result) => IcarusMcpResponse {
-                        jsonrpc: "2.0".to_string(),
                         id: request.id,
-                        result: Some(serde_json::json!({
+                        result: Some(serde_json::to_string(&serde_json::json!({
                             "content": [{
                                 "type": "text",
                                 "text": result.to_string()
                             }]
-                        })),
+                        })).unwrap()),
                         error: None,
                     },
                     Err(e) => IcarusMcpResponse {
-                        jsonrpc: "2.0".to_string(),
                         id: request.id,
                         result: None,
-                        error: Some(serde_json::json!({
-                            "code": -32603,
-                            "message": e.to_string()
-                        })),
+                        error: Some(IcarusMcpError {
+                            code: -32603,
+                            message: e.to_string(),
+                            data: None,
+                        }),
                     },
                 }
             }
             None => IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": format!("Tool not found: {}", tool_name)
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: format!("Tool not found: {}", tool_name),
+                    data: None,
+                }),
             },
         }
     }
@@ -158,39 +157,39 @@ impl TestHarness {
             .collect();
             
         IcarusMcpResponse {
-            jsonrpc: "2.0".to_string(),
             id: request.id,
-            result: Some(serde_json::json!({
+            result: Some(serde_json::to_string(&serde_json::json!({
                 "resources": resources
-            })),
+            })).unwrap()),
             error: None,
         }
     }
     
     async fn handle_resource_read(&self, request: IcarusMcpRequest) -> IcarusMcpResponse {
-        let params = match request.params {
-            Some(p) => p,
-            None => return IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
+        // Parse params from JSON string
+        let params: serde_json::Value = match serde_json::from_str(&request.params) {
+            Ok(p) => p,
+            Err(_) => return IcarusMcpResponse {
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": "Invalid params"
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: "Invalid params".to_string(),
+                    data: None,
+                }),
             },
         };
         
         let uri = match params.get("uri").and_then(|u| u.as_str()) {
             Some(uri) => uri,
             None => return IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": "Missing resource URI"
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: "Missing resource URI".to_string(),
+                    data: None,
+                }),
             },
         };
         
@@ -198,36 +197,35 @@ impl TestHarness {
             Some(resource) => {
                 match resource.read().await {
                     Ok(content) => IcarusMcpResponse {
-                        jsonrpc: "2.0".to_string(),
                         id: request.id,
-                        result: Some(serde_json::json!({
+                        result: Some(serde_json::to_string(&serde_json::json!({
                             "contents": [{
                                 "uri": uri,
                                 "mimeType": resource.info().mime_type,
                                 "text": String::from_utf8_lossy(&content)
                             }]
-                        })),
+                        })).unwrap()),
                         error: None,
                     },
                     Err(e) => IcarusMcpResponse {
-                        jsonrpc: "2.0".to_string(),
                         id: request.id,
                         result: None,
-                        error: Some(serde_json::json!({
-                            "code": -32603,
-                            "message": e.to_string()
-                        })),
+                        error: Some(IcarusMcpError {
+                            code: -32603,
+                            message: e.to_string(),
+                            data: None,
+                        }),
                     },
                 }
             }
             None => IcarusMcpResponse {
-                jsonrpc: "2.0".to_string(),
                 id: request.id,
                 result: None,
-                error: Some(serde_json::json!({
-                    "code": -32602,
-                    "message": format!("Resource not found: {}", uri)
-                })),
+                error: Some(IcarusMcpError {
+                    code: -32602,
+                    message: format!("Resource not found: {}", uri),
+                    data: None,
+                }),
             },
         }
     }
@@ -241,12 +239,11 @@ mod tests {
     async fn test_harness_initialize() {
         let harness = TestHarness::new();
         let request = IcarusMcpRequest {
-            jsonrpc: "2.0".to_string(),
-            id: 1,
+            id: Some("1".to_string()),
             method: "initialize".to_string(),
-            params: Some(serde_json::json!({
+            params: serde_json::to_string(&serde_json::json!({
                 "protocolVersion": "1.0.0"
-            })),
+            })).unwrap(),
         };
         
         let response = harness.execute(request).await;

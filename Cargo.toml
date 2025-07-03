@@ -6,7 +6,6 @@ members = [
     "crates/icarus-types",
     "crates/icarus",
     "crates/icarus-test",
-    "examples/memory-server",
 ]
 resolver = "2"
 
@@ -20,8 +19,8 @@ repository = "https://github.com/icarus-sdk/icarus-sdk"
 [workspace.dependencies]
 # External dependencies
 rmcp = "0.2.1"
-ic-cdk = "0.18.5"
-ic-cdk-macros = "0.18.5"
+ic-cdk = "0.16"
+ic-cdk-macros = "0.16"
 ic-stable-structures = "0.6"
 candid = "0.10"
 serde = { version = "1.0", features = ["derive"] }

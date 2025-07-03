@@ -6,6 +6,7 @@
 - ../ICARUS_SPEC.md defines project objectives
 - sensitive and confidental data must always be in the .gitignore
 - always use the latests crates, libaries, and packages
+- absolutely no examples should be written in this project
 
 - this project focuses on Icarus SDK
 - you can reference the other 2 connected projects in the parent directory for icarus-cli and icarus-app

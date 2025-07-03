@@ -5,6 +5,7 @@
 
 pub mod error;
 pub mod protocol;
+pub mod response;
 pub mod server;
 pub mod state;
 pub mod tool;
@@ -17,7 +18,8 @@ pub mod outcalls;
 pub mod session;
 pub mod certificate;
 
-pub use error::{IcarusError, Result};
+pub use error::{IcarusError, Result, ToolError};
+pub use response::{ToolSuccess, ToolStatus, tool_success, tool_ok};
 pub use server::IcarusServer;
 pub use tool::IcarusTool;
 pub use resource::IcarusResource;
@@ -25,7 +27,8 @@ pub use resource::IcarusResource;
 // Re-export commonly used types
 pub mod prelude {
     pub use crate::{
-        error::{IcarusError, Result},
+        error::{IcarusError, Result, ToolError},
+        response::{ToolSuccess, ToolStatus, tool_success, tool_ok},
         server::IcarusServer,
         tool::IcarusTool,
         resource::IcarusResource,

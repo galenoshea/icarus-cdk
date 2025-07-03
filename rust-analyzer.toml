@@ -1,0 +1,16 @@
+# Rust-analyzer configuration for Icarus SDK
+
+# Enable procedural macros
+procMacro.enable = true
+procMacro.attributes.enable = true
+
+# Build scripts configuration
+cargo.buildScripts.enable = true
+cargo.buildScripts.useRustcWrapper = true
+
+# Diagnostics settings
+diagnostics.experimental.enable = false
+
+# Check on save
+checkOnSave.enable = true
+checkOnSave.command = "check"

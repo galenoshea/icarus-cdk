@@ -1,6 +1,6 @@
 //! Test assertions for Icarus MCP servers
 
-use icarus_core::protocol::IcarusMcpResponse;
+use icarus_core::protocol::{IcarusMcpResponse, IcarusMcpError};
 use serde_json::Value;
 
 /// Assertion helpers for MCP responses
@@ -45,15 +45,11 @@ impl<'a> ResponseAssertions<'a> {
     pub fn assert_error_code(&self, expected_code: i32) -> &Self {
         self.assert_error();
         if let Some(error) = &self.response.error {
-            if let Some(code) = error.get("code").and_then(|c| c.as_i64()) {
-                assert_eq!(
-                    code, expected_code as i64,
-                    "Expected error code {} but got {}",
-                    expected_code, code
-                );
-            } else {
-                panic!("Error response missing code field");
-            }
+            assert_eq!(
+                error.code, expected_code,
+                "Expected error code {} but got {}",
+                expected_code, error.code
+            );
         }
         self
     }
@@ -62,15 +58,11 @@ impl<'a> ResponseAssertions<'a> {
     pub fn assert_error_contains(&self, substring: &str) -> &Self {
         self.assert_error();
         if let Some(error) = &self.response.error {
-            if let Some(message) = error.get("message").and_then(|m| m.as_str()) {
-                assert!(
-                    message.contains(substring),
-                    "Expected error message to contain '{}' but got: {}",
-                    substring, message
-                );
-            } else {
-                panic!("Error response missing message field");
-            }
+            assert!(
+                error.message.contains(substring),
+                "Expected error message to contain '{}' but got: {}",
+                substring, error.message
+            );
         }
         self
     }
@@ -78,7 +70,9 @@ impl<'a> ResponseAssertions<'a> {
     /// Assert a field exists in the result
     pub fn assert_result_has(&self, field: &str) -> &Self {
         self.assert_success();
-        if let Some(result) = &self.response.result {
+        if let Some(result_str) = &self.response.result {
+            let result: Value = serde_json::from_str(result_str)
+                .expect("Failed to parse result as JSON");
             assert!(
                 result.get(field).is_some(),
                 "Expected field '{}' in result but it was not found. Result: {:?}",
@@ -89,16 +83,17 @@ impl<'a> ResponseAssertions<'a> {
     }
     
     /// Get a value from the result for further assertions
-    pub fn get_result_value(&self, path: &str) -> Option<&Value> {
-        self.response.result.as_ref().and_then(|result| {
+    pub fn get_result_value(&self, path: &str) -> Option<Value> {
+        self.response.result.as_ref().and_then(|result_str| {
+            let result: Value = serde_json::from_str(result_str).ok()?;
             let parts: Vec<&str> = path.split('.').collect();
-            let mut current = result;
+            let mut current = &result;
             
             for part in parts {
                 current = current.get(part)?;
             }
             
-            Some(current)
+            Some(current.clone())
         })
     }
 }
@@ -126,7 +121,7 @@ macro_rules! assert_tool_list_contains {
             
         let tools = $response.assert()
             .get_result_value("tools")
-            .and_then(|v| v.as_array())
+            .and_then(|v| v.as_array().cloned())
             .expect("Expected tools to be an array");
             
         let has_tool = tools.iter().any(|tool| {
@@ -156,7 +151,7 @@ macro_rules! assert_resource_list_contains {
             
         let resources = $response.assert()
             .get_result_value("resources")
-            .and_then(|v| v.as_array())
+            .and_then(|v| v.as_array().cloned())
             .expect("Expected resources to be an array");
             
         let has_resource = resources.iter().any(|resource| {
@@ -182,14 +177,13 @@ mod tests {
     #[test]
     fn test_success_assertions() {
         let response = IcarusMcpResponse {
-            jsonrpc: "2.0".to_string(),
-            id: 1,
-            result: Some(serde_json::json!({
+            id: Some("1".to_string()),
+            result: Some(serde_json::to_string(&serde_json::json!({
                 "status": "ok",
                 "data": {
                     "value": 42
                 }
-            })),
+            })).unwrap()),
             error: None,
         };
         
@@ -199,19 +193,19 @@ mod tests {
             .assert_result_has("data");
             
         let value = response.assert().get_result_value("data.value");
-        assert_eq!(value, Some(&serde_json::json!(42)));
+        assert_eq!(value, Some(serde_json::json!(42)));
     }
     
     #[test]
     fn test_error_assertions() {
         let response = IcarusMcpResponse {
-            jsonrpc: "2.0".to_string(),
-            id: 1,
+            id: Some("1".to_string()),
             result: None,
-            error: Some(serde_json::json!({
-                "code": -32602,
-                "message": "Invalid params: missing field 'name'"
-            })),
+            error: Some(IcarusMcpError {
+                code: -32602,
+                message: "Invalid params: missing field 'name'".to_string(),
+                data: None,
+            }),
         };
         
         response.assert()

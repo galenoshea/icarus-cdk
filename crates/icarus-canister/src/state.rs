@@ -91,19 +91,25 @@ thread_local! {
 }
 
 impl IcarusCanisterState {
-    pub fn init(config: ServerConfig) -> Self {
+    pub fn init(config: ServerConfig) {
         let state = Self {
             config: StableCell::init(get_memory(MEMORY_ID_CONFIG), config).unwrap(),
             tools: StableBTreeMap::init(get_memory(MEMORY_ID_TOOLS)),
             resources: StableBTreeMap::init(get_memory(MEMORY_ID_RESOURCES)),
         };
         
-        STATE.with(|s| *s.borrow_mut() = Some(state.clone()));
-        state
+        STATE.with(|s| *s.borrow_mut() = Some(state));
     }
     
-    pub fn get() -> IcarusCanisterState {
-        STATE.with(|s| s.borrow().as_ref().unwrap().clone())
+    pub fn with<F, R>(f: F) -> R
+    where
+        F: FnOnce(&IcarusCanisterState) -> R,
+    {
+        STATE.with(|s| {
+            let state = s.borrow();
+            let state_ref = state.as_ref().expect("State not initialized");
+            f(state_ref)
+        })
     }
     
     pub fn capabilities(&self) -> IcarusServerCapabilities {
@@ -117,14 +123,5 @@ impl IcarusCanisterState {
     }
 }
 
-impl Clone for IcarusCanisterState {
-    fn clone(&self) -> Self {
-        // Note: This doesn't actually clone the stable structures,
-        // it creates new references to the same underlying memory
-        Self {
-            config: StableCell::init(get_memory(MEMORY_ID_CONFIG), self.config.get().clone()).unwrap(),
-            tools: StableBTreeMap::init(get_memory(MEMORY_ID_TOOLS)),
-            resources: StableBTreeMap::init(get_memory(MEMORY_ID_RESOURCES)),
-        }
-    }
-}
+// State should not be cloneable as it contains stable memory structures
+// Use STATE.with() to access the global state instead

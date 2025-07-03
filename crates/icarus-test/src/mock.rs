@@ -1,6 +1,6 @@
 //! Mock implementations for testing
 
-use ic_cdk::api::call::RejectionCode;
+use ic_cdk::api::call::RejectionCode as RejectCode;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
@@ -11,7 +11,7 @@ pub struct MockEnvironment {
     /// Stable memory contents
     pub stable_memory: Arc<Mutex<Vec<u8>>>,
     /// Call results
-    pub call_results: Arc<Mutex<HashMap<String, Result<Vec<u8>, (RejectionCode, String)>>>>,
+    pub call_results: Arc<Mutex<HashMap<String, Result<Vec<u8>, (RejectCode, String)>>>>,
 }
 
 impl MockEnvironment {
@@ -43,7 +43,7 @@ impl MockEnvironment {
     pub fn expect_call(
         &self,
         method: String,
-        result: Result<Vec<u8>, (RejectionCode, String)>,
+        result: Result<Vec<u8>, (RejectCode, String)>,
     ) {
         self.call_results.lock().unwrap().insert(method, result);
     }

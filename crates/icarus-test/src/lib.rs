@@ -33,26 +33,24 @@ impl TestContext {
     /// Helper to create a tool call request
     pub fn tool_call_request(tool_name: &str, args: Value) -> IcarusMcpRequest {
         IcarusMcpRequest {
-            jsonrpc: "2.0".to_string(),
-            id: 1,
+            id: Some("1".to_string()),
             method: "tools/call".to_string(),
-            params: Some(serde_json::json!({
+            params: serde_json::to_string(&serde_json::json!({
                 "name": tool_name,
                 "arguments": args
-            })),
+            })).unwrap(),
         }
     }
     
     /// Helper to create an initialize request
     pub fn initialize_request() -> IcarusMcpRequest {
         IcarusMcpRequest {
-            jsonrpc: "2.0".to_string(),
-            id: 1,
+            id: Some("1".to_string()),
             method: "initialize".to_string(),
-            params: Some(serde_json::json!({
+            params: serde_json::to_string(&serde_json::json!({
                 "protocolVersion": "1.0.0",
                 "capabilities": {}
-            })),
+            })).unwrap(),
         }
     }
 }
