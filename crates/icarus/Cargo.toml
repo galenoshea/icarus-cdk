@@ -22,9 +22,12 @@ candid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 
+# Test utilities (optional)
+icarus-test = { workspace = true, optional = true }
+
 [features]
 default = []
-test-utils = []
+test-utils = ["icarus-test"]
 
 [dev-dependencies]
 ic-cdk-macros = { workspace = true }

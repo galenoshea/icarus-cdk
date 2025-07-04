@@ -28,6 +28,7 @@ pub struct ToolState {
     pub name: String,
     pub enabled: bool,
     pub call_count: u64,
+    pub is_query: bool,
 }
 
 /// State for individual resources

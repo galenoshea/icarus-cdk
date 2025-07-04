@@ -16,6 +16,24 @@ pub struct TestContext {
     pub env: mock::MockEnvironment,
 }
 
+/// Helper to create a tool call request
+pub fn tool_call_request(tool_name: &str, args: Value) -> IcarusMcpRequest {
+    IcarusMcpRequest {
+        id: Some("1".to_string()),
+        method: "tools/call".to_string(),
+        params: serde_json::to_string(&serde_json::json!({
+            "name": tool_name,
+            "arguments": args
+        })).unwrap(),
+    }
+}
+
+/// Assert that a response is successful
+pub fn assert_success(response: &IcarusMcpResponse) {
+    assert!(response.error.is_none(), "Expected success but got error: {:?}", response.error);
+    assert!(response.result.is_some(), "Expected result but got none");
+}
+
 impl TestContext {
     /// Create a new test context
     pub fn new() -> Self {
@@ -28,6 +46,16 @@ impl TestContext {
     pub async fn execute_request(&self, request: IcarusMcpRequest) -> IcarusMcpResponse {
         // Simulate request handling
         icarus_canister::endpoints::icarus_mcp_request(request).await
+    }
+    
+    /// Execute a tool with the given server instance
+    pub async fn execute_tool<S>(&mut self, server: &mut S, request: IcarusMcpRequest) -> IcarusMcpResponse
+    where
+        S: icarus_core::server::IcarusServer,
+    {
+        // For now, just forward to execute_request
+        // In a real implementation, this would use the server instance directly
+        self.execute_request(request).await
     }
     
     /// Helper to create a tool call request

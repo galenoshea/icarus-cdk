@@ -104,9 +104,12 @@ pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let struct_name = &input.ident;
     
+    // Extract generics if any
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    
     // For now, assume we're working with structs and use Candid serialization
     let expanded = quote! {
-        impl ic_stable_structures::Storable for #struct_name {
+        impl #impl_generics ic_stable_structures::Storable for #struct_name #ty_generics #where_clause {
             fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
                 // Note: Using expect here is acceptable as Storable trait doesn't support errors
                 // Ensure your types are always serializable
@@ -127,7 +130,7 @@ pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
                 };
         }
         
-        impl icarus_core::state::Storable for #struct_name {
+        impl #impl_generics icarus_core::state::Storable for #struct_name #ty_generics #where_clause {
             fn to_bytes(&self) -> icarus_core::error::Result<Vec<u8>> {
                 candid::encode_one(self)
                     .map_err(|e| icarus_core::error::IcarusError::Canister(e.to_string()))

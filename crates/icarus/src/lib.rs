@@ -23,6 +23,27 @@ pub mod storage {
     pub use icarus_canister::storage::*;
 }
 
+// Re-export test utilities
+#[cfg(feature = "test-utils")]
+pub mod test {
+    pub use icarus_test::{
+        TestContext, 
+        test_utils::{assert_success, assert_error},
+    };
+    
+    // Helper to create tool call requests
+    pub fn tool_call_request(tool_name: &str, args: serde_json::Value) -> icarus_core::protocol::IcarusMcpRequest {
+        icarus_core::protocol::IcarusMcpRequest {
+            id: Some("1".to_string()),
+            method: "tools/call".to_string(),
+            params: serde_json::to_string(&serde_json::json!({
+                "name": tool_name,
+                "arguments": args
+            })).unwrap(),
+        }
+    }
+}
+
 // Re-export key dependencies
 pub use rmcp;
 pub use ic_cdk;
@@ -52,6 +73,9 @@ pub mod prelude {
     pub use candid::{CandidType, Deserialize};
     pub use ic_cdk::api;
     
+    // Re-export json! macro for convenience
+    pub use serde_json::json;
+    
     // Type aliases for common return types
     /// Result type for tool execution that bridges ICP and MCP
     /// 
@@ -65,9 +89,11 @@ pub mod prelude {
 #[macro_export]
 macro_rules! export_candid {
     () => {
+        // Generate the ic_cdk export_candid first
+        ic_cdk::export_candid!();
+        
         #[ic_cdk::query(name = "__get_candid_interface_tmp_hack")]
         fn export_candid() -> String {
-            ic_cdk::export_candid!();
             __export_service()
         }
     };
