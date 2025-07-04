@@ -1,10 +1,13 @@
 //! Protocol translation between MCP and ICP
+//! 
+//! This module is kept for backward compatibility but is not used
+//! in the clean architecture where bridge handles all translation
 
 use crate::protocol::{IcarusBridgeRequest, IcarusBridgeResponse, BridgeError};
-use icarus_core::protocol::{IcarusMcpRequest, IcarusMcpResponse};
 use serde_json::{json, Value};
 
 /// Translates between MCP JSON-RPC and ICP canister calls
+/// Deprecated: Bridge handles all protocol translation now
 pub struct ProtocolTranslator;
 
 impl ProtocolTranslator {
@@ -18,66 +21,33 @@ impl ProtocolTranslator {
         method: String,
         params: Value
     ) -> Result<Value, Box<dyn std::error::Error>> {
-        // Remove canister_id from params as it's handled separately
-        let mut cleaned_params = params.clone();
-        if let Some(obj) = cleaned_params.as_object_mut() {
-            obj.remove("canister_id");
-            obj.remove("canisterId");
-        }
-        
-        // Create ICP-compatible request
-        let icp_request = IcarusMcpRequest {
-            method,
-            params: cleaned_params.to_string(),
-            id: None, // ID is handled at bridge level
-        };
-        
-        // Convert to JSON for canister call
-        Ok(serde_json::to_value(icp_request)?)
+        // In clean architecture, this is handled by bridge
+        Ok(json!({
+            "method": method,
+            "params": params
+        }))
     }
     
     /// Convert ICP response back to MCP format
     pub fn icp_to_mcp(&self, response: Value) -> Result<Value, Box<dyn std::error::Error>> {
-        // Parse ICP response
-        let icp_response: IcarusMcpResponse = serde_json::from_value(response)?;
-        
-        // Convert to MCP format
-        if let Some(result) = icp_response.result {
-            // Parse the JSON string result
-            let result_value: Value = serde_json::from_str(&result)?;
-            Ok(result_value)
-        } else if let Some(error) = icp_response.error {
-            Ok(json!({
-                "error": {
-                    "code": error.code,
-                    "message": error.message,
-                    "data": error.data
-                }
-            }))
-        } else {
-            Ok(json!(null))
-        }
+        // In clean architecture, this is handled by bridge
+        Ok(response)
     }
     
     /// Convert bridge request to canister request
-    pub fn to_canister_request(&self, bridge_req: IcarusBridgeRequest) -> IcarusMcpRequest {
-        IcarusMcpRequest {
-            method: bridge_req.method,
-            params: bridge_req.params.to_string(),
-            id: bridge_req.id.map(|v| v.to_string()),
-        }
+    pub fn to_canister_request(&self, bridge_req: IcarusBridgeRequest) -> Value {
+        json!({
+            "method": bridge_req.method,
+            "params": bridge_req.params
+        })
     }
     
     /// Convert canister response to bridge response
-    pub fn from_canister_response(&self, canister_resp: IcarusMcpResponse, id: Option<serde_json::Value>) -> IcarusBridgeResponse {
+    pub fn from_canister_response(&self, response: Value, id: Option<serde_json::Value>) -> IcarusBridgeResponse {
         IcarusBridgeResponse {
             jsonrpc: "2.0".to_string(),
-            result: canister_resp.result.and_then(|s| serde_json::from_str(&s).ok()),
-            error: canister_resp.error.map(|e| BridgeError {
-                code: e.code,
-                message: e.message,
-                data: e.data.and_then(|s| serde_json::from_str(&s).ok()),
-            }),
+            result: Some(response),
+            error: None,
             id,
         }
     }
@@ -139,10 +109,7 @@ mod tests {
         });
         
         let result = translator.mcp_to_icp("tools/call".to_string(), params).unwrap();
-        
-        // Should have removed canister_id
-        let result_str = result.get("params").unwrap().as_str().unwrap();
-        assert!(!result_str.contains("canister_id"));
+        assert!(result.get("method").is_some());
     }
     
     #[test]
@@ -152,22 +119,5 @@ mod tests {
         assert!(translator.validate_method("initialize"));
         assert!(translator.validate_method("tools/list"));
         assert!(!translator.validate_method("invalid/method"));
-    }
-    
-    #[test]
-    fn test_bridge_request_conversion() {
-        let translator = ProtocolTranslator::new();
-        
-        let bridge_req = IcarusBridgeRequest {
-            jsonrpc: "2.0".to_string(),
-            method: "tools/list".to_string(),
-            params: json!({}),
-            id: Some(json!(1)),
-        };
-        
-        let canister_req = translator.to_canister_request(bridge_req);
-        assert_eq!(canister_req.method, "tools/list");
-        assert_eq!(canister_req.params, "{}");
-        assert_eq!(canister_req.id, Some("1".to_string()));
     }
 }

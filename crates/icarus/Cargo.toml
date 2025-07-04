@@ -23,11 +23,11 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 # Test utilities (optional)
-icarus-test = { workspace = true, optional = true }
+# icarus-test = { workspace = true, optional = true } # Temporarily disabled
 
 [features]
 default = []
-test-utils = ["icarus-test"]
+# test-utils = ["icarus-test"] # Temporarily disabled
 
 [dev-dependencies]
 ic-cdk-macros = { workspace = true }

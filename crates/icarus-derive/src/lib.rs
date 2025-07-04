@@ -164,10 +164,15 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     
     // Parse attributes using parse_nested_meta
     let mut tool_name = input_fn.sig.ident.to_string();
+    let mut is_query = false;
     let parser = syn::meta::parser(|meta| {
         if meta.path.is_ident("name") {
             let value: syn::LitStr = meta.value()?.parse()?;
             tool_name = value.value();
+            Ok(())
+        } else if meta.path.is_ident("is_query") {
+            let value: syn::LitBool = meta.value()?.parse()?;
+            is_query = value.value();
             Ok(())
         } else {
             Err(meta.error("unsupported attribute"))

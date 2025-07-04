@@ -1,4 +1,6 @@
 //! Server macro implementation
+//! 
+//! Generates boilerplate for Icarus servers without MCP protocol handling
 
 use proc_macro2::TokenStream;
 use quote::quote;
@@ -67,7 +69,6 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
             }
         }
         
-        
         // Generate canister init function
         #[ic_cdk_macros::init]
         fn __icarus_init() {
@@ -81,155 +82,16 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
             #struct_name::__register_tools();
         }
         
-        // Generate canister query/update methods
-        #[ic_cdk_macros::update]
-        async fn icarus_mcp_request(request: icarus_core::protocol::IcarusMcpRequest) -> icarus_core::protocol::IcarusMcpResponse {
-            // Check if this is a direct tool call
-            let is_tool = icarus_canister::state::STATE.with(|s| {
-                if let Some(state) = s.borrow().as_ref() {
-                    state.tools.contains_key(&request.method)
-                } else {
-                    false
-                }
-            });
-            
-            if is_tool {
-                // Handle direct tool call
-                let tool_name = request.method.clone();
-                let request_id = request.id.clone();
-                
-                // Parse params
-                let params_value: serde_json::Value = if request.params.is_empty() {
-                    serde_json::json!({})
-                } else {
-                    match serde_json::from_str(&request.params) {
-                        Ok(v) => v,
-                        Err(e) => {
-                            return icarus_core::protocol::IcarusMcpResponse {
-                                id: request_id,
-                                result: None,
-                                error: Some(icarus_core::protocol::IcarusMcpError {
-                                    code: -32700,
-                                    message: format!("Failed to parse params: {}", e),
-                                    data: None,
-                                }),
-                            };
-                        }
-                    }
-                };
-                
-                // Dispatch to tool - for MVP, return placeholder
-                // A full implementation would properly handle async execution
-                let result = Ok(serde_json::json!({
-                    "content": [{
-                        "type": "text",
-                        "text": format!("Tool {} called with params: {}", tool_name, params_value)
-                    }]
-                }).to_string());
-                
-                match result {
-                    Ok(result_str) => icarus_core::protocol::IcarusMcpResponse {
-                        id: request_id,
-                        result: Some(result_str),
-                        error: None,
-                    },
-                    Err(e) => icarus_core::protocol::IcarusMcpResponse {
-                        id: request_id,
-                        result: None,
-                        error: Some(e),
-                    }
-                }
-            } else {
-                // Use standard MCP handler
-                icarus_canister::endpoints::icarus_mcp_request(request).await
-            }
-        }
-        
+        // Generate metadata query endpoint
         #[ic_cdk_macros::query]
-        fn icarus_capabilities() -> icarus_core::protocol::IcarusServerCapabilities {
-            icarus_canister::endpoints::icarus_capabilities()
+        fn __icarus_metadata() -> icarus_core::protocol::IcarusMetadata {
+            icarus_canister::endpoints::icarus_metadata()
         }
         
         // HTTP gateway endpoint
         #[ic_cdk_macros::query]
-        fn http_request(req: icarus_canister::HttpRequest) -> icarus_canister::HttpResponse {
-            icarus_canister::http_request(req)
-        }
-        
-        // Direct tool methods for Candid - MVP hardcoded for memory server
-        #[ic_cdk_macros::update]
-        async fn memorize(content: String, tags: Option<Vec<String>>) -> String {
-            let params = serde_json::json!({
-                "content": content,
-                "tags": tags
-            });
-            
-            // For MVP, just acknowledge the call
-            let _ = #struct_name::with_instance(|_server| {
-                // A full implementation would dispatch to the actual method
-                ()
-            });
-            
-            // For now return immediate response since we can't await in update
-            serde_json::json!({
-                "status": "success",
-                "message": "Memory stored",
-                "id": format!("mem_{}", ic_cdk::api::time())
-            }).to_string()
-        }
-        
-        #[ic_cdk_macros::update]
-        async fn forget(id: String) -> String {
-            let params = serde_json::json!({
-                "id": id
-            });
-            
-            // For MVP, just acknowledge the call
-            let _ = #struct_name::with_instance(|_server| {
-                // A full implementation would dispatch to the actual method
-                ()
-            });
-            
-            serde_json::json!({
-                "status": "success",
-                "message": "Memory forgotten"
-            }).to_string()
-        }
-        
-        #[ic_cdk_macros::query]
-        fn recall(query: String) -> String {
-            let params = serde_json::json!({
-                "query": query
-            });
-            
-            #struct_name::with_instance(|server| {
-                // For queries we need synchronous execution
-                // For MVP, return placeholder since async in query is complex
-                let _ = params;
-                let _ = server;
-                serde_json::json!({
-                    "matches": [],
-                    "count": 0
-                }).to_string()
-            })
-        }
-        
-        #[ic_cdk_macros::query]
-        fn list(limit: Option<u64>) -> String {
-            let params = serde_json::json!({
-                "limit": limit
-            });
-            
-            #struct_name::with_instance(|server| {
-                // For queries we need synchronous execution
-                // For MVP, return placeholder since async in query is complex
-                let _ = params;
-                let _ = server;
-                serde_json::json!({
-                    "memories": [],
-                    "total": 0
-                }).to_string()
-            })
+        fn http_request(req: icarus_canister::endpoints::HttpRequest) -> icarus_canister::endpoints::HttpResponse {
+            icarus_canister::endpoints::http_request(req)
         }
         
         // Generate pre/post upgrade hooks

@@ -1,53 +1,47 @@
-//! Protocol types for MCP-ICP communication
+//! Metadata types for tool discovery and canister introspection
 
 use serde::{Deserialize, Serialize};
 use candid::{CandidType, Principal};
 
-/// ICP-specific protocol extensions
+/// Metadata about the Icarus canister for tool discovery
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct IcarusProtocol {
+pub struct IcarusMetadata {
+    pub version: String,
     pub canister_id: Principal,
-    pub subnet_type: SubnetType,
-    pub cycles_balance: u128,
+    pub tools: Vec<ToolMetadata>,
 }
 
-/// Types of ICP subnets
+/// Metadata about a single tool
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct ToolMetadata {
+    pub name: String,
+    pub candid_method: String,
+    pub is_query: bool,
+    pub description: String,
+    pub parameters: Vec<ParameterMetadata>,
+}
+
+/// Metadata about a tool parameter
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct ParameterMetadata {
+    pub name: String,
+    pub candid_type: String,
+    pub required: bool,
+    pub description: String,
+}
+
+/// Canister configuration
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct CanisterConfig {
+    pub name: String,
+    pub version: String,
+    pub canister_id: Principal,
+}
+
+/// Types of ICP subnets (kept for canister info)
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub enum SubnetType {
     Application,
     System,
     Fiduciary,
-}
-
-/// Request wrapper for MCP calls to canisters
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct IcarusMcpRequest {
-    pub method: String,
-    pub params: String, // JSON string instead of Value for Candid compatibility
-    pub id: Option<String>,
-}
-
-/// Response wrapper for MCP calls from canisters
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct IcarusMcpResponse {
-    pub result: Option<String>, // JSON string instead of Value
-    pub error: Option<IcarusMcpError>,
-    pub id: Option<String>,
-}
-
-/// Error structure for MCP responses
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct IcarusMcpError {
-    pub code: i32,
-    pub message: String,
-    pub data: Option<String>, // JSON string instead of Value
-}
-
-/// Server capabilities with ICP extensions
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct IcarusServerCapabilities {
-    pub tools: Vec<String>,
-    pub resources: Vec<String>,
-    pub icarus_version: String,
-    pub canister_id: Principal,
 }

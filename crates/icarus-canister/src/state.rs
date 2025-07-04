@@ -2,7 +2,6 @@
 
 use crate::memory::{get_memory, MEMORY_ID_CONFIG, MEMORY_ID_TOOLS, MEMORY_ID_RESOURCES};
 use ic_stable_structures::{StableBTreeMap, StableCell, Storable};
-use icarus_core::protocol::IcarusServerCapabilities;
 use std::cell::RefCell;
 use candid::{CandidType, Deserialize, Principal};
 use serde::Serialize;
@@ -113,15 +112,6 @@ impl IcarusCanisterState {
         })
     }
     
-    pub fn capabilities(&self) -> IcarusServerCapabilities {
-        let config = self.config.get();
-        IcarusServerCapabilities {
-            tools: self.tools.iter().map(|(k, _)| k).collect(),
-            resources: self.resources.iter().map(|(k, _)| k).collect(),
-            icarus_version: env!("CARGO_PKG_VERSION").to_string(),
-            canister_id: config.canister_id,
-        }
-    }
 }
 
 // State should not be cloneable as it contains stable memory structures
