@@ -9,6 +9,7 @@ description = "ICP canister integration for Icarus MCP servers"
 
 [dependencies]
 icarus-core = { workspace = true }
+icarus-derive = { workspace = true }
 rmcp = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }

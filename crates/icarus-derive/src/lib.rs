@@ -158,35 +158,141 @@ pub fn icarus_tools(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Attribute macro for individual tool methods
+/// Usage: #[icarus_tool("Tool description")]
+/// 
+/// This attribute marks functions as tools and stores their description.
+/// The icarus_module macro will collect these to generate metadata.
 #[proc_macro_attribute]
 pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as syn::ItemFn);
     
-    // Parse attributes using parse_nested_meta
-    let mut tool_name = input_fn.sig.ident.to_string();
-    let mut is_query = false;
-    let parser = syn::meta::parser(|meta| {
-        if meta.path.is_ident("name") {
-            let value: syn::LitStr = meta.value()?.parse()?;
-            tool_name = value.value();
-            Ok(())
-        } else if meta.path.is_ident("is_query") {
-            let value: syn::LitBool = meta.value()?.parse()?;
-            is_query = value.value();
-            Ok(())
-        } else {
-            Err(meta.error("unsupported attribute"))
-        }
-    });
+    // Parse the description from the attribute
+    let description = if attr.is_empty() {
+        format!("{} tool", input_fn.sig.ident)
+    } else {
+        let lit_str = parse_macro_input!(attr as syn::LitStr);
+        lit_str.value()
+    };
     
-    let _ = parse_macro_input!(attr with parser);
-    
-    // For now, just pass through the function as-is
-    // The actual serialization handling would be done by the framework
-    // when integrating with the canister and MCP bridge
+    // Preserve the function with the description as a doc comment
+    // The module macro will look for this pattern
     let expanded = quote! {
+        #[doc = #description]
         #input_fn
     };
     
     TokenStream::from(expanded)
 }
+
+/// Module-level attribute macro that collects all icarus_tool functions
+/// and generates the get_metadata query function automatically.
+/// 
+/// Usage:
+/// ```
+/// #[icarus_module(name = "my-server", version = "1.0.0")]
+/// mod my_module {
+///     #[update]
+///     #[icarus_tool("Store data")]
+///     pub fn store(data: String) -> Result<(), String> { ... }
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(item as syn::ItemMod);
+    
+    // Parse name and version from attributes manually
+    let mut name = None;
+    let mut version = None;
+    
+    // Parse the attribute tokens to extract name and version
+    let attr_str = attr.to_string();
+    if attr_str.contains("name") {
+        if let Some(start) = attr_str.find("name = \"") {
+            let start = start + 8;
+            if let Some(end) = attr_str[start..].find("\"") {
+                name = Some(attr_str[start..start+end].to_string());
+            }
+        }
+    }
+    
+    if attr_str.contains("version") {
+        if let Some(start) = attr_str.find("version = \"") {
+            let start = start + 11;
+            if let Some(end) = attr_str[start..].find("\"") {
+                version = Some(attr_str[start..start+end].to_string());
+            }
+        }
+    }
+    
+    let name = name.unwrap_or_else(|| "icarus-server".to_string());
+    let version = version.unwrap_or_else(|| "1.0.0".to_string());
+    
+    // Process the module to collect tools and generate metadata
+    let expanded = tools::expand_icarus_module(name, version, input);
+    TokenStream::from(expanded)
+}
+
+/// Crate-level attribute macro that scans for all icarus_tool functions
+/// and generates the get_metadata query function automatically.
+/// 
+/// Usage:
+/// ```
+/// #![icarus_canister(name = "my-server", version = "1.0.0")]
+/// 
+/// #[update]
+/// #[icarus_tool("Store data")]
+/// pub fn store(data: String) -> Result<(), String> { ... }
+/// ```
+#[proc_macro_attribute]
+pub fn icarus_canister(attr: TokenStream, item: TokenStream) -> TokenStream {
+    // Parse the crate content
+    let input = parse_macro_input!(item as syn::File);
+    
+    // Parse name and version from attributes
+    let mut name = None;
+    let mut version = None;
+    
+    let attr_str = attr.to_string();
+    if attr_str.contains("name") {
+        if let Some(start) = attr_str.find("name = \"") {
+            let start = start + 8;
+            if let Some(end) = attr_str[start..].find("\"") {
+                name = Some(attr_str[start..start+end].to_string());
+            }
+        }
+    }
+    
+    if attr_str.contains("version") {
+        if let Some(start) = attr_str.find("version = \"") {
+            let start = start + 11;
+            if let Some(end) = attr_str[start..].find("\"") {
+                version = Some(attr_str[start..start+end].to_string());
+            }
+        }
+    }
+    
+    let name = name.unwrap_or_else(|| "icarus-server".to_string());
+    let version = version.unwrap_or_else(|| "1.0.0".to_string());
+    
+    // Process the crate to collect tools and generate metadata
+    let expanded = tools::expand_icarus_canister(name, version, input);
+    TokenStream::from(expanded)
+}
+
+// Helper function to extract type as string
+fn extract_type_string(ty: &syn::Type) -> String {
+    quote!(#ty).to_string()
+}
+
+// Helper function to convert Rust types to JSON schema types
+fn rust_type_to_json_type(rust_type: &str) -> &'static str {
+    match rust_type {
+        s if s.contains("String") || s.contains("&str") => "string",
+        s if s.contains("i32") || s.contains("i64") || s.contains("u32") || s.contains("u64") || s.contains("usize") => "integer",
+        s if s.contains("f32") || s.contains("f64") => "number",
+        s if s.contains("bool") => "boolean",
+        s if s.contains("Vec<") => "array",
+        _ => "string", // Default to string for unknown types
+    }
+}
+

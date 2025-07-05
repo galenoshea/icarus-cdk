@@ -32,6 +32,7 @@ tracing = "0.1"
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
+linkme = "0.3"
 
 # Internal dependencies
 icarus-core = { path = "crates/icarus-core", version = "0.1.0" }

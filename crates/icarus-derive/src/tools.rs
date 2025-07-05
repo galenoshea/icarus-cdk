@@ -4,7 +4,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{ItemImpl, ImplItem, FnArg, Pat, Type};
+use syn::{ItemImpl, ImplItem, FnArg, Pat, Type, ItemMod, Item, File, ItemFn};
 
 pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
     let self_ty = &input.self_ty;
@@ -245,5 +245,282 @@ fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, param
                 }).to_string()
             }
         }
+    }
+}
+
+/// Expand a module marked with #[icarus_module] to automatically generate metadata
+pub fn expand_icarus_module(name: String, version: String, mut input: ItemMod) -> TokenStream {
+    let mod_name = &input.ident;
+    let mod_vis = &input.vis;
+    
+    // Ensure the module has content
+    let content = match &mut input.content {
+        Some((_, items)) => items,
+        None => {
+            // If module has no body, just return it unchanged
+            return quote! { #input };
+        }
+    };
+    
+    // Collect all functions marked with #[icarus_tool]
+    let mut tools = Vec::new();
+    let mut functions_to_export = Vec::new();
+    
+    for item in content.iter() {
+        if let Item::Fn(func) = item {
+            // Check if function has both a canister attribute and icarus_tool
+            let has_update = func.attrs.iter().any(|attr| attr.path().is_ident("update"));
+            let has_query = func.attrs.iter().any(|attr| attr.path().is_ident("query"));
+            
+            if has_update || has_query {
+                // Clone the function to export at crate level
+                let mut exported_func = func.clone();
+                
+                // Look for the doc comment that icarus_tool generates
+                let description = func.attrs.iter()
+                    .find_map(|attr| {
+                        if attr.path().is_ident("doc") {
+                            attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| format!("{} function", func.sig.ident));
+                
+                // Extract function information
+                let fn_name = &func.sig.ident;
+                let is_query = has_query;
+                
+                // Extract parameters
+                let params: Vec<_> = func.sig.inputs.iter()
+                    .filter_map(|arg| {
+                        if let FnArg::Typed(pat_type) = arg {
+                            if let Pat::Ident(ident) = &*pat_type.pat {
+                                Some((ident.ident.clone(), pat_type.ty.clone()))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                
+                // Extract return type
+                let ret_type = match &func.sig.output {
+                    syn::ReturnType::Default => quote! { () },
+                    syn::ReturnType::Type(_, ty) => quote! { #ty },
+                };
+                
+                tools.push((fn_name.clone(), description, params, ret_type, is_query));
+                functions_to_export.push(exported_func);
+            }
+        }
+    }
+    
+    // Generate tool metadata entries
+    let tool_entries: Vec<_> = tools.iter().map(|(fn_name, desc, params, _ret_type, _is_query)| {
+        let mut properties = quote! {};
+        let mut required = Vec::new();
+        
+        for (param_name, param_type) in params {
+            let param_name_str = param_name.to_string();
+            let is_optional = quote!(#param_type).to_string().starts_with("Option <");
+            let json_type = type_to_json_schema(&quote!(#param_type).to_string());
+            
+            properties = quote! {
+                #properties
+                properties.insert(
+                    #param_name_str.to_string(),
+                    ::serde_json::json!({ "type": #json_type })
+                );
+            };
+            
+            if !is_optional {
+                required.push(param_name_str);
+            }
+        }
+        
+        let required_array = if required.is_empty() {
+            quote! { Vec::<&str>::new() }
+        } else {
+            quote! { vec![#(#required),*] }
+        };
+        
+        quote! {
+            {
+                let mut properties = ::serde_json::Map::new();
+                #properties
+                
+                ::serde_json::json!({
+                    "name": stringify!(#fn_name),
+                    "description": #desc,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": #required_array
+                    }
+                })
+            }
+        }
+    }).collect();
+    
+    // Generate the get_metadata function
+    let get_metadata_fn = quote! {
+        /// Get canister metadata for tool discovery
+        #[::ic_cdk_macros::query]
+        pub fn get_metadata() -> String {
+            let tools = vec![#(#tool_entries),*];
+            
+            ::serde_json::json!({
+                "name": #name,
+                "version": #version,
+                "tools": tools
+            }).to_string()
+        }
+    };
+    
+    // Return both the exported functions and the get_metadata function at crate level
+    quote! {
+        // Export tool functions at crate level for IC CDK
+        #(#functions_to_export)*
+        
+        // Export the metadata function
+        #get_metadata_fn
+    }
+}
+
+/// Convert Rust type string to JSON Schema type
+fn type_to_json_schema(rust_type: &str) -> &'static str {
+    match rust_type {
+        s if s.contains("String") || s.contains("& str") => "string",
+        s if s.contains("i32") || s.contains("i64") || s.contains("u32") || s.contains("u64") || s.contains("usize") => "integer",
+        s if s.contains("f32") || s.contains("f64") => "number",
+        s if s.contains("bool") => "boolean",
+        s if s.contains("Vec <") => "array",
+        _ => "string", // Default to string for unknown types
+    }
+}
+
+/// Expand a crate marked with #[icarus_canister] to automatically generate metadata
+pub fn expand_icarus_canister(name: String, version: String, mut input: File) -> TokenStream {
+    // Collect all functions marked with #[icarus_tool]
+    let mut tools = Vec::new();
+    
+    // Scan all items in the file
+    for item in &input.items {
+        if let Item::Fn(func) = item {
+            // Check if function has both a canister attribute and icarus_tool
+            let has_update = func.attrs.iter().any(|attr| attr.path().is_ident("update"));
+            let has_query = func.attrs.iter().any(|attr| attr.path().is_ident("query"));
+            
+            if has_update || has_query {
+                // Look for the icarus_tool doc comment
+                let description = func.attrs.iter()
+                    .find_map(|attr| {
+                        if attr.path().is_ident("doc") {
+                            attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap_or_else(|| format!("{} function", func.sig.ident));
+                
+                // Extract function information
+                let fn_name = &func.sig.ident;
+                let is_query = has_query;
+                
+                // Extract parameters
+                let params: Vec<_> = func.sig.inputs.iter()
+                    .filter_map(|arg| {
+                        if let FnArg::Typed(pat_type) = arg {
+                            if let Pat::Ident(ident) = &*pat_type.pat {
+                                Some((ident.ident.clone(), pat_type.ty.clone()))
+                            } else {
+                                None
+                            }
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+                
+                tools.push((fn_name.clone(), description, params, is_query));
+            }
+        }
+    }
+    
+    // Generate tool metadata entries
+    let tool_entries: Vec<_> = tools.iter().map(|(fn_name, desc, params, _is_query)| {
+        let mut properties = quote! {};
+        let mut required = Vec::new();
+        
+        for (param_name, param_type) in params {
+            let param_name_str = param_name.to_string();
+            let is_optional = quote!(#param_type).to_string().starts_with("Option <");
+            let json_type = type_to_json_schema(&quote!(#param_type).to_string());
+            
+            properties = quote! {
+                #properties
+                properties.insert(
+                    #param_name_str.to_string(),
+                    ::serde_json::json!({ "type": #json_type })
+                );
+            };
+            
+            if !is_optional {
+                required.push(param_name_str);
+            }
+        }
+        
+        let required_array = if required.is_empty() {
+            quote! { Vec::<&str>::new() }
+        } else {
+            quote! { vec![#(#required),*] }
+        };
+        
+        quote! {
+            {
+                let mut properties = ::serde_json::Map::new();
+                #properties
+                
+                ::serde_json::json!({
+                    "name": stringify!(#fn_name),
+                    "description": #desc,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": #required_array
+                    }
+                })
+            }
+        }
+    }).collect();
+    
+    // Generate the get_metadata function
+    let get_metadata_fn = quote! {
+        /// Get canister metadata for tool discovery
+        #[::ic_cdk_macros::query]
+        pub fn get_metadata() -> String {
+            let tools = vec![#(#tool_entries),*];
+            
+            ::serde_json::json!({
+                "name": #name,
+                "version": #version,
+                "tools": tools
+            }).to_string()
+        }
+    };
+    
+    // Add the get_metadata function to the crate items
+    let metadata_fn_item: ItemFn = syn::parse2(get_metadata_fn.clone()).unwrap();
+    input.items.push(Item::Fn(metadata_fn_item));
+    
+    // Return the modified crate
+    let attrs = &input.attrs;
+    let items = &input.items;
+    quote! {
+        #(#attrs)*
+        #(#items)*
     }
 }
