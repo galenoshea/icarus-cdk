@@ -189,46 +189,22 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// 
 /// Usage:
 /// ```
-/// #[icarus_module(name = "my-server", version = "1.0.0")]
+/// #[icarus_module]
 /// mod my_module {
 ///     #[update]
 ///     #[icarus_tool("Store data")]
 ///     pub fn store(data: String) -> Result<(), String> { ... }
 /// }
 /// ```
+/// 
+/// The name and version are automatically taken from Cargo.toml
 #[proc_macro_attribute]
-pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn icarus_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as syn::ItemMod);
     
-    // Parse name and version from attributes manually
-    let mut name = None;
-    let mut version = None;
-    
-    // Parse the attribute tokens to extract name and version
-    let attr_str = attr.to_string();
-    if attr_str.contains("name") {
-        if let Some(start) = attr_str.find("name = \"") {
-            let start = start + 8;
-            if let Some(end) = attr_str[start..].find("\"") {
-                name = Some(attr_str[start..start+end].to_string());
-            }
-        }
-    }
-    
-    if attr_str.contains("version") {
-        if let Some(start) = attr_str.find("version = \"") {
-            let start = start + 11;
-            if let Some(end) = attr_str[start..].find("\"") {
-                version = Some(attr_str[start..start+end].to_string());
-            }
-        }
-    }
-    
-    let name = name.unwrap_or_else(|| "icarus-server".to_string());
-    let version = version.unwrap_or_else(|| "1.0.0".to_string());
-    
     // Process the module to collect tools and generate metadata
-    let expanded = tools::expand_icarus_module(name, version, input);
+    // Name and version will be read from env! macros in the generated code
+    let expanded = tools::expand_icarus_module(input);
     TokenStream::from(expanded)
 }
 
@@ -244,38 +220,12 @@ pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// pub fn store(data: String) -> Result<(), String> { ... }
 /// ```
 #[proc_macro_attribute]
-pub fn icarus_canister(attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn icarus_canister(_attr: TokenStream, item: TokenStream) -> TokenStream {
     // Parse the crate content
     let input = parse_macro_input!(item as syn::File);
     
-    // Parse name and version from attributes
-    let mut name = None;
-    let mut version = None;
-    
-    let attr_str = attr.to_string();
-    if attr_str.contains("name") {
-        if let Some(start) = attr_str.find("name = \"") {
-            let start = start + 8;
-            if let Some(end) = attr_str[start..].find("\"") {
-                name = Some(attr_str[start..start+end].to_string());
-            }
-        }
-    }
-    
-    if attr_str.contains("version") {
-        if let Some(start) = attr_str.find("version = \"") {
-            let start = start + 11;
-            if let Some(end) = attr_str[start..].find("\"") {
-                version = Some(attr_str[start..start+end].to_string());
-            }
-        }
-    }
-    
-    let name = name.unwrap_or_else(|| "icarus-server".to_string());
-    let version = version.unwrap_or_else(|| "1.0.0".to_string());
-    
     // Process the crate to collect tools and generate metadata
-    let expanded = tools::expand_icarus_canister(name, version, input);
+    let expanded = tools::expand_icarus_canister(input);
     TokenStream::from(expanded)
 }
 

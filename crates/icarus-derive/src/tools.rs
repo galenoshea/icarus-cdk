@@ -249,7 +249,7 @@ fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, param
 }
 
 /// Expand a module marked with #[icarus_module] to automatically generate metadata
-pub fn expand_icarus_module(name: String, version: String, mut input: ItemMod) -> TokenStream {
+pub fn expand_icarus_module(mut input: ItemMod) -> TokenStream {
     let mod_name = &input.ident;
     let mod_vis = &input.vis;
     
@@ -373,8 +373,8 @@ pub fn expand_icarus_module(name: String, version: String, mut input: ItemMod) -
             let tools = vec![#(#tool_entries),*];
             
             ::serde_json::json!({
-                "name": #name,
-                "version": #version,
+                "name": env!("CARGO_PKG_NAME"),
+                "version": env!("CARGO_PKG_VERSION"),
                 "tools": tools
             }).to_string()
         }
@@ -403,7 +403,7 @@ fn type_to_json_schema(rust_type: &str) -> &'static str {
 }
 
 /// Expand a crate marked with #[icarus_canister] to automatically generate metadata
-pub fn expand_icarus_canister(name: String, version: String, mut input: File) -> TokenStream {
+pub fn expand_icarus_canister(mut input: File) -> TokenStream {
     // Collect all functions marked with #[icarus_tool]
     let mut tools = Vec::new();
     
@@ -505,8 +505,8 @@ pub fn expand_icarus_canister(name: String, version: String, mut input: File) ->
             let tools = vec![#(#tool_entries),*];
             
             ::serde_json::json!({
-                "name": #name,
-                "version": #version,
+                "name": env!("CARGO_PKG_NAME"),
+                "version": env!("CARGO_PKG_VERSION"),
                 "tools": tools
             }).to_string()
         }
