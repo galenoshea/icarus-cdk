@@ -99,7 +99,21 @@ pub fn icarus_server(args: TokenStream, input: TokenStream) -> TokenStream {
 }
 
 /// Derive macro for ICP storable types
-#[proc_macro_derive(IcarusStorable)]
+/// 
+/// # Examples
+/// ```
+/// #[derive(IcarusStorable)]
+/// struct MyData { ... } // Uses default 1MB bound
+/// 
+/// #[derive(IcarusStorable)]
+/// #[icarus_storable(unbounded)]
+/// struct LargeData { ... } // Uses unbounded storage
+/// 
+/// #[derive(IcarusStorable)]
+/// #[icarus_storable(max_size = "2MB")]
+/// struct CustomData { ... } // Uses custom 2MB bound
+/// ```
+#[proc_macro_derive(IcarusStorable, attributes(icarus_storable))]
 pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let struct_name = &input.ident;
@@ -107,43 +121,56 @@ pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
     // Extract generics if any
     let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     
-    // For now, assume we're working with structs and use Candid serialization
+    // Parse attributes
+    let mut unbounded = false;
+    let mut max_size_bytes = 1024 * 1024; // 1MB default
+    
+    for attr in &input.attrs {
+        if attr.path().is_ident("icarus_storable") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("unbounded") {
+                    unbounded = true;
+                    Ok(())
+                } else if meta.path.is_ident("max_size") {
+                    let value = meta.value()?;
+                    let lit_str: syn::LitStr = value.parse()?;
+                    let size_str = lit_str.value();
+                    max_size_bytes = parse_size_string(&size_str);
+                    Ok(())
+                } else {
+                    Err(meta.error("unsupported icarus_storable attribute"))
+                }
+            }).unwrap_or_else(|e| panic!("Failed to parse icarus_storable attribute: {}", e));
+        }
+    }
+    
+    let bound = if unbounded {
+        quote! { ic_stable_structures::storable::Bound::Unbounded }
+    } else {
+        quote! { 
+            ic_stable_structures::storable::Bound::Bounded {
+                max_size: #max_size_bytes,
+                is_fixed_size: false,
+            }
+        }
+    };
+    
+    // Generate implementation
     let expanded = quote! {
         impl #impl_generics ic_stable_structures::Storable for #struct_name #ty_generics #where_clause {
             fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
-                // Note: Using expect here is acceptable as Storable trait doesn't support errors
-                // Ensure your types are always serializable
                 std::borrow::Cow::Owned(
                     candid::encode_one(self).expect("Failed to encode to Candid")
                 )
             }
             
             fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
-                // Note: Using expect here is acceptable as Storable trait doesn't support errors
                 candid::decode_one(&bytes).expect("Failed to decode from Candid")
             }
             
-            const BOUND: ic_stable_structures::storable::Bound = 
-                ic_stable_structures::storable::Bound::Bounded {
-                    max_size: 1024 * 1024, // 1MB default max size
-                    is_fixed_size: false,
-                };
+            const BOUND: ic_stable_structures::storable::Bound = #bound;
         }
         
-        impl #impl_generics icarus_core::state::Storable for #struct_name #ty_generics #where_clause {
-            fn to_bytes(&self) -> icarus_core::error::Result<Vec<u8>> {
-                candid::encode_one(self)
-                    .map_err(|e| icarus_core::error::IcarusError::Canister(e.to_string()))
-            }
-            
-            fn from_bytes(bytes: &[u8]) -> icarus_core::error::Result<Self> {
-                candid::decode_one(bytes)
-                    .map_err(|e| icarus_core::error::IcarusError::Canister(e.to_string()))
-            }
-            
-            const MAX_SIZE: u32 = 1024 * 1024; // 1MB
-            const FIXED_SIZE: Option<u32> = None;
-        }
     };
     
     TokenStream::from(expanded)
@@ -243,6 +270,21 @@ fn rust_type_to_json_type(rust_type: &str) -> &'static str {
         s if s.contains("bool") => "boolean",
         s if s.contains("Vec<") => "array",
         _ => "string", // Default to string for unknown types
+    }
+}
+
+// Helper function to parse size strings like "1MB", "2KB", etc.
+fn parse_size_string(size: &str) -> u32 {
+    let size = size.trim();
+    if let Some(num_str) = size.strip_suffix("MB") {
+        num_str.trim().parse::<u32>().unwrap_or(1) * 1024 * 1024
+    } else if let Some(num_str) = size.strip_suffix("KB") {
+        num_str.trim().parse::<u32>().unwrap_or(1) * 1024
+    } else if let Some(num_str) = size.strip_suffix("B") {
+        num_str.trim().parse::<u32>().unwrap_or(1024)
+    } else {
+        // Try to parse as raw bytes
+        size.parse::<u32>().unwrap_or(1024 * 1024)
     }
 }
 

@@ -107,17 +107,25 @@ impl StableCounter {
     }
 }
 
-/// Macro to declare stable storage
+/// Simplified macro to declare stable storage  
+/// 
+/// This macro provides a cleaner syntax for declaring stable storage.
+/// For now, it uses the existing init_memory! macro under the hood.
+/// 
+/// # Example
+/// ```
+/// stable_storage! {
+///     MEMORIES: StableBTreeMap<String, MemoryEntry> = memory_id!(0);
+///     COUNTER: u64 = 0;
+/// }
+/// ```
 #[macro_export]
 macro_rules! stable_storage {
     (
-        $($name:ident: StableMap<$key:ty, $value:ty> = $memory_id:expr),* $(,)?
+        $($name:ident: $type:ty = $init:expr;)*
     ) => {
-        thread_local! {
-            $(
-                static $name: $crate::storage::StableMap<$key, $value> = 
-                    $crate::storage::StableMap::new($memory_id);
-            )*
+        $crate::init_memory! {
+            $($name: $type = $init;)*
         }
     };
 }

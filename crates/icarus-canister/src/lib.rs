@@ -6,6 +6,7 @@
 pub mod memory;
 pub mod state;
 pub mod storage;
+pub mod stable_ext;
 pub mod tools;
 pub mod endpoints;
 pub mod lifecycle;
@@ -13,6 +14,7 @@ pub mod macros;
 
 pub use state::IcarusCanisterState;
 pub use storage::{StableMap, StableCounter};
+pub use stable_ext::{StableBTreeMapExt, StableCellExt};
 pub use endpoints::{
     icarus_metadata,
     http_request,
@@ -21,5 +23,5 @@ pub use endpoints::{
 };
 pub use lifecycle::{init, post_upgrade, pre_upgrade};
 
-// Re-export the icarus_tool, icarus_module, and icarus_canister attributes from icarus-derive
-pub use icarus_derive::{icarus_tool, icarus_module, icarus_canister};
+// Re-export the icarus_tool, icarus_module, icarus_canister, and IcarusStorable from icarus-derive
+pub use icarus_derive::{icarus_tool, icarus_module, icarus_canister, IcarusStorable};
