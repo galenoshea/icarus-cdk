@@ -3,9 +3,6 @@ members = [
     "crates/icarus-core",
     "crates/icarus-derive", 
     "crates/icarus-canister",
-    "crates/icarus-types",
-    "crates/icarus",
-    # "crates/icarus-test", # Temporarily disabled - needs update for new protocol types
 ]
 resolver = "2"
 
@@ -38,8 +35,6 @@ linkme = "0.3"
 icarus-core = { path = "crates/icarus-core", version = "0.1.0" }
 icarus-derive = { path = "crates/icarus-derive", version = "0.1.0" }
 icarus-canister = { path = "crates/icarus-canister", version = "0.1.0" }
-icarus-types = { path = "crates/icarus-types", version = "0.1.0" }
-# icarus-test = { path = "crates/icarus-test", version = "0.1.0" } # Temporarily disabled
 
 [profile.release]
 opt-level = 3
