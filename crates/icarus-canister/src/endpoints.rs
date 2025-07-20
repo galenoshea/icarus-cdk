@@ -5,7 +5,7 @@
 
 use crate::state::STATE;
 use icarus_core::protocol::{IcarusMetadata, ToolMetadata};
-use candid::{CandidType, Deserialize};
+use candid::{CandidType, Deserialize, Principal};
 
 /// Query canister metadata for tool discovery
 pub fn icarus_metadata() -> IcarusMetadata {
@@ -155,4 +155,9 @@ pub fn http_request(_req: HttpRequest) -> HttpResponse {
         ],
         body: html.into_bytes(),
     }
+}
+
+/// Get the current owner of the canister
+pub fn get_owner() -> Principal {
+    crate::state::get_owner()
 }

@@ -19,6 +19,7 @@ pub struct ServerConfig {
     pub name: String,
     pub version: String,
     pub canister_id: Principal,
+    pub owner: Principal,
 }
 
 /// State for individual tools
@@ -112,7 +113,42 @@ impl IcarusCanisterState {
         })
     }
     
+    
+    /// Get the canister owner principal
+    pub fn get_owner(&self) -> Principal {
+        self.config.get().owner
+    }
+    
 }
 
 // State should not be cloneable as it contains stable memory structures
 // Use STATE.with() to access the global state instead
+
+/// Access control functions
+
+/// Assert that the caller is the canister owner
+pub fn assert_owner() {
+    let caller = ic_cdk::caller();
+    IcarusCanisterState::with(|state| {
+        let owner = state.get_owner();
+        if caller != owner {
+            ic_cdk::trap(&format!(
+                "Access denied: caller {} is not the owner {}",
+                caller.to_text(),
+                owner.to_text()
+            ));
+        }
+    });
+}
+
+/// Check if the caller is the canister owner without trapping
+pub fn is_owner(caller: Principal) -> bool {
+    IcarusCanisterState::with(|state| {
+        caller == state.get_owner()
+    })
+}
+
+/// Get the current owner principal
+pub fn get_owner() -> Principal {
+    IcarusCanisterState::with(|state| state.get_owner())
+}

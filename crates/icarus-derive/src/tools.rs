@@ -21,6 +21,7 @@ pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
                     let method_name = &method.sig.ident;
                     let tool_name = extract_tool_name(attr).unwrap_or_else(|| method_name.to_string());
                     let is_query = extract_is_query(attr);
+                    let is_public = extract_is_public(attr);
                     let is_async = method.sig.asyncness.is_some();
                     
                     // Determine if this is a query based on receiver or attribute
@@ -68,10 +69,10 @@ pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
                     
                     // Generate Candid method based on query/update and async/sync
                     let candid_method = match (is_query, is_async) {
-                        (true, true) => generate_async_query_method(&tool_name, method_name, &params),
-                        (true, false) => generate_query_method(&tool_name, method_name, &params),
-                        (false, true) => generate_async_update_method(&tool_name, method_name, &params),
-                        (false, false) => generate_update_method(&tool_name, method_name, &params),
+                        (true, true) => generate_async_query_method(&tool_name, method_name, &params, is_public),
+                        (true, false) => generate_query_method(&tool_name, method_name, &params, is_public),
+                        (false, true) => generate_async_update_method(&tool_name, method_name, &params, is_public),
+                        (false, false) => generate_update_method(&tool_name, method_name, &params, is_public),
                     };
                     
                     candid_methods.push(candid_method);
@@ -96,7 +97,7 @@ pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
     }
 }
 
-fn generate_query_method(tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)]) -> TokenStream {
+fn generate_query_method(_tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)], is_public: bool) -> TokenStream {
     // Generate parameter list for Candid method
     let param_list = params.iter().map(|(name, ty)| {
         quote! { #name: #ty }
@@ -107,10 +108,21 @@ fn generate_query_method(tool_name: &str, method_name: &syn::Ident, params: &[(s
         quote! { #name }
     });
     
+    let access_check = if is_public {
+        quote! {}
+    } else {
+        quote! {
+            // Verify caller is the canister owner
+            icarus_canister::assert_owner();
+        }
+    };
+
     quote! {
         // Query methods must be synchronous in ICP
         #[ic_cdk::query]
         fn #method_name(#(#param_list),*) -> String {
+            #access_check
+            
             SERVER_INSTANCE.with(|s| {
                 let server = s.borrow();
                 let server = server.as_ref().expect("Server not initialized");
@@ -127,7 +139,7 @@ fn generate_query_method(tool_name: &str, method_name: &syn::Ident, params: &[(s
     }
 }
 
-fn generate_update_method(tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)]) -> TokenStream {
+fn generate_update_method(_tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)], is_public: bool) -> TokenStream {
     // Generate parameter list for Candid method
     let param_list = params.iter().map(|(name, ty)| {
         quote! { #name: #ty }
@@ -138,10 +150,21 @@ fn generate_update_method(tool_name: &str, method_name: &syn::Ident, params: &[(
         quote! { #name }
     });
     
+    let access_check = if is_public {
+        quote! {}
+    } else {
+        quote! {
+            // Verify caller is the canister owner
+            icarus_canister::assert_owner();
+        }
+    };
+
     quote! {
         // Sync update method
         #[ic_cdk::update]
         fn #method_name(#(#param_list),*) -> String {
+            #access_check
+            
             SERVER_INSTANCE.with(|s| {
                 let mut server = s.borrow_mut();
                 let server = server.as_mut().expect("Server not initialized");
@@ -194,8 +217,29 @@ fn extract_is_query(attr: &syn::Attribute) -> Option<bool> {
     is_query
 }
 
+fn extract_is_public(attr: &syn::Attribute) -> bool {
+    // Parse the attribute to extract public = true/false, default false
+    let mut is_public = false;
+    
+    let _ = attr.parse_nested_meta(|meta| {
+        if meta.path.is_ident("public") {
+            if let Ok(value) = meta.value() {
+                if let Ok(lit_bool) = value.parse::<syn::LitBool>() {
+                    is_public = lit_bool.value();
+                }
+            } else {
+                // If just "public" without value, assume true
+                is_public = true;
+            }
+        }
+        Ok(())
+    });
+    
+    is_public
+}
+
 // Generate async query method - This will error at compile time with helpful message
-fn generate_async_query_method(tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)]) -> TokenStream {
+fn generate_async_query_method(_tool_name: &str, method_name: &syn::Ident, _params: &[(syn::Ident, Box<Type>)], _is_public: bool) -> TokenStream {
     quote! {
         // This will generate a compile error with a helpful message
         compile_error!(concat!(
@@ -207,7 +251,7 @@ fn generate_async_query_method(tool_name: &str, method_name: &syn::Ident, params
 }
 
 // Generate async update method
-fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)]) -> TokenStream {
+fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, params: &[(syn::Ident, Box<Type>)], is_public: bool) -> TokenStream {
     // Generate parameter list for Candid method
     let param_list = params.iter().map(|(name, ty)| {
         quote! { #name: #ty }
@@ -218,10 +262,21 @@ fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, param
         quote! { #name }
     });
     
+    let access_check = if is_public {
+        quote! {}
+    } else {
+        quote! {
+            // Verify caller is the canister owner
+            icarus_canister::assert_owner();
+        }
+    };
+
     quote! {
         // Async update method - IC supports async updates
         #[ic_cdk::update]
         async fn #method_name(#(#param_list),*) -> String {
+            #access_check
+            
             // We need to extract the future before awaiting to avoid RefCell issues
             let fut = SERVER_INSTANCE.with(|s| {
                 let mut server = s.borrow_mut();
