@@ -80,6 +80,7 @@ impl Default for SessionConfig {
 /// In-memory session manager for testing
 pub struct MemorySessionManager {
     sessions: HashMap<String, Session>,
+    #[allow(dead_code)]
     config: SessionConfig,
     #[cfg(test)]
     mock_time: Option<u64>,

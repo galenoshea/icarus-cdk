@@ -14,8 +14,11 @@ license = "Apache-2.0"
 repository = "https://github.com/icarus-sdk/icarus-sdk"
 
 [workspace.dependencies]
-# External dependencies
+# External dependencies  
 rmcp = "0.2.1"
+# Override problematic time dependencies to disable wasm features
+chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
+web-time = { version = "1.1.0", default-features = false }
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"
 ic-stable-structures = "0.6"

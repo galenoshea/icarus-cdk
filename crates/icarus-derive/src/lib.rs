@@ -98,6 +98,241 @@ pub fn icarus_server(args: TokenStream, input: TokenStream) -> TokenStream {
     server::expand_icarus_server(args, input).into()
 }
 
+/// Derive macro for common Icarus type patterns
+/// 
+/// This is a convenience macro that combines IcarusStorable with sensible defaults.
+/// You still need to derive the standard traits manually.
+/// 
+/// # Examples
+/// ```
+/// #[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusType)]
+/// struct MemoryEntry {
+///     id: String,
+///     content: String,
+///     created_at: u64,
+/// }
+/// ```
+/// 
+/// This is equivalent to:
+/// ```
+/// #[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusStorable)]
+/// #[icarus_storable(unbounded)]
+/// struct MemoryEntry { ... }
+/// ```
+#[proc_macro_derive(IcarusType, attributes(icarus_storable))]
+pub fn derive_icarus_type(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let struct_name = &input.ident;
+    
+    // Extract generics if any
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
+    
+    // Parse attributes for storage configuration
+    let mut unbounded = true; // Default to unbounded for convenience
+    let mut max_size_bytes = 1024 * 1024; // 1MB default
+    
+    for attr in &input.attrs {
+        if attr.path().is_ident("icarus_storable") {
+            attr.parse_nested_meta(|meta| {
+                if meta.path.is_ident("unbounded") {
+                    unbounded = true;
+                    Ok(())
+                } else if meta.path.is_ident("bounded") {
+                    unbounded = false;
+                    Ok(())
+                } else if meta.path.is_ident("max_size") {
+                    let value = meta.value()?;
+                    let lit_str: syn::LitStr = value.parse()?;
+                    let size_str = lit_str.value();
+                    max_size_bytes = parse_size_string(&size_str);
+                    unbounded = false;
+                    Ok(())
+                } else {
+                    Ok(()) // Ignore other attributes
+                }
+            }).unwrap_or_else(|_| {}); // Ignore parse errors
+        }
+    }
+    
+    let bound = if unbounded {
+        quote! { ic_stable_structures::storable::Bound::Unbounded }
+    } else {
+        quote! { 
+            ic_stable_structures::storable::Bound::Bounded {
+                max_size: #max_size_bytes,
+                is_fixed_size: false,
+            }
+        }
+    };
+    
+    // Generate all the common trait implementations
+    let expanded = quote! {
+        // Note: We expect the user to add #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+        // This macro just adds the IcarusStorable functionality
+        
+        // Implement Storable for ICP
+        impl #impl_generics ic_stable_structures::Storable for #struct_name #ty_generics #where_clause {
+            fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+                std::borrow::Cow::Owned(
+                    candid::encode_one(self).expect("Failed to encode to Candid")
+                )
+            }
+            
+            fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+                candid::decode_one(&bytes).expect("Failed to decode from Candid")
+            }
+            
+            const BOUND: ic_stable_structures::storable::Bound = #bound;
+        }
+    };
+    
+    TokenStream::from(expanded)
+}
+
+/// Derive macro for simplified storage declaration
+/// 
+/// Generates stable storage declarations from a simple struct definition.
+/// Automatically assigns memory IDs and handles initialization.
+/// 
+/// # Examples
+/// ```
+/// #[derive(IcarusStorage)]
+/// struct Storage {
+///     memories: StableBTreeMap<String, MemoryEntry>,
+///     counter: u64,
+///     users: StableBTreeMap<Principal, User>,
+/// }
+/// ```
+/// 
+/// This generates:
+/// - Thread-local storage declarations
+/// - Memory manager initialization  
+/// - Accessor methods for each field
+#[proc_macro_derive(IcarusStorage)]
+pub fn derive_icarus_storage(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    
+    if let syn::Data::Struct(data_struct) = &input.data {
+        if let syn::Fields::Named(fields_named) = &data_struct.fields {
+            let struct_name = &input.ident;
+            let mut storage_declarations = vec![];
+            let mut accessor_methods = vec![];
+            let mut memory_id = 0u8;
+            
+            for field in &fields_named.named {
+                if let Some(field_name) = &field.ident {
+                    let field_type = &field.ty;
+                    let field_name_upper = syn::Ident::new(
+                        &field_name.to_string().to_uppercase(), 
+                        field_name.span()
+                    );
+                    
+                    // Generate storage declaration based on field type
+                    let storage_decl = if is_stable_map_type(field_type) {
+                        quote! {
+                            #field_name_upper: #field_type = 
+                                ::ic_stable_structures::StableBTreeMap::init(
+                                    MEMORY_MANAGER.with(|m| m.borrow().get(
+                                        ::ic_stable_structures::memory_manager::MemoryId::new(#memory_id)
+                                    ))
+                                );
+                        }
+                    } else if is_stable_cell_type(field_type) {
+                        quote! {
+                            #field_name_upper: ::ic_stable_structures::StableCell<#field_type, ::ic_stable_structures::memory_manager::VirtualMemory<::ic_stable_structures::DefaultMemoryImpl>> = 
+                                ::ic_stable_structures::StableCell::init(
+                                    MEMORY_MANAGER.with(|m| m.borrow().get(
+                                        ::ic_stable_structures::memory_manager::MemoryId::new(#memory_id)
+                                    )),
+                                    Default::default()
+                                ).expect("Failed to initialize StableCell");
+                        }
+                    } else {
+                        // For simple types, wrap in StableCell
+                        quote! {
+                            #field_name_upper: ::ic_stable_structures::StableCell<#field_type, ::ic_stable_structures::memory_manager::VirtualMemory<::ic_stable_structures::DefaultMemoryImpl>> = 
+                                ::ic_stable_structures::StableCell::init(
+                                    MEMORY_MANAGER.with(|m| m.borrow().get(
+                                        ::ic_stable_structures::memory_manager::MemoryId::new(#memory_id)
+                                    )),
+                                    Default::default()
+                                ).expect("Failed to initialize StableCell");
+                        }
+                    };
+                    
+                    storage_declarations.push(storage_decl);
+                    
+                    // Generate accessor method
+                    let accessor = if is_stable_map_type(field_type) {
+                        quote! {
+                            pub fn #field_name() -> impl std::ops::Deref<Target = #field_type> {
+                                #field_name_upper.with(|storage| storage.borrow())
+                            }
+                        }
+                    } else {
+                        let setter_name = syn::Ident::new(
+                            &format!("{}_set", field_name), 
+                            field_name.span()
+                        );
+                        
+                        quote! {
+                            pub fn #field_name() -> #field_type 
+                            where 
+                                #field_type: Clone + Default
+                            {
+                                #field_name_upper.with(|cell| cell.borrow().get().clone())
+                            }
+                            
+                            pub fn #setter_name(value: #field_type) 
+                            where 
+                                #field_type: Clone
+                            {
+                                #field_name_upper.with(|cell| {
+                                    cell.borrow_mut().set(value)
+                                        .expect("Failed to set value in StableCell");
+                                });
+                            }
+                        }
+                    };
+                    
+                    accessor_methods.push(accessor);
+                    memory_id += 1;
+                }
+            }
+            
+            let expanded = quote! {
+                thread_local! {
+                    static MEMORY_MANAGER: ::std::cell::RefCell<
+                        ::ic_stable_structures::memory_manager::MemoryManager<
+                            ::ic_stable_structures::DefaultMemoryImpl
+                        >
+                    > = ::std::cell::RefCell::new(
+                        ::ic_stable_structures::memory_manager::MemoryManager::init(
+                            ::ic_stable_structures::DefaultMemoryImpl::default()
+                        )
+                    );
+                    
+                    #(static #storage_declarations)*
+                }
+                
+                impl #struct_name {
+                    #(#accessor_methods)*
+                }
+            };
+            
+            TokenStream::from(expanded)
+        } else {
+            syn::Error::new_spanned(&input, "IcarusStorage can only be used on structs with named fields")
+                .to_compile_error()
+                .into()
+        }
+    } else {
+        syn::Error::new_spanned(&input, "IcarusStorage can only be used on structs")
+            .to_compile_error()
+            .into()
+    }
+}
+
 /// Derive macro for ICP storable types
 /// 
 /// # Examples
@@ -226,12 +461,18 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// 
 /// The name and version are automatically taken from Cargo.toml
 #[proc_macro_attribute]
-pub fn icarus_module(_attr: TokenStream, item: TokenStream) -> TokenStream {
+pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as syn::ItemMod);
     
+    // Parse attributes
+    let module_config = if attr.is_empty() {
+        tools::ModuleConfig::default()
+    } else {
+        parse_macro_input!(attr as tools::ModuleConfig)
+    };
+    
     // Process the module to collect tools and generate metadata
-    // Name and version will be read from env! macros in the generated code
-    let expanded = tools::expand_icarus_module(input);
+    let expanded = tools::expand_icarus_module(input, module_config);
     TokenStream::from(expanded)
 }
 
@@ -257,11 +498,13 @@ pub fn icarus_canister(_attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 // Helper function to extract type as string
+#[allow(dead_code)]
 fn extract_type_string(ty: &syn::Type) -> String {
     quote!(#ty).to_string()
 }
 
 // Helper function to convert Rust types to JSON schema types
+#[allow(dead_code)]
 fn rust_type_to_json_type(rust_type: &str) -> &'static str {
     match rust_type {
         s if s.contains("String") || s.contains("&str") => "string",
@@ -271,6 +514,18 @@ fn rust_type_to_json_type(rust_type: &str) -> &'static str {
         s if s.contains("Vec<") => "array",
         _ => "string", // Default to string for unknown types
     }
+}
+
+// Helper function to check if a type is StableBTreeMap
+fn is_stable_map_type(ty: &syn::Type) -> bool {
+    let type_string = quote!(#ty).to_string();
+    type_string.contains("StableBTreeMap")
+}
+
+// Helper function to check if a type is StableCell
+fn is_stable_cell_type(ty: &syn::Type) -> bool {
+    let type_string = quote!(#ty).to_string();
+    type_string.contains("StableCell")
 }
 
 // Helper function to parse size strings like "1MB", "2KB", etc.

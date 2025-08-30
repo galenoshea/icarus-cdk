@@ -4,7 +4,7 @@
 
 use proc_macro2::TokenStream;
 use quote::quote;
-use syn::{ItemImpl, ImplItem, FnArg, Pat, Type, ItemMod, Item, File, ItemFn};
+use syn::{ItemImpl, ImplItem, FnArg, Pat, Type, ItemMod, Item, File, ItemFn, parse::Parse, parse::ParseStream};
 
 pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
     let self_ty = &input.self_ty;
@@ -127,13 +127,9 @@ fn generate_query_method(_tool_name: &str, method_name: &syn::Ident, params: &[(
                 let server = s.borrow();
                 let server = server.as_ref().expect("Server not initialized");
                 
-                // Call the sync method directly
-                match server.#method_name(#(#param_pass),*) {
-                    Ok(value) => value.to_string(),
-                    Err(e) => serde_json::json!({
-                        "error": e.to_string()
-                    }).to_string()
-                }
+                // Call the sync method directly (now returns direct values or traps)
+                let result = server.#method_name(#(#param_pass),*);
+                serde_json::to_string(&result).unwrap_or_else(|_| result.to_string())
             })
         }
     }
@@ -169,13 +165,9 @@ fn generate_update_method(_tool_name: &str, method_name: &syn::Ident, params: &[
                 let mut server = s.borrow_mut();
                 let server = server.as_mut().expect("Server not initialized");
                 
-                // Call the sync method directly
-                match server.#method_name(#(#param_pass),*) {
-                    Ok(value) => value.to_string(),
-                    Err(e) => serde_json::json!({
-                        "error": e.to_string()
-                    }).to_string()
-                }
+                // Call the sync method directly (now returns direct values or traps)
+                let result = server.#method_name(#(#param_pass),*);
+                serde_json::to_string(&result).unwrap_or_else(|_| result.to_string())
             })
         }
     }
@@ -258,7 +250,7 @@ fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, param
     });
     
     // Generate parameter passing to actual method
-    let param_pass = params.iter().map(|(name, _)| {
+    let _param_pass = params.iter().map(|(name, _)| {
         quote! { #name }
     });
     
@@ -293,20 +285,88 @@ fn generate_async_update_method(tool_name: &str, method_name: &syn::Ident, param
             
             let result = fut.await;
             
-            match result {
-                Ok(value) => value.to_string(),
-                Err(e) => serde_json::json!({
+            // For now, just return a placeholder since async patterns are complex
+            // In practice, most tools should be sync anyway
+            result.unwrap_or_else(|e| {
+                serde_json::json!({
                     "error": e.to_string()
                 }).to_string()
-            }
+            })
         }
     }
 }
 
+/// Configuration for icarus_module attribute
+/// Currently empty as authentication is always mandatory
+#[derive(Debug, Clone, Default)]
+pub struct ModuleConfig {
+    // No fields - authentication is always enabled
+    // Future fields could include: 
+    // - canister_name: Option<String>
+    // - version: Option<String>
+}
+
+impl Parse for ModuleConfig {
+    fn parse(input: ParseStream) -> syn::Result<Self> {
+        // For now, we don't accept any parameters
+        // If someone passes parameters, we'll error
+        if !input.is_empty() {
+            return Err(syn::Error::new(
+                input.span(), 
+                "icarus_module does not accept parameters. Authentication is always enabled."
+            ));
+        }
+        
+        Ok(ModuleConfig::default())
+    }
+}
+
+/// Inject authenticate() call at the beginning of a function
+fn inject_authenticate_call(func: &mut ItemFn) {
+    use syn::{Stmt, parse_quote};
+    
+    // Check for require_role attribute
+    let role_requirement = func.attrs.iter()
+        .find(|attr| attr.path().is_ident("require_role"))
+        .and_then(|attr| {
+            // Parse the role from the attribute
+            attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
+        });
+    
+    let auth_call: Stmt = if let Some(role) = role_requirement {
+        // Create require_role() call based on the role
+        match role.as_str() {
+            "Owner" => parse_quote! {
+                require_role(AuthRole::Owner);
+            },
+            "Admin" => parse_quote! {
+                require_role(AuthRole::Admin);
+            },
+            "User" => parse_quote! {
+                require_role(AuthRole::User);
+            },
+            "ReadOnly" => parse_quote! {
+                require_role(AuthRole::ReadOnly);
+            },
+            _ => parse_quote! {
+                authenticate();
+            },
+        }
+    } else {
+        // Default to authenticate()
+        parse_quote! {
+            authenticate();
+        }
+    };
+    
+    // Insert at the beginning of the function body
+    func.block.stmts.insert(0, auth_call);
+}
+
 /// Expand a module marked with #[icarus_module] to automatically generate metadata
-pub fn expand_icarus_module(mut input: ItemMod) -> TokenStream {
-    let mod_name = &input.ident;
-    let mod_vis = &input.vis;
+pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenStream {
+    let _mod_name = &input.ident;
+    let _mod_vis = &input.vis;
     
     // Ensure the module has content
     let content = match &mut input.content {
@@ -321,15 +381,24 @@ pub fn expand_icarus_module(mut input: ItemMod) -> TokenStream {
     let mut tools = Vec::new();
     let mut functions_to_export = Vec::new();
     
-    for item in content.iter() {
+    for item in content.iter_mut() {
         if let Item::Fn(func) = item {
             // Check if function has both a canister attribute and icarus_tool
             let has_update = func.attrs.iter().any(|attr| attr.path().is_ident("update"));
             let has_query = func.attrs.iter().any(|attr| attr.path().is_ident("query"));
             
             if has_update || has_query {
+                // Check for skip_auth attribute (rarely used, only for special cases)
+                let skip_auth = func.attrs.iter().any(|attr| attr.path().is_ident("skip_auth"));
+                
+                // Always inject authentication unless explicitly skipped
+                // Authentication is mandatory for all Icarus modules for security
+                if !skip_auth {
+                    inject_authenticate_call(func);
+                }
+                
                 // Clone the function to export at crate level
-                let mut exported_func = func.clone();
+                let exported_func = func.clone();
                 
                 // Look for the doc comment that icarus_tool generates
                 let description = func.attrs.iter()
@@ -435,13 +504,43 @@ pub fn expand_icarus_module(mut input: ItemMod) -> TokenStream {
         }
     };
     
-    // Return both the exported functions and the get_metadata function at crate level
+    // Always generate the init function for security and marketplace compatibility
+    let init_fn = quote! {
+        /// Canister initialization function (auto-generated by icarus_module)
+        /// Accepts an optional owner principal for marketplace deployment
+        #[::ic_cdk_macros::init]
+        fn init(owner: Option<::candid::Principal>) {
+            // If an owner is provided, use it; otherwise use the caller as the owner
+            let initial_owner = owner.unwrap_or_else(|| ::ic_cdk::caller());
+            
+            // Initialize the authentication system with the owner
+            ::icarus_canister::auth::init_auth(initial_owner);
+            
+            // Log initialization
+            ::ic_cdk::print(format!(
+                "{} canister initialized with owner: {}",
+                env!("CARGO_PKG_NAME"),
+                initial_owner
+            ));
+        }
+        
+        /// Post-upgrade hook to maintain state (auto-generated by icarus_module)
+        #[::ic_cdk_macros::post_upgrade]
+        fn post_upgrade() {
+            // State is preserved in stable memory, no action needed
+        }
+    };
+    
+    // Return the exported functions, metadata function, and init function at crate level
     quote! {
         // Export tool functions at crate level for IC CDK
         #(#functions_to_export)*
         
         // Export the metadata function
         #get_metadata_fn
+        
+        // Export the init and post_upgrade functions (always included for security)
+        #init_fn
     }
 }
 

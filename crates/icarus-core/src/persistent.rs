@@ -30,21 +30,31 @@ pub trait IcarusPersistentState: Send + Sync {
 /// Helper methods for typed storage
 pub trait TypedPersistentState: IcarusPersistentState {
     /// Save a typed value
-    async fn set_typed<T: Serialize>(&mut self, key: String, value: &T) -> Result<()> {
-        let bytes = serde_json::to_vec(value)
-            .map_err(|e| crate::error::IcarusError::Serialization(e))?;
-        self.set(key, bytes).await
+    fn set_typed<T: Serialize + Send + Sync>(&mut self, key: String, value: &T) -> impl std::future::Future<Output = Result<()>> + Send
+    where
+        Self: Send,
+    {
+        async move {
+            let bytes = serde_json::to_vec(value)
+                .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+            self.set(key, bytes).await
+        }
     }
     
     /// Get a typed value
-    async fn get_typed<T: for<'de> Deserialize<'de>>(&self, key: &str) -> Result<Option<T>> {
-        match self.get(key).await? {
-            Some(bytes) => {
-                let value = serde_json::from_slice(&bytes)
-                    .map_err(|e| crate::error::IcarusError::Serialization(e))?;
-                Ok(Some(value))
+    fn get_typed<T: for<'de> Deserialize<'de> + Send>(&self, key: &str) -> impl std::future::Future<Output = Result<Option<T>>> + Send
+    where
+        Self: Send + Sync,
+    {
+        async move {
+            match self.get(key).await? {
+                Some(bytes) => {
+                    let value = serde_json::from_slice(&bytes)
+                        .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+                    Ok(Some(value))
+                }
+                None => Ok(None),
             }
-            None => Ok(None),
         }
     }
 }
