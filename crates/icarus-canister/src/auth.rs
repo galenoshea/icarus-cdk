@@ -25,7 +25,7 @@ pub struct User {
 }
 
 /// Role-based access control
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CandidType)]
 pub enum AuthRole {
     Owner,      // Full access, can manage all users
     Admin,      // Can add/remove users, view audit logs
@@ -80,6 +80,11 @@ stable_storage! {
 
 /// Initialize the authentication system with the canister owner
 pub fn init_auth(owner: Principal) {
+    // Security check: prevent anonymous principal from being owner
+    if owner == Principal::anonymous() {
+        ic_cdk::trap("Security Error: Anonymous principal cannot be set as owner");
+    }
+    
     AUTH_USERS.with(|users| {
         let owner_entry = User {
             principal: owner,
@@ -162,11 +167,12 @@ pub fn authenticate() -> AuthInfo {
     })
 }
 
-/// Check if caller has specific role or higher
-pub fn require_role(required_role: AuthRole) -> AuthInfo {
+/// Check if caller has specific role or higher (hierarchical)
+/// Owner > Admin > User > ReadOnly
+pub fn require_role_or_higher(minimum_role: AuthRole) -> AuthInfo {
     let auth_info = authenticate();
     
-    let has_permission = match (&auth_info.role, &required_role) {
+    let has_permission = match (&auth_info.role, &minimum_role) {
         (AuthRole::Owner, _) => true,
         (AuthRole::Admin, AuthRole::Admin | AuthRole::User | AuthRole::ReadOnly) => true,
         (AuthRole::User, AuthRole::User | AuthRole::ReadOnly) => true,
@@ -177,8 +183,44 @@ pub fn require_role(required_role: AuthRole) -> AuthInfo {
     if has_permission {
         auth_info
     } else {
-        ic_cdk::trap(&format!("Insufficient permissions: {:?} required", required_role));
+        ic_cdk::trap(&format!("Insufficient permissions: {:?} or higher required", minimum_role));
     }
+}
+
+/// Check if caller has exactly the specified role
+pub fn require_exact_role(role: AuthRole) -> AuthInfo {
+    let auth_info = authenticate();
+    if matches!(auth_info.role, ref r if *r == role) {
+        auth_info
+    } else {
+        ic_cdk::trap(&format!("Requires exactly {:?} role, but caller has {:?}", role, auth_info.role));
+    }
+}
+
+/// Check if caller has any of the specified roles
+pub fn require_any_of_roles(roles: &[AuthRole]) -> AuthInfo {
+    let auth_info = authenticate();
+    if roles.contains(&auth_info.role) {
+        auth_info
+    } else {
+        ic_cdk::trap(&format!("Requires one of: {:?}, but caller has {:?}", roles, auth_info.role));
+    }
+}
+
+/// Check if caller does NOT have any of the excluded roles
+pub fn require_none_of_roles(excluded: &[AuthRole]) -> AuthInfo {
+    let auth_info = authenticate();
+    if !excluded.contains(&auth_info.role) {
+        auth_info
+    } else {
+        ic_cdk::trap(&format!("Role {:?} is not allowed here", auth_info.role));
+    }
+}
+
+/// Check if caller has specific role or higher
+/// @deprecated Use require_role_or_higher for clarity
+pub fn require_role(required_role: AuthRole) -> AuthInfo {
+    require_role_or_higher(required_role)
 }
 
 /// Add a new user (requires Admin or Owner role)
@@ -186,6 +228,11 @@ pub fn add_user(
     principal: Principal, 
     role: AuthRole
 ) -> String {
+    // Security check: prevent anonymous principal from being added
+    if principal == Principal::anonymous() {
+        ic_cdk::trap("Security Error: Anonymous principal cannot be authorized");
+    }
+    
     let auth_info = require_role(AuthRole::Admin);
     let caller = ic_cdk::caller();
 
@@ -273,6 +320,11 @@ pub fn update_user_role(
     principal: Principal, 
     new_role: AuthRole
 ) -> String {
+    // Security check: prevent anonymous principal from having any role
+    if principal == Principal::anonymous() {
+        ic_cdk::trap("Security Error: Anonymous principal cannot have a role");
+    }
+    
     require_role(AuthRole::Owner); // Only owners can change roles
     let caller = ic_cdk::caller();
 
