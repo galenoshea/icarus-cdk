@@ -60,7 +60,7 @@ ic_cdk::export_candid!();
 Install the Icarus CLI to create and manage MCP server projects:
 
 ```bash
-# Install the CLI
+# Install from crates.io
 cargo install icarus-cli
 
 # Verify installation
@@ -138,11 +138,15 @@ The generated canister is a standard ICP backend with no MCP awareness. All prot
 
 ## Documentation
 
-See the [docs/](docs/) folder for:
-- Getting Started Guide
-- API Reference
-- Best Practices
-- Example Projects
+Comprehensive documentation is available in the [docs/](docs/) folder:
+
+- **[Documentation Index](docs/README.md)** - Start here for navigation
+- **[Getting Started Guide](docs/getting-started.md)** - Build your first MCP server
+- **[API Reference](docs/api-reference.md)** - Complete API documentation
+- **[Examples](examples/)** - Working example projects
+- **[CLI Documentation](cli/docs/)** - Command reference and guides
+- **[Contributing](CONTRIBUTING.md)** - How to contribute
+- **[Changelog](CHANGELOG.md)** - Version history and migration notes
 
 ## Testing
 

@@ -1,0 +1,21 @@
+{
+  "canisters": {
+    "basic_memory": {
+      "type": "rust",
+      "package": "basic-memory-example",
+      "candid": "target/wasm32-unknown-unknown/release/basic_memory_example.did"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}

@@ -5,7 +5,7 @@ This guide will help you create your first MCP server using the Icarus SDK.
 ## Prerequisites
 
 - Rust 1.75 or later
-- Icarus CLI installed (`curl -L https://icarus.dev/install.sh | sh`)
+- Icarus CLI installed (`cargo install icarus-cli`)
 - Basic familiarity with Rust
 
 ## Creating Your First Project
