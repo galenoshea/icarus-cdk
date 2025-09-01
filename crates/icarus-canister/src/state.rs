@@ -39,11 +39,11 @@ pub struct ResourceState {
 }
 
 impl Storable for ServerConfig {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+    fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
 
@@ -55,11 +55,11 @@ impl Storable for ServerConfig {
 }
 
 impl Storable for ToolState {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+    fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
 
@@ -71,11 +71,11 @@ impl Storable for ToolState {
 }
 
 impl Storable for ResourceState {
-    fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
+    fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
 
