@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -13,9 +13,9 @@ keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
 categories = ["development-tools", "web-programming", "wasm"]
 
 [dependencies]
-icarus-core = { version = "0.2.5", path = "crates/icarus-core" }
-icarus-derive = { version = "0.2.5", path = "crates/icarus-derive" }
-icarus-canister = { version = "0.2.5", path = "crates/icarus-canister" }
+icarus-core = { version = "0.2.6", path = "crates/icarus-core" }
+icarus-derive = { version = "0.2.6", path = "crates/icarus-derive" }
+icarus-canister = { version = "0.2.6", path = "crates/icarus-canister" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -48,7 +48,7 @@ name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
-version = "0.2.5"
+version = "0.2.6"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
