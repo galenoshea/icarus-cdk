@@ -1,9 +1,9 @@
 [package]
 name = "icarus"
-version = "0.1.1"
+version = "0.2.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
-license = "Apache-2.0"
+license = "BSL-1.1"
 repository = "https://github.com/galenoshea/icarus-sdk"
 documentation = "https://docs.rs/icarus"
 homepage = "https://github.com/galenoshea/icarus-sdk"
@@ -13,9 +13,9 @@ keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
 categories = ["development-tools", "web-programming", "wasm"]
 
 [dependencies]
-icarus-core = { version = "0.1.0", path = "crates/icarus-core" }
-icarus-derive = { version = "0.1.0", path = "crates/icarus-derive" }
-icarus-canister = { version = "0.1.0", path = "crates/icarus-canister" }
+icarus-core = { version = "0.2.0", path = "crates/icarus-core" }
+icarus-derive = { version = "0.2.0", path = "crates/icarus-derive" }
+icarus-canister = { version = "0.2.0", path = "crates/icarus-canister" }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -47,10 +47,10 @@ name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
-license = "Apache-2.0"
+license = "BSL-1.1"
 repository = "https://github.com/icarus-sdk/icarus-sdk"
 
 [workspace.dependencies]
@@ -75,9 +75,9 @@ proc-macro2 = "1.0"
 linkme = "0.3"
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.1.0" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.1.0" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.1.0" }
+icarus-core = { path = "crates/icarus-core", version = "0.2.0" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.2.0" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.2.0" }
 
 [profile.release]
 opt-level = 3

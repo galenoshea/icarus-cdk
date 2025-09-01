@@ -1,6 +1,6 @@
 //! Unit tests for the tools module
 
-use icarus_canister::tools::{ToolRegistry, ToolRegistration};
+use icarus_canister::tools::{ToolRegistration, ToolRegistry};
 use icarus_core::error::ToolError;
 use serde_json::json;
 
@@ -13,19 +13,15 @@ fn test_tool_registry_creation() {
 #[test]
 fn test_tool_registration() {
     let mut registry = ToolRegistry::new();
-    
+
     let tool = ToolRegistration {
         name: "test_tool".to_string(),
         description: "A test tool".to_string(),
-        function: Box::new(|_args| {
-            Box::pin(async move {
-                Ok(json!({"result": "success"}))
-            })
-        }),
+        function: Box::new(|_args| Box::pin(async move { Ok(json!({"result": "success"})) })),
     };
-    
+
     registry.register(tool);
-    
+
     let tools = registry.list_tools();
     assert_eq!(tools.len(), 1);
     assert_eq!(tools[0].0, "test_tool");
@@ -41,19 +37,15 @@ fn test_default_tool_registry() {
 #[tokio::test]
 async fn test_tool_execution() {
     let mut registry = ToolRegistry::new();
-    
+
     let tool = ToolRegistration {
         name: "echo".to_string(),
         description: "Echoes input".to_string(),
-        function: Box::new(|args| {
-            Box::pin(async move {
-                Ok(args.clone())
-            })
-        }),
+        function: Box::new(|args| Box::pin(async move { Ok(args.clone()) })),
     };
-    
+
     registry.register(tool);
-    
+
     let input = json!({"message": "hello"});
     let result = registry.execute("echo", input.clone()).await.unwrap();
     assert_eq!(result, input);
@@ -63,7 +55,7 @@ async fn test_tool_execution() {
 async fn test_tool_not_found() {
     let registry = ToolRegistry::new();
     let result = registry.execute("nonexistent", json!({})).await;
-    
+
     assert!(result.is_err());
     match result.unwrap_err() {
         ToolError::NotFound(msg) => {
@@ -76,7 +68,7 @@ async fn test_tool_not_found() {
 #[tokio::test]
 async fn test_multiple_tools() {
     let mut registry = ToolRegistry::new();
-    
+
     // Register first tool
     registry.register(ToolRegistration {
         name: "add".to_string(),
@@ -89,7 +81,7 @@ async fn test_multiple_tools() {
             })
         }),
     });
-    
+
     // Register second tool
     registry.register(ToolRegistration {
         name: "multiply".to_string(),
@@ -102,14 +94,20 @@ async fn test_multiple_tools() {
             })
         }),
     });
-    
+
     // Test both tools
-    let add_result = registry.execute("add", json!({"a": 5, "b": 3})).await.unwrap();
+    let add_result = registry
+        .execute("add", json!({"a": 5, "b": 3}))
+        .await
+        .unwrap();
     assert_eq!(add_result["result"], 8);
-    
-    let mul_result = registry.execute("multiply", json!({"a": 4, "b": 7})).await.unwrap();
+
+    let mul_result = registry
+        .execute("multiply", json!({"a": 4, "b": 7}))
+        .await
+        .unwrap();
     assert_eq!(mul_result["result"], 28);
-    
+
     // Check listing
     let tools = registry.list_tools();
     assert_eq!(tools.len(), 2);

@@ -1,11 +1,11 @@
 //! Server trait and implementation for Icarus MCP servers
 
-use async_trait::async_trait;
 use crate::error::Result;
-use crate::tool::IcarusTool;
 use crate::resource::IcarusResource;
-use rmcp::ServerHandler;
+use crate::tool::IcarusTool;
+use async_trait::async_trait;
 use candid::Principal;
+use rmcp::ServerHandler;
 
 /// Version information for server upgrades
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -17,7 +17,11 @@ pub struct Version {
 
 impl Version {
     pub fn new(major: u8, minor: u8, patch: u8) -> Self {
-        Self { major, minor, patch }
+        Self {
+            major,
+            minor,
+            patch,
+        }
     }
 }
 
@@ -28,30 +32,30 @@ pub trait IcarusServer: ServerHandler + Send + Sync {
     async fn on_canister_init(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called during canister upgrades
     async fn on_canister_upgrade(&mut self, _from_version: Version) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called before canister upgrade to save state
     async fn on_pre_upgrade(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called after canister upgrade to restore state
     async fn on_post_upgrade(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Get the canister principal
     fn canister_id(&self) -> Option<Principal> {
         None
     }
-    
+
     /// Register a tool with the server
     fn register_tool(&mut self, tool: Box<dyn IcarusTool>) -> Result<()>;
-    
+
     /// Register a resource with the server
     fn register_resource(&mut self, resource: Box<dyn IcarusResource>) -> Result<()>;
 }

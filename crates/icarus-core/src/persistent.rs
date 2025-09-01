@@ -1,7 +1,7 @@
 //! Persistent state management for servers
 
-use async_trait::async_trait;
 use crate::error::Result;
+use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -10,19 +10,19 @@ use std::collections::HashMap;
 pub trait IcarusPersistentState: Send + Sync {
     /// Save a value to persistent storage
     async fn set(&mut self, key: String, value: Vec<u8>) -> Result<()>;
-    
+
     /// Retrieve a value from persistent storage
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>>;
-    
+
     /// Delete a value from persistent storage
     async fn delete(&mut self, key: &str) -> Result<()>;
-    
+
     /// List all keys in persistent storage
     async fn list_keys(&self) -> Result<Vec<String>>;
-    
+
     /// Clear all persistent storage
     async fn clear(&mut self) -> Result<()>;
-    
+
     /// Get storage size in bytes
     async fn size(&self) -> Result<u64>;
 }
@@ -30,19 +30,26 @@ pub trait IcarusPersistentState: Send + Sync {
 /// Helper methods for typed storage
 pub trait TypedPersistentState: IcarusPersistentState {
     /// Save a typed value
-    fn set_typed<T: Serialize + Send + Sync>(&mut self, key: String, value: &T) -> impl std::future::Future<Output = Result<()>> + Send
+    fn set_typed<T: Serialize + Send + Sync>(
+        &mut self,
+        key: String,
+        value: &T,
+    ) -> impl std::future::Future<Output = Result<()>> + Send
     where
         Self: Send,
     {
         async move {
-            let bytes = serde_json::to_vec(value)
-                .map_err(crate::error::IcarusError::Serialization)?;
+            let bytes =
+                serde_json::to_vec(value).map_err(crate::error::IcarusError::Serialization)?;
             self.set(key, bytes).await
         }
     }
-    
+
     /// Get a typed value
-    fn get_typed<T: for<'de> Deserialize<'de> + Send>(&self, key: &str) -> impl std::future::Future<Output = Result<Option<T>>> + Send
+    fn get_typed<T: for<'de> Deserialize<'de> + Send>(
+        &self,
+        key: &str,
+    ) -> impl std::future::Future<Output = Result<Option<T>>> + Send
     where
         Self: Send + Sync,
     {
@@ -88,25 +95,25 @@ impl IcarusPersistentState for MemoryPersistentState {
         self.data.insert(key, value);
         Ok(())
     }
-    
+
     async fn get(&self, key: &str) -> Result<Option<Vec<u8>>> {
         Ok(self.data.get(key).cloned())
     }
-    
+
     async fn delete(&mut self, key: &str) -> Result<()> {
         self.data.remove(key);
         Ok(())
     }
-    
+
     async fn list_keys(&self) -> Result<Vec<String>> {
         Ok(self.data.keys().cloned().collect())
     }
-    
+
     async fn clear(&mut self) -> Result<()> {
         self.data.clear();
         Ok(())
     }
-    
+
     async fn size(&self) -> Result<u64> {
         let size: usize = self.data.values().map(|v| v.len()).sum();
         Ok(size as u64)

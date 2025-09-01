@@ -1,9 +1,9 @@
 //! HTTP outcalls support for external API integration
 
+use crate::error::Result;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::error::Result;
 
 /// HTTP method types
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
@@ -48,7 +48,7 @@ pub struct HttpResponse {
 pub trait HttpOutcalls: Send + Sync {
     /// Make an HTTP request
     async fn request(&self, request: HttpRequest) -> Result<HttpResponse>;
-    
+
     /// Convenience method for GET requests
     async fn get(&self, url: &str) -> Result<HttpResponse> {
         self.request(HttpRequest {
@@ -57,24 +57,25 @@ pub trait HttpOutcalls: Send + Sync {
             headers: HashMap::new(),
             body: None,
             max_response_bytes: None,
-        }).await
+        })
+        .await
     }
-    
+
     /// Convenience method for POST requests with JSON
     async fn post_json(&self, url: &str, json: &serde_json::Value) -> Result<HttpResponse> {
-        let body = serde_json::to_vec(json)
-            .map_err(crate::error::IcarusError::Serialization)?;
-            
+        let body = serde_json::to_vec(json).map_err(crate::error::IcarusError::Serialization)?;
+
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
-        
+
         self.request(HttpRequest {
             method: HttpMethod::POST,
             url: url.to_string(),
             headers,
             body: Some(body),
             max_response_bytes: None,
-        }).await
+        })
+        .await
     }
 }
 
@@ -122,33 +123,33 @@ impl HttpRequestBuilder {
             max_response_bytes: None,
         }
     }
-    
+
     /// Add a header
     pub fn header(mut self, key: impl Into<String>, value: impl Into<String>) -> Self {
         self.headers.insert(key.into(), value.into());
         self
     }
-    
+
     /// Set the request body
     pub fn body(mut self, body: Vec<u8>) -> Self {
         self.body = Some(body);
         self
     }
-    
+
     /// Set JSON body
     pub fn json_body(mut self, json: &serde_json::Value) -> Result<Self> {
-        let body = serde_json::to_vec(json)
-            .map_err(crate::error::IcarusError::Serialization)?;
-        self.headers.insert("Content-Type".to_string(), "application/json".to_string());
+        let body = serde_json::to_vec(json).map_err(crate::error::IcarusError::Serialization)?;
+        self.headers
+            .insert("Content-Type".to_string(), "application/json".to_string());
         Ok(self.body(body))
     }
-    
+
     /// Set maximum response size
     pub fn max_response_bytes(mut self, max: u64) -> Self {
         self.max_response_bytes = Some(max);
         self
     }
-    
+
     /// Build the request
     pub fn build(self) -> HttpRequest {
         HttpRequest {
@@ -167,19 +168,19 @@ impl HttpResponse {
     pub fn is_success(&self) -> bool {
         self.status >= 200 && self.status < 300
     }
-    
+
     /// Get response body as string
     pub fn text(&self) -> Result<String> {
-        String::from_utf8(self.body.clone())
-            .map_err(|e| crate::error::IcarusError::Canister(format!("Invalid UTF-8 in response: {}", e)))
+        String::from_utf8(self.body.clone()).map_err(|e| {
+            crate::error::IcarusError::Canister(format!("Invalid UTF-8 in response: {}", e))
+        })
     }
-    
+
     /// Parse response body as JSON
     pub fn json<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
-        serde_json::from_slice(&self.body)
-            .map_err(crate::error::IcarusError::Serialization)
+        serde_json::from_slice(&self.body).map_err(crate::error::IcarusError::Serialization)
     }
-    
+
     /// Get a header value
     pub fn header(&self, name: &str) -> Option<&String> {
         self.headers.get(name)

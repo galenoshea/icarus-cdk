@@ -146,4 +146,45 @@ See [tests/README.md](tests/README.md) for more details.
 
 ## License
 
-Apache 2.0
+⚠️ **IMPORTANT**: This SDK is licensed under the Business Source License 1.1 (BSL-1.1), 
+which is **NOT** an open source license.
+
+### Version Notice
+- ❌ Version 0.1.0 was published in error and has been yanked - DO NOT USE
+- ✅ Version 0.2.0+ is the official release under BSL-1.1
+
+### ✅ You CAN:
+- Build and deploy MCP tools to Icarus Marketplace
+- Modify the SDK for internal use
+- Integrate with your applications that use Icarus
+- Use for education and research
+- Create commercial MCP tools using this SDK
+
+### ❌ You CANNOT:
+- Create competing MCP marketplaces
+- Redistribute the SDK or derivatives
+- Remove signature verification
+- White-label or rebrand the SDK
+- Reverse engineer for competition
+- Offer SDK as a service
+- Bypass telemetry or usage reporting
+
+### 🔒 Security & Verification
+This SDK includes:
+- Cryptographic signature verification for authenticity
+- Telemetry for service improvement and compliance
+- Connection restrictions to official Icarus infrastructure
+
+Tampering with these mechanisms violates the license and may result in legal action.
+
+### 📅 Open Source Conversion
+On **January 1, 2029**, this SDK automatically converts to Apache License 2.0.
+
+### 📄 Legal
+- See [LICENSE](./LICENSE) for complete BSL-1.1 terms
+- See [NOTICE](./NOTICE) for important restrictions
+- Commercial licenses available: licensing@icarus.dev
+- Report violations: legal@icarus.dev
+
+### ™️ Trademarks
+"Icarus" and the Icarus logo are registered trademarks. Unauthorized use is prohibited.

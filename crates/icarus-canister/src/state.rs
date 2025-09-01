@@ -1,10 +1,10 @@
 //! Canister state management
 
-use crate::memory::{get_memory, MEMORY_ID_CONFIG, MEMORY_ID_TOOLS, MEMORY_ID_RESOURCES};
-use ic_stable_structures::{StableBTreeMap, StableCell, Storable};
-use std::cell::RefCell;
+use crate::memory::{get_memory, MEMORY_ID_CONFIG, MEMORY_ID_RESOURCES, MEMORY_ID_TOOLS};
 use candid::{CandidType, Deserialize, Principal};
+use ic_stable_structures::{StableBTreeMap, StableCell, Storable};
 use serde::Serialize;
+use std::cell::RefCell;
 
 /// Main canister state
 pub struct IcarusCanisterState {
@@ -42,12 +42,12 @@ impl Storable for ServerConfig {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
-    
+
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
-    
-    const BOUND: ic_stable_structures::storable::Bound = 
+
+    const BOUND: ic_stable_structures::storable::Bound =
         ic_stable_structures::storable::Bound::Bounded {
             max_size: 1024,
             is_fixed_size: false,
@@ -58,12 +58,12 @@ impl Storable for ToolState {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
-    
+
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
-    
-    const BOUND: ic_stable_structures::storable::Bound = 
+
+    const BOUND: ic_stable_structures::storable::Bound =
         ic_stable_structures::storable::Bound::Bounded {
             max_size: 512,
             is_fixed_size: false,
@@ -74,12 +74,12 @@ impl Storable for ResourceState {
     fn to_bytes(&self) -> std::borrow::Cow<[u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
-    
+
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
-    
-    const BOUND: ic_stable_structures::storable::Bound = 
+
+    const BOUND: ic_stable_structures::storable::Bound =
         ic_stable_structures::storable::Bound::Bounded {
             max_size: 512,
             is_fixed_size: false,
@@ -98,10 +98,10 @@ impl IcarusCanisterState {
             tools: StableBTreeMap::init(get_memory(MEMORY_ID_TOOLS)),
             resources: StableBTreeMap::init(get_memory(MEMORY_ID_RESOURCES)),
         };
-        
+
         STATE.with(|s| *s.borrow_mut() = Some(state));
     }
-    
+
     pub fn with<F, R>(f: F) -> R
     where
         F: FnOnce(&IcarusCanisterState) -> R,
@@ -112,13 +112,11 @@ impl IcarusCanisterState {
             f(state_ref)
         })
     }
-    
-    
+
     /// Get the canister owner principal
     pub fn get_owner(&self) -> Principal {
         self.config.get().owner
     }
-    
 }
 
 // State should not be cloneable as it contains stable memory structures
@@ -142,9 +140,7 @@ pub fn assert_owner() {
 
 /// Check if the caller is the canister owner without trapping
 pub fn is_owner(caller: Principal) -> bool {
-    IcarusCanisterState::with(|state| {
-        caller == state.get_owner()
-    })
+    IcarusCanisterState::with(|state| caller == state.get_owner())
 }
 
 /// Get the current owner principal

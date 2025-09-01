@@ -1,109 +1,118 @@
+// Copyright (c) 2025 Icarus Team. All Rights Reserved.
+// Licensed under BSL-1.1. See LICENSE and NOTICE files.
+// Signature verification and telemetry must remain intact.
+
 // #![warn(missing_docs)] // TODO: Enable after adding all documentation
 
 //! ICP canister integration for Icarus MCP servers
-//! 
+//!
 //! This crate provides the canister implementation details for running
 //! MCP servers on the Internet Computer.
 
 pub mod auth;
 pub mod auth_tools;
-pub mod memory;
-pub mod state;
-pub mod storage;
-pub mod stable_ext;
-pub mod tools;
+pub mod easy_storage;
 pub mod endpoints;
 pub mod lifecycle;
 pub mod macros;
+pub mod memory;
 pub mod result;
-pub mod easy_storage;
+pub mod stable_ext;
+pub mod state;
+pub mod storage;
+pub mod tools;
 
 pub use auth::{
-    User, AuthRole, AuthInfo, AuthAuditEntry, AuthAction,
-    init_auth, authenticate, require_role, require_role_or_higher,
-    require_exact_role, require_any_of_roles, require_none_of_roles,
-    add_user, remove_user, update_user_role, get_authorized_users, 
-    get_auth_audit, get_auth_status, list_users, get_user,
+    add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users, get_user,
+    init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
+    require_none_of_roles, require_role, require_role_or_higher, update_user_role, AuthAction,
+    AuthAuditEntry, AuthInfo, AuthRole, User,
 };
-pub use state::{IcarusCanisterState, assert_owner, is_owner, get_owner};
-pub use storage::{StableMap, StableCounter};
-pub use stable_ext::{StableBTreeMapExt, StableCellExt};
 pub use endpoints::{
-    icarus_metadata,
-    http_request,
-    HttpRequest,
-    HttpResponse,
-    get_owner as get_canister_owner,
+    get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest, HttpResponse,
 };
 pub use lifecycle::{init, init_with_caller, post_upgrade, pre_upgrade};
+pub use stable_ext::{StableBTreeMapExt, StableCellExt};
+pub use state::{assert_owner, get_owner, is_owner, IcarusCanisterState};
+pub use storage::{StableCounter, StableMap};
 
 // Re-export the macros from icarus-derive
-pub use icarus_derive::{icarus_tool, icarus_module, icarus_canister, IcarusStorable, IcarusStorage, IcarusType};
+pub use icarus_derive::{
+    icarus_canister, icarus_module, icarus_tool, IcarusStorable, IcarusStorage, IcarusType,
+};
 
 // Re-export commonly used macros (defined with #[macro_export])
 // Note: These macros are automatically available at the crate root due to #[macro_export]
 
 /// Comprehensive prelude for Icarus canister development
-/// 
+///
 /// This module contains all the commonly used imports, so developers only need:
 /// `use icarus_canister::prelude::*;`
 pub mod prelude {
     // Core IC CDK types and macros
-    pub use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
-    pub use ic_cdk::{api, caller, print, trap, storage};
     pub use candid::{CandidType, Principal};
-    
+    pub use ic_cdk::{api, caller, print, storage, trap};
+    pub use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
+
     // Stable structures for persistence
     pub use ic_stable_structures::{
         memory_manager::{MemoryId, MemoryManager, VirtualMemory},
-        DefaultMemoryImpl, StableBTreeMap, StableCell, Storable,
         storable::Bound as StorableBound,
+        DefaultMemoryImpl, StableBTreeMap, StableCell, Storable,
     };
-    
+
     // Serde for serialization
-    pub use serde::{Serialize, Deserialize};
+    pub use serde::{Deserialize, Serialize};
     pub use serde_json;
-    
+
     // Icarus core functionality
     pub use crate::{
         // Authentication system
         auth::{
-            User, AuthRole, AuthInfo, AuthAuditEntry, AuthAction,
-            init_auth, authenticate, 
-            require_role, require_role_or_higher, require_exact_role,
-            require_any_of_roles, require_none_of_roles,
-            add_user, remove_user, update_user_role, get_authorized_users,
-            get_auth_audit, get_auth_status, list_users, get_user,
+            add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users,
+            get_user, init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
+            require_none_of_roles, require_role, require_role_or_higher, update_user_role,
+            AuthAction, AuthAuditEntry, AuthInfo, AuthRole, User,
         },
+        // Easy storage patterns
+        easy_storage::{CounterCell, StorageCell, StorageMap},
+
+        // HTTP endpoints - exclude get_owner to avoid conflict
+        endpoints::{
+            get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest,
+            HttpResponse,
+        },
+
+        icarus_module,
+        icarus_storage,
+        // Macros for tool definition
+        icarus_tool,
+        init_memory,
+        // Lifecycle hooks
+        lifecycle::*,
+        // Memory management
+        memory::{get_memory, MEMORY_MANAGER},
+        // Memory management macros
+        memory_id,
+        // Result types and error handling
+        result::{IcarusError, IcarusResult, TrapExt},
+
+        stable_storage,
         // State management
         state::*,
         // Storage utilities
         storage::*,
-        // Memory management
-        memory::{get_memory, MEMORY_MANAGER},
-        // Lifecycle hooks
-        lifecycle::*,
-        // HTTP endpoints - exclude get_owner to avoid conflict
-        endpoints::{icarus_metadata, http_request, HttpRequest, HttpResponse, get_owner as get_canister_owner},
-        
-        // Result types and error handling
-        result::{IcarusResult, IcarusError, TrapExt},
-        
-        // Easy storage patterns
-        easy_storage::{StorageMap, StorageCell, CounterCell},
-        
-        // Macros for tool definition
-        icarus_tool, icarus_module, IcarusStorable, IcarusStorage, IcarusType,
-        
-        // Memory management macros
-        memory_id, init_memory, tool_metadata, stable_storage, icarus_storage,
+        tool_metadata,
+        IcarusStorable,
+        IcarusStorage,
+        IcarusType,
     };
-    
+
     // Common type aliases
     pub type Memory = VirtualMemory<DefaultMemoryImpl>;
     pub type Map<K, V> = StableBTreeMap<K, V, Memory>;
     pub type Cell<T> = StableCell<T, Memory>;
-    
+
     // Common Result type for tools
     pub type ToolResult<T> = Result<T, String>;
 }

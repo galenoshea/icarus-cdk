@@ -10,8 +10,8 @@
 //! use icarus_canister::auth_tools;
 //! ```
 
-use crate::auth::{add_user, remove_user, update_user_role, get_auth_status, list_users, AuthRole};
-use crate::result::{IcarusResult, IcarusError};
+use crate::auth::{add_user, get_auth_status, list_users, remove_user, update_user_role, AuthRole};
+use crate::result::{IcarusError, IcarusResult};
 use candid::Principal;
 
 /// Add a user to the authorized users list via MCP
@@ -22,7 +22,7 @@ pub fn manual_add_authorized_user(principal_text: String, role: String) -> Icaru
     // Parse principal from string
     let principal = Principal::from_text(principal_text)
         .map_err(|e| IcarusError::validation("principal", e.to_string()))?;
-    
+
     // Parse role from string
     let auth_role = match role.to_lowercase().as_str() {
         "owner" => AuthRole::Owner,
@@ -36,7 +36,7 @@ pub fn manual_add_authorized_user(principal_text: String, role: String) -> Icaru
             ))
         }
     };
-        
+
     // Call core auth function
     Ok(add_user(principal, auth_role))
 }
@@ -47,7 +47,7 @@ pub fn manual_remove_authorized_user(principal_text: String) -> IcarusResult<Str
     // Parse principal from string
     let principal = Principal::from_text(principal_text)
         .map_err(|e| IcarusError::validation("principal", e.to_string()))?;
-        
+
     // Call core auth function
     Ok(remove_user(principal))
 }
@@ -58,7 +58,7 @@ pub fn manual_update_user_role(principal_text: String, new_role: String) -> Icar
     // Parse principal from string
     let principal = Principal::from_text(principal_text)
         .map_err(|e| IcarusError::validation("principal", e.to_string()))?;
-    
+
     // Parse role from string
     let auth_role = match new_role.to_lowercase().as_str() {
         "owner" => AuthRole::Owner,
@@ -67,7 +67,7 @@ pub fn manual_update_user_role(principal_text: String, new_role: String) -> Icar
         "readonly" => AuthRole::ReadOnly,
         _ => return Err(IcarusError::validation("role", "Invalid role")),
     };
-        
+
     // Call core auth function
     Ok(update_user_role(principal, auth_role))
 }
@@ -76,9 +76,8 @@ pub fn manual_update_user_role(principal_text: String, new_role: String) -> Icar
 #[allow(dead_code)]
 pub fn manual_auth_status() -> String {
     // Get auth status and serialize to JSON
-    serde_json::to_string(&get_auth_status()).unwrap_or_else(|e| {
-        format!("{{\"error\": \"Failed to serialize auth status: {}\"}}", e)
-    })
+    serde_json::to_string(&get_auth_status())
+        .unwrap_or_else(|e| format!("{{\"error\": \"Failed to serialize auth status: {}\"}}", e))
 }
 
 /// List all authorized users via MCP

@@ -1,8 +1,8 @@
 //! Response types for idiomatic tool return values
-//! 
+//!
 //! These types provide a bridge between Rust's type system and MCP's JSON requirements.
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 /// A successful tool response with optional data
@@ -11,7 +11,7 @@ pub struct ToolSuccess<T = Value> {
     /// The main data payload
     #[serde(flatten)]
     pub data: T,
-    
+
     /// Optional status message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
@@ -25,7 +25,7 @@ impl<T> ToolSuccess<T> {
             message: None,
         }
     }
-    
+
     /// Add a message to the response
     pub fn with_message(mut self, message: impl Into<String>) -> Self {
         self.message = Some(message.into());
@@ -48,10 +48,10 @@ impl ToolSuccess<Value> {
 pub struct ToolStatus {
     /// Whether the operation succeeded
     pub success: bool,
-    
+
     /// Status message
     pub message: String,
-    
+
     /// Optional additional details
     #[serde(skip_serializing_if = "Option::is_none")]
     pub details: Option<Value>,
@@ -66,7 +66,7 @@ impl ToolStatus {
             details: None,
         }
     }
-    
+
     /// Create an error status
     pub fn error(message: impl Into<String>) -> Self {
         Self {
@@ -75,7 +75,7 @@ impl ToolStatus {
             details: None,
         }
     }
-    
+
     /// Add details to the status
     pub fn with_details(mut self, details: Value) -> Self {
         self.details = Some(details);

@@ -11,7 +11,7 @@ pub fn init(owner: Principal) {
         canister_id: ic_cdk::id(),
         owner,
     };
-    
+
     IcarusCanisterState::init(config);
 }
 

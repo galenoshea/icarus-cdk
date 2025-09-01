@@ -1,7 +1,7 @@
 //! Metadata types for tool discovery and canister introspection
 
-use serde::{Deserialize, Serialize};
 use candid::{CandidType, Principal};
+use serde::{Deserialize, Serialize};
 
 /// Metadata about the Icarus canister for tool discovery
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]

@@ -28,7 +28,7 @@ impl IcarusError {
     pub fn unauthorized() -> Self {
         Self::Unauthorized("Unauthorized access".to_string())
     }
-    
+
     /// Create a validation error
     pub fn validation(field: impl Into<String>, message: impl Into<String>) -> Self {
         Self::ValidationError {
@@ -36,22 +36,22 @@ impl IcarusError {
             message: message.into(),
         }
     }
-    
+
     /// Create a not found error
     pub fn not_found(resource: impl Into<String>) -> Self {
         Self::NotFound(format!("{} not found", resource.into()))
     }
-    
+
     /// Create an already exists error
     pub fn already_exists(resource: impl Into<String>) -> Self {
         Self::AlreadyExists(format!("{} already exists", resource.into()))
     }
-    
+
     /// Create a storage error
     pub fn storage(message: impl Into<String>) -> Self {
         Self::StorageError(message.into())
     }
-    
+
     /// Convert to a trap message for compatibility
     pub fn trap(self) -> ! {
         ic_cdk::trap(&self.to_string())

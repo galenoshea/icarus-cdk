@@ -3,11 +3,11 @@
 //! Provides a comprehensive authentication system with audit trails,
 //! role-based access control, and secure principal management.
 
+use crate::{memory_id, stable_storage, IcarusStorable};
 use candid::{CandidType, Deserialize, Principal};
 use ic_stable_structures::memory_manager::VirtualMemory;
 use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
 use serde::Serialize;
-use crate::{memory_id, stable_storage, IcarusStorable};
 
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
@@ -27,10 +27,10 @@ pub struct User {
 /// Role-based access control
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, CandidType)]
 pub enum AuthRole {
-    Owner,      // Full access, can manage all users
-    Admin,      // Can add/remove users, view audit logs
-    User,       // Normal tool access
-    ReadOnly,   // Query-only access
+    Owner,    // Full access, can manage all users
+    Admin,    // Can add/remove users, view audit logs
+    User,     // Normal tool access
+    ReadOnly, // Query-only access
 }
 
 /// Authentication result with detailed information
@@ -84,7 +84,7 @@ pub fn init_auth(owner: Principal) {
     if owner == Principal::anonymous() {
         ic_cdk::trap("Security Error: Anonymous principal cannot be set as owner");
     }
-    
+
     AUTH_USERS.with(|users| {
         let owner_entry = User {
             principal: owner,
@@ -111,7 +111,7 @@ pub fn init_auth(owner: Principal) {
 /// Validate authentication and return detailed auth info, or trap on failure
 pub fn authenticate() -> AuthInfo {
     let caller = ic_cdk::caller();
-    
+
     AUTH_USERS.with(|users| {
         // Get and clone the entry to avoid borrow conflicts
         let mut auth_entry = if let Some(entry) = users.borrow().get(&caller) {
@@ -126,9 +126,12 @@ pub fn authenticate() -> AuthInfo {
                 "Principal not found in authorized users".to_string(),
             );
 
-            ic_cdk::trap(&format!("Access denied: Principal {} not authorized", caller.to_text()));
+            ic_cdk::trap(&format!(
+                "Access denied: Principal {} not authorized",
+                caller.to_text()
+            ));
         };
-        
+
         if !auth_entry.active {
             log_auth_action(
                 AuthAction::AccessDenied,
@@ -138,7 +141,7 @@ pub fn authenticate() -> AuthInfo {
                 false,
                 "User account deactivated".to_string(),
             );
-            
+
             ic_cdk::trap("Access denied: account deactivated");
         }
 
@@ -171,18 +174,25 @@ pub fn authenticate() -> AuthInfo {
 /// Owner > Admin > User > ReadOnly
 pub fn require_role_or_higher(minimum_role: AuthRole) -> AuthInfo {
     let auth_info = authenticate();
-    
-    let has_permission = matches!((&auth_info.role, &minimum_role), 
-        (AuthRole::Owner, _) | 
-        (AuthRole::Admin, AuthRole::Admin | AuthRole::User | AuthRole::ReadOnly) | 
-        (AuthRole::User, AuthRole::User | AuthRole::ReadOnly) | 
-        (AuthRole::ReadOnly, AuthRole::ReadOnly)
+
+    let has_permission = matches!(
+        (&auth_info.role, &minimum_role),
+        (AuthRole::Owner, _)
+            | (
+                AuthRole::Admin,
+                AuthRole::Admin | AuthRole::User | AuthRole::ReadOnly
+            )
+            | (AuthRole::User, AuthRole::User | AuthRole::ReadOnly)
+            | (AuthRole::ReadOnly, AuthRole::ReadOnly)
     );
 
     if has_permission {
         auth_info
     } else {
-        ic_cdk::trap(&format!("Insufficient permissions: {:?} or higher required", minimum_role));
+        ic_cdk::trap(&format!(
+            "Insufficient permissions: {:?} or higher required",
+            minimum_role
+        ));
     }
 }
 
@@ -192,7 +202,10 @@ pub fn require_exact_role(role: AuthRole) -> AuthInfo {
     if matches!(auth_info.role, ref r if *r == role) {
         auth_info
     } else {
-        ic_cdk::trap(&format!("Requires exactly {:?} role, but caller has {:?}", role, auth_info.role));
+        ic_cdk::trap(&format!(
+            "Requires exactly {:?} role, but caller has {:?}",
+            role, auth_info.role
+        ));
     }
 }
 
@@ -202,7 +215,10 @@ pub fn require_any_of_roles(roles: &[AuthRole]) -> AuthInfo {
     if roles.contains(&auth_info.role) {
         auth_info
     } else {
-        ic_cdk::trap(&format!("Requires one of: {:?}, but caller has {:?}", roles, auth_info.role));
+        ic_cdk::trap(&format!(
+            "Requires one of: {:?}, but caller has {:?}",
+            roles, auth_info.role
+        ));
     }
 }
 
@@ -223,15 +239,12 @@ pub fn require_role(required_role: AuthRole) -> AuthInfo {
 }
 
 /// Add a new user (requires Admin or Owner role)
-pub fn add_user(
-    principal: Principal, 
-    role: AuthRole
-) -> String {
+pub fn add_user(principal: Principal, role: AuthRole) -> String {
     // Security check: prevent anonymous principal from being added
     if principal == Principal::anonymous() {
         ic_cdk::trap("Security Error: Anonymous principal cannot be authorized");
     }
-    
+
     let auth_info = require_role(AuthRole::Admin);
     let caller = ic_cdk::caller();
 
@@ -283,7 +296,9 @@ pub fn remove_user(principal: Principal) -> String {
     AUTH_USERS.with(|users| {
         if let Some(target_entry) = users.borrow().get(&principal) {
             // Prevent removal of owners by admins
-            if matches!(target_entry.role, AuthRole::Owner) && !matches!(auth_info.role, AuthRole::Owner) {
+            if matches!(target_entry.role, AuthRole::Owner)
+                && !matches!(auth_info.role, AuthRole::Owner)
+            {
                 ic_cdk::trap("Only owners can remove other owners");
             }
 
@@ -315,15 +330,12 @@ pub fn remove_user(principal: Principal) -> String {
 }
 
 /// Update user role (requires Owner role)
-pub fn update_user_role(
-    principal: Principal, 
-    new_role: AuthRole
-) -> String {
+pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
     // Security check: prevent anonymous principal from having any role
     if principal == Principal::anonymous() {
         ic_cdk::trap("Security Error: Anonymous principal cannot have a role");
     }
-    
+
     require_role(AuthRole::Owner); // Only owners can change roles
     let caller = ic_cdk::caller();
 
@@ -369,7 +381,11 @@ pub fn get_authorized_users() -> Vec<User> {
     );
 
     AUTH_USERS.with(|users| {
-        users.borrow().iter().map(|(_, entry)| entry.clone()).collect()
+        users
+            .borrow()
+            .iter()
+            .map(|(_, entry)| entry.clone())
+            .collect()
     })
 }
 
@@ -398,7 +414,7 @@ pub fn get_auth_audit(limit: Option<u32>) -> Vec<AuthAuditEntry> {
         // Sort by timestamp (newest first)
         entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
         entries.truncate(limit);
-        
+
         entries
     })
 }
@@ -447,11 +463,8 @@ pub fn list_users() -> Vec<User> {
 
 /// Get specific user by principal
 pub fn get_user(principal: Principal) -> Option<User> {
-    AUTH_USERS.with(|users| {
-        users.borrow().get(&principal)
-    })
+    AUTH_USERS.with(|users| users.borrow().get(&principal))
 }
-
 
 // Convenience macros for common auth checks
 #[macro_export]

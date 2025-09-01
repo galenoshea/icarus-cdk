@@ -1,7 +1,7 @@
 //! Certificate verification for secure canister communication
 
-use serde::{Deserialize, Serialize};
 use crate::error::Result;
+use serde::{Deserialize, Serialize};
 
 /// Certificate data from ICP
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ pub struct Delegation {
 pub trait CertificateVerifier: Send + Sync {
     /// Verify a certificate
     fn verify(&self, certificate: &Certificate) -> Result<bool>;
-    
+
     /// Extract certified data
     fn extract_data(&self, certificate: &Certificate, path: &[&[u8]]) -> Result<Option<Vec<u8>>>;
 }
@@ -71,7 +71,7 @@ impl BasicCertificateVerifier {
     pub fn new(config: CertificateConfig) -> Self {
         Self { config }
     }
-    
+
     /// Look up a path in the certificate tree
     #[allow(clippy::only_used_in_recursion)]
     fn lookup_path(&self, tree: &CertificateTree, path: &[&[u8]]) -> Option<Vec<u8>> {
@@ -80,10 +80,9 @@ impl BasicCertificateVerifier {
                 CertificateTree::Leaf(data) => Some(data.clone()),
                 _ => None,
             },
-            CertificateTree::Fork(left, right) => {
-                self.lookup_path(left, path)
-                    .or_else(|| self.lookup_path(right, path))
-            }
+            CertificateTree::Fork(left, right) => self
+                .lookup_path(left, path)
+                .or_else(|| self.lookup_path(right, path)),
             CertificateTree::Labeled(label, subtree) if !path.is_empty() => {
                 if label == path[0] {
                     self.lookup_path(subtree, &path[1..])
@@ -101,13 +100,13 @@ impl CertificateVerifier for BasicCertificateVerifier {
         if !self.config.verify_certificates {
             return Ok(true);
         }
-        
+
         // TODO: Implement actual certificate verification
         // This requires cryptographic operations and ICP-specific logic
         // For now, we'll just return true if verification is disabled
         Ok(false)
     }
-    
+
     fn extract_data(&self, certificate: &Certificate, path: &[&[u8]]) -> Result<Option<Vec<u8>>> {
         Ok(self.lookup_path(&certificate.tree, path))
     }
@@ -125,18 +124,18 @@ impl CertificatePath {
             segments: Vec::new(),
         }
     }
-    
+
     /// Add a segment to the path
     pub fn segment(mut self, segment: impl AsRef<[u8]>) -> Self {
         self.segments.push(segment.as_ref().to_vec());
         self
     }
-    
+
     /// Add a string segment
     pub fn string_segment(self, segment: &str) -> Self {
         self.segment(segment.as_bytes())
     }
-    
+
     /// Build the path segments
     pub fn build(self) -> Vec<Vec<u8>> {
         self.segments
@@ -163,7 +162,7 @@ impl<T> CertifiedResponse<T> {
     pub fn new(data: T, certificate: Certificate) -> Self {
         Self { data, certificate }
     }
-    
+
     /// Verify the certificate
     pub fn verify(&self, verifier: &dyn CertificateVerifier) -> Result<bool> {
         verifier.verify(&self.certificate)
@@ -173,7 +172,7 @@ impl<T> CertifiedResponse<T> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_certificate_path_builder() {
         let path = CertificatePath::new()
@@ -181,7 +180,7 @@ mod tests {
             .segment([0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01])
             .string_segment("certified_data")
             .build();
-            
+
         assert_eq!(path.len(), 3);
         assert_eq!(path[0], b"canister");
         assert_eq!(path[2], b"certified_data");

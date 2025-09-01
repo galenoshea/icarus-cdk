@@ -1,6 +1,14 @@
+// Copyright (c) 2025 Icarus Team. All Rights Reserved.
+// Licensed under BSL-1.1. See LICENSE and NOTICE files.
+// Signature verification and telemetry must remain intact.
+
 // #![warn(missing_docs)] // TODO: Enable after adding all documentation
 
-//! # Icarus SDK
+//! # Icarus SDK - Licensed under BSL-1.1
+//!
+//! NOTICE: This SDK includes signature verification and telemetry.
+//! Tampering with these mechanisms violates the license agreement.
+//! See LICENSE and NOTICE files for complete terms.
 //!
 //! Build MCP (Model Context Protocol) servers that run as Internet Computer canisters.
 //!
@@ -56,4 +64,4 @@ pub use icarus_derive::{icarus_module, icarus_tool};
 pub mod prelude {
     pub use crate::canister::prelude::*;
     pub use crate::derive::{icarus_module, icarus_tool};
-}
+} // test

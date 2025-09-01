@@ -1,11 +1,11 @@
 //! Canister endpoints for tool metadata discovery
-//! 
+//!
 //! In the clean architecture, canisters don't handle MCP protocol.
 //! They only provide metadata for bridge discovery.
 
 use crate::state::STATE;
-use icarus_core::protocol::{IcarusMetadata, ToolMetadata};
 use candid::{CandidType, Deserialize, Principal};
+use icarus_core::protocol::{IcarusMetadata, ToolMetadata};
 
 /// Query canister metadata for tool discovery
 pub fn icarus_metadata() -> IcarusMetadata {
@@ -15,14 +15,16 @@ pub fn icarus_metadata() -> IcarusMetadata {
             IcarusMetadata {
                 version: state.config.get().version.clone(),
                 canister_id: ic_cdk::id(),
-                tools: state.tools.iter()
+                tools: state
+                    .tools
+                    .iter()
                     .map(|(name, tool_state)| {
                         ToolMetadata {
                             name: name.clone(),
                             candid_method: name.clone(), // Method name matches tool name
                             is_query: tool_state.is_query,
                             description: format!("{} tool", name), // TODO: Get from tool definition
-                            parameters: vec![], // TODO: Get from tool definition
+                            parameters: vec![],                    // TODO: Get from tool definition
                         }
                     })
                     .collect(),
@@ -57,21 +59,25 @@ pub struct HttpResponse {
 /// Handle HTTP requests from the IC HTTP gateway
 pub fn http_request(_req: HttpRequest) -> HttpResponse {
     let metadata = icarus_metadata();
-    
+
     // Generate HTML showing available tools
-    let tools_html: String = metadata.tools.iter()
-        .map(|tool| format!(
-            r#"<div class="tool">
+    let tools_html: String = metadata
+        .tools
+        .iter()
+        .map(|tool| {
+            format!(
+                r#"<div class="tool">
                 <strong>{}</strong> ({})
                 <br><small>{}</small>
             </div>"#,
-            tool.name,
-            if tool.is_query { "query" } else { "update" },
-            tool.description
-        ))
+                tool.name,
+                if tool.is_query { "query" } else { "update" },
+                tool.description
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     let html = format!(
         r#"<!DOCTYPE html>
 <html>
@@ -146,11 +152,14 @@ pub fn http_request(_req: HttpRequest) -> HttpResponse {
         tools_html,
         ic_cdk::id().to_text()
     );
-    
+
     HttpResponse {
         status_code: 200,
         headers: vec![
-            ("Content-Type".to_string(), "text/html; charset=UTF-8".to_string()),
+            (
+                "Content-Type".to_string(),
+                "text/html; charset=UTF-8".to_string(),
+            ),
             ("Cache-Control".to_string(), "no-cache".to_string()),
         ],
         body: html.into_bytes(),

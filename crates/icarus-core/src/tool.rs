@@ -1,10 +1,10 @@
 //! Tool abstraction for Icarus MCP servers
 
+use crate::error::Result;
 use async_trait::async_trait;
+use rmcp::model::Tool;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use crate::error::Result;
-use rmcp::model::Tool;
 
 /// Information about a tool
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -28,20 +28,20 @@ pub struct StorageRequirements {
 pub trait IcarusTool: Send + Sync {
     /// Get tool information
     fn info(&self) -> ToolInfo;
-    
+
     /// Convert to rmcp tool representation
     fn to_rmcp_tool(&self) -> Tool;
-    
+
     /// Check if the tool requires stable storage
     fn requires_stable_storage(&self) -> bool {
         false
     }
-    
+
     /// Get storage requirements for capacity planning
     fn storage_requirements(&self) -> StorageRequirements {
         StorageRequirements::default()
     }
-    
+
     /// Execute the tool with given arguments
     async fn execute(&self, args: Value) -> Result<Value>;
 }

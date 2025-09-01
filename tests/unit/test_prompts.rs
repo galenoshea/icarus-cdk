@@ -20,15 +20,15 @@ fn test_prompt_builder() {
 #[test]
 fn test_prompt_registry() {
     let mut registry = PromptRegistry::new();
-    
+
     let prompt = PromptBuilder::new("greeting")
         .description("Greeting prompt")
         .template("Hello {{name}}!")
         .arg("name", "Name to greet", true)
         .build();
-    
+
     registry.register(prompt);
-    
+
     let retrieved = registry.get("greeting");
     assert!(retrieved.is_some());
     assert_eq!(retrieved.unwrap().name, "greeting");
@@ -37,19 +37,19 @@ fn test_prompt_registry() {
 #[test]
 fn test_prompt_rendering() {
     let mut registry = PromptRegistry::new();
-    
+
     let prompt = PromptBuilder::new("welcome")
         .description("Welcome message")
         .template("Welcome {{name}} to {{place}}!")
         .arg("name", "User name", true)
         .arg_with_default("place", "Location", "Icarus")
         .build();
-    
+
     registry.register(prompt);
-    
+
     let mut args = HashMap::new();
     args.insert("name".to_string(), "Alice".to_string());
-    
+
     let rendered = registry.render("welcome", &args).unwrap();
     assert_eq!(rendered, "Welcome Alice to Icarus!");
 }
@@ -57,7 +57,7 @@ fn test_prompt_rendering() {
 #[test]
 fn test_prompt_rendering_with_all_args() {
     let mut registry = PromptRegistry::new();
-    
+
     let prompt = PromptBuilder::new("full")
         .description("Full message")
         .template("{{greeting}} {{name}}, welcome to {{place}}!")
@@ -65,14 +65,14 @@ fn test_prompt_rendering_with_all_args() {
         .arg("name", "User name", true)
         .arg("place", "Location", true)
         .build();
-    
+
     registry.register(prompt);
-    
+
     let mut args = HashMap::new();
     args.insert("name".to_string(), "Bob".to_string());
     args.insert("place".to_string(), "ICP".to_string());
     args.insert("greeting".to_string(), "Hi".to_string());
-    
+
     let rendered = registry.render("full", &args).unwrap();
     assert_eq!(rendered, "Hi Bob, welcome to ICP!");
 }
@@ -80,18 +80,18 @@ fn test_prompt_rendering_with_all_args() {
 #[test]
 fn test_missing_required_argument() {
     let mut registry = PromptRegistry::new();
-    
+
     let prompt = PromptBuilder::new("strict")
         .description("Strict prompt")
         .template("Hello {{name}}!")
         .arg("name", "Required name", true)
         .build();
-    
+
     registry.register(prompt);
-    
+
     let args = HashMap::new();
     let result = registry.render("strict", &args);
-    
+
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Missing required argument"));
 }
@@ -100,7 +100,7 @@ fn test_missing_required_argument() {
 fn test_prompt_not_found() {
     let registry = PromptRegistry::new();
     let args = HashMap::new();
-    
+
     let result = registry.render("nonexistent", &args);
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("not found"));

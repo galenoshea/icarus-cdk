@@ -1,7 +1,7 @@
 //! Server lifecycle management traits
 
-use async_trait::async_trait;
 use crate::error::Result;
+use async_trait::async_trait;
 
 /// Lifecycle events for MCP servers
 #[async_trait]
@@ -10,22 +10,22 @@ pub trait IcarusServerLifecycle: Send + Sync {
     async fn on_initialize(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called before the server is upgraded
     async fn on_pre_upgrade(&self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called after the server is upgraded
     async fn on_post_upgrade(&mut self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called when the server is about to be stopped
     async fn on_stop(&self) -> Result<()> {
         Ok(())
     }
-    
+
     /// Called periodically for maintenance tasks
     async fn on_heartbeat(&mut self) -> Result<()> {
         Ok(())

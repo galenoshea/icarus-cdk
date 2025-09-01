@@ -1,0 +1,83 @@
+Icarus SDK - Business Source License 1.1
+Copyright (c) 2025 Icarus Team. All Rights Reserved.
+
+================================================================================
+IMPORTANT LICENSING NOTICE
+================================================================================
+
+This SDK is licensed under the Business Source License 1.1, which is NOT an 
+open source license. Commercial and competitive uses are restricted.
+
+KEY RESTRICTIONS:
+─────────────────
+• NO creating competing MCP marketplaces
+• NO redistributing the SDK or derivatives
+• NO removing signature verification
+• NO white-labeling or rebranding
+• NO reverse engineering for competition
+• NO offering SDK as a service
+
+PERMITTED USES:
+───────────────
+• Building MCP tools for Icarus Marketplace
+• Internal business use
+• Educational and research purposes
+• Integration with Icarus services
+• Personal and non-commercial projects
+
+SIGNATURE VERIFICATION:
+───────────────────────
+This SDK includes cryptographic signature verification to ensure authenticity.
+Tampering with or bypassing these mechanisms violates the license terms and
+may result in legal action.
+
+TELEMETRY AND USAGE REPORTING:
+───────────────────────────────
+This SDK includes telemetry to improve the service and ensure compliance.
+Disabling or interfering with telemetry violates the license agreement.
+
+TRADEMARK NOTICE:
+─────────────────
+"Icarus" and the Icarus logo are registered trademarks of the Icarus Team.
+Use of these marks without explicit written permission is prohibited.
+
+VERSION NOTICE:
+───────────────
+Version 0.1.0 was published in error with Apache-2.0 license and has been yanked.
+Version 0.2.0 and later are the official releases under BSL-1.1.
+Only version 0.2.0 and later should be used in production.
+
+CONVERSION TO OPEN SOURCE:
+──────────────────────────
+On January 1, 2029, this software will automatically convert to the 
+Apache License, Version 2.0. Until then, all restrictions above apply.
+
+COMMERCIAL LICENSING:
+─────────────────────
+For uses not permitted under the BSL, commercial licenses are available.
+Contact: licensing@icarus.dev
+
+VIOLATION REPORTING:
+────────────────────
+To report license violations or unauthorized use:
+Email: legal@icarus.dev
+
+ATTRIBUTION REQUIREMENTS:
+─────────────────────────
+When using this SDK, you must:
+1. Preserve all copyright notices
+2. Maintain the NOTICE file in distributions
+3. Display "Powered by Icarus" in your application
+4. Not imply endorsement by Icarus Team
+
+THIRD-PARTY SOFTWARE:
+─────────────────────
+This SDK includes dependencies under various open source licenses.
+See Cargo.toml and individual dependency licenses for details.
+
+For the complete license text, see the LICENSE file.
+For questions about licensing, contact: licensing@icarus.dev
+
+================================================================================
+END OF NOTICE
+================================================================================
