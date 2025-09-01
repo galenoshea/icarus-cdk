@@ -21,9 +21,15 @@ The SDK uses automated publishing via GitHub Actions when version tags are pushe
 
 ### 1. Prepare Release
 
-First, ensure all changes are committed and pushed:
+First, test locally and ensure all changes are committed:
 ```bash
-git status
+# Run local CI tests
+./scripts/test-ci.sh
+
+# Test the release process
+./scripts/test-release.sh patch
+
+# Push changes
 git push origin main
 ```
 

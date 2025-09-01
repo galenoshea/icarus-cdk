@@ -73,10 +73,11 @@ echo ""
 
 # Step 2: Run CI tests first
 print_step "Running CI tests..."
-if ./test-ci.sh > /dev/null 2>&1; then
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+if "$SCRIPT_DIR/test-ci.sh" > /dev/null 2>&1; then
     print_success "CI tests passed"
 else
-    print_error "CI tests failed - run ./test-ci.sh for details"
+    print_error "CI tests failed - run ./scripts/test-ci.sh for details"
     exit 1
 fi
 echo ""
