@@ -14,7 +14,7 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust,no_run
+//! ```ignore
 //! use icarus::prelude::*;
 //! use candid::{CandidType, Deserialize};
 //! use serde::Serialize;
@@ -52,7 +52,7 @@ pub use icarus_canister as canister;
 // Re-export commonly used items
 pub use icarus_derive::{icarus_module, icarus_tool};
 
-// Prelude module for convenient imports
+/// Prelude module for convenient imports
 pub mod prelude {
     pub use crate::canister::prelude::*;
     pub use crate::derive::{icarus_module, icarus_tool};

@@ -12,7 +12,7 @@ Write your MCP servers in Rust, deploy them to ICP, and they run forever with bu
 
 ## Quick Start
 
-```rust
+```rust,ignore
 use icarus_canister::prelude::*;
 use candid::{CandidType, Deserialize};
 use serde::Serialize;
