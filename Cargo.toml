@@ -3,7 +3,7 @@ name = "icarus"
 version = "0.2.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
-license = "BSL-1.1"
+license-file = "LICENSE"
 repository = "https://github.com/galenoshea/icarus-sdk"
 documentation = "https://docs.rs/icarus"
 homepage = "https://github.com/galenoshea/icarus-sdk"
@@ -50,7 +50,7 @@ path = "tests/integration/test_sdk_workflow.rs"
 version = "0.2.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
-license = "BSL-1.1"
+license-file = "LICENSE"
 repository = "https://github.com/icarus-sdk/icarus-sdk"
 
 [workspace.dependencies]
