@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -47,7 +47,7 @@ name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
-version = "0.2.2"
+version = "0.2.3"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
