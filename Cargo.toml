@@ -17,6 +17,11 @@ icarus-core = { version = "0.1.0", path = "crates/icarus-core" }
 icarus-derive = { version = "0.1.0", path = "crates/icarus-derive" }
 icarus-canister = { version = "0.1.0", path = "crates/icarus-canister" }
 
+[dev-dependencies]
+tokio = { version = "1", features = ["full"] }
+serde_json = "1.0"
+candid = "0.10"
+
 [workspace]
 members = [
     "crates/icarus-core",
@@ -24,6 +29,22 @@ members = [
     "crates/icarus-canister",
 ]
 resolver = "2"
+
+[[test]]
+name = "unit_prompts"
+path = "tests/unit/test_prompts.rs"
+
+[[test]]
+name = "unit_session"
+path = "tests/unit/test_session.rs"
+
+[[test]]
+name = "unit_tools"
+path = "tests/unit/test_tools.rs"
+
+[[test]]
+name = "integration_sdk_workflow"
+path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
 version = "0.1.0"

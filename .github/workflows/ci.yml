@@ -41,13 +41,22 @@ jobs:
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
     
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        echo "Running unit tests..."
+        cargo test --lib --verbose
+        echo "Running integration tests..."
+        cargo test --test '*' --verbose
+        echo "Running doc tests..."
+        cargo test --doc --verbose
     
     - name: Run clippy
-      run: cargo clippy -- -D warnings
+      run: cargo clippy --all-targets --all-features -- -D warnings
     
     - name: Check formatting
-      run: cargo fmt -- --check
+      run: cargo fmt --all -- --check
+    
+    - name: Check documentation
+      run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
     
     - name: Build WASM
       run: cargo build --target wasm32-unknown-unknown --release

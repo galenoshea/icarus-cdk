@@ -123,6 +123,27 @@ See the [docs/](docs/) folder for:
 - Best Practices
 - Example Projects
 
+## Testing
+
+The SDK includes a comprehensive test suite:
+
+```bash
+# Run all tests
+cargo test
+
+# Run with coverage
+cargo install cargo-llvm-cov
+cargo llvm-cov --html
+
+# Install pre-commit hooks
+./scripts/install-hooks.sh
+
+# Run CI tests locally
+./scripts/test-ci.sh
+```
+
+See [tests/README.md](tests/README.md) for more details.
+
 ## License
 
 Apache 2.0
