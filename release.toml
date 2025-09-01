@@ -1,7 +1,6 @@
 # Configuration for cargo-release
 # This ensures all workspace crates are versioned and released together
 
-[workspace]
 # All workspace members share the same version
 shared-version = true
 
@@ -20,7 +19,6 @@ tag-message = "Release version {{version}}"
 
 # Commit message format
 pre-release-commit-message = "Release version {{version}}"
-post-release-commit-message = "Prepare for next development iteration {{next_version}}"
 
 # Don't publish to crates.io automatically (GitHub Actions will handle this)
 publish = false
@@ -37,16 +35,10 @@ consolidate-commits = true
 # Pre-release replacements to update version references
 [[pre-release-replacements]]
 file = "README.md"
-search = 'icarus = "[0-9]+\.[0-9]+\.[0-9]+"'
+search = 'icarus = "[0-9]+\.[0-9]+"'
 replace = 'icarus = "{{version}}"'
 
 [[pre-release-replacements]]
 file = "README.md"
-search = 'icarus-canister = "[0-9]+\.[0-9]+\.[0-9]+"'
+search = 'icarus-canister = "[0-9]+\.[0-9]+"'
 replace = 'icarus-canister = "{{version}}"'
-
-# Individual crate configurations (inherit from workspace)
-[packages.icarus-core]
-[packages.icarus-derive]
-[packages.icarus-canister]
-[packages.icarus]
