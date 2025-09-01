@@ -1,42 +1,33 @@
 //! Integration tests for the complete SDK workflow
 
 use icarus_core::prompts::{PromptBuilder, PromptRegistry};
-use icarus_core::session::SessionManager;
-use icarus_canister::tools::{ToolRegistry, ToolRegistration, ToolFunction};
+use icarus_canister::tools::{ToolRegistry, ToolRegistration};
 use icarus_core::error::ToolError;
-use candid::Principal;
 use serde_json::json;
 use std::collections::HashMap;
 
-/// Test the complete workflow of creating a tool with prompts and sessions
+/// Test the complete workflow of creating a tool with prompts
 #[tokio::test]
 async fn test_complete_tool_workflow() {
-    // Step 1: Set up session management
-    let mut session_manager = SessionManager::new();
-    let principal = Principal::from_text("aaaaa-aa").unwrap();
-    let session_id = session_manager.create_session(principal.clone());
-    
-    assert!(session_manager.validate_session(&session_id, principal));
-    
-    // Step 2: Set up prompts
+    // Step 1: Set up prompts
     let mut prompt_registry = PromptRegistry::new();
     
     let system_prompt = PromptBuilder::new("system")
         .description("System prompt for the tool")
         .template("You are {{role}} helping with {{task}}")
-        .arg("role", "The role of the assistant", true, Some("an assistant".to_string()))
-        .arg("task", "The task to help with", true, None)
+        .arg_with_default("role", "The role of the assistant", "an assistant")
+        .arg("task", "The task to help with", true)
         .build();
     
     prompt_registry.register(system_prompt);
     
-    // Step 3: Set up tools
+    // Step 2: Set up tools
     let mut tool_registry = ToolRegistry::new();
     
     let tool = ToolRegistration {
         name: "prompt_tool".to_string(),
         description: "A tool that uses prompts".to_string(),
-        function: ToolFunction::Query(Box::new(move |args| {
+        function: Box::new(move |args| {
             let prompt_registry_clone = prompt_registry.clone();
             Box::pin(async move {
                 let mut prompt_args = HashMap::new();
@@ -44,30 +35,26 @@ async fn test_complete_tool_workflow() {
                 
                 let rendered = prompt_registry_clone
                     .render("system", &prompt_args)
-                    .map_err(|e| ToolError::Execution(e))?;
+                    .map_err(|e| ToolError::operation_failed(e))?;
                 
                 Ok(json!({
                     "prompt": rendered,
                     "input": args
                 }))
             })
-        })),
+        }),
     };
     
     tool_registry.register(tool);
     
-    // Step 4: Execute the tool
+    // Step 3: Execute the tool
     let input = json!({"message": "test message"});
     let result = tool_registry.execute("prompt_tool", input).await.unwrap();
     
-    // Step 5: Verify the results
+    // Step 4: Verify the results
     assert!(result["prompt"].as_str().unwrap().contains("an assistant"));
     assert!(result["prompt"].as_str().unwrap().contains("testing"));
     assert_eq!(result["input"]["message"], "test message");
-    
-    // Step 6: Clean up session
-    session_manager.remove_session(&session_id);
-    assert!(session_manager.get_session(&session_id).is_none());
 }
 
 /// Test error handling across the SDK
@@ -79,13 +66,11 @@ async fn test_error_handling() {
     let failing_tool = ToolRegistration {
         name: "failing_tool".to_string(),
         description: "A tool that always fails".to_string(),
-        function: ToolFunction::Query(Box::new(|_args| {
+        function: Box::new(|_args| {
             Box::pin(async move {
-                Err(ToolError::Execution(
-                    "Intentional failure".to_string()
-                ))
+                Err(ToolError::operation_failed("Intentional failure"))
             })
-        })),
+        }),
     };
     
     tool_registry.register(failing_tool);
@@ -95,10 +80,10 @@ async fn test_error_handling() {
     assert!(result.is_err());
     
     match result.unwrap_err() {
-        ToolError::Execution(msg) => {
+        ToolError::OperationFailed(msg) => {
             assert_eq!(msg, "Intentional failure");
         }
-        _ => panic!("Expected Execution error"),
+        _ => panic!("Expected OperationFailed error"),
     }
 }
 
@@ -111,21 +96,21 @@ async fn test_tool_composition() {
     registry.register(ToolRegistration {
         name: "preprocess".to_string(),
         description: "Preprocesses data".to_string(),
-        function: ToolFunction::Query(Box::new(|args| {
+        function: Box::new(|args| {
             Box::pin(async move {
                 let text = args["text"].as_str().unwrap_or("");
                 Ok(json!({
                     "processed": text.to_uppercase()
                 }))
             })
-        })),
+        }),
     });
     
     // Tool 2: Analyzer
     registry.register(ToolRegistration {
         name: "analyze".to_string(),
         description: "Analyzes processed data".to_string(),
-        function: ToolFunction::Query(Box::new(|args| {
+        function: Box::new(|args| {
             Box::pin(async move {
                 let text = args["processed"].as_str().unwrap_or("");
                 Ok(json!({
@@ -133,7 +118,7 @@ async fn test_tool_composition() {
                     "has_hello": text.contains("HELLO")
                 }))
             })
-        })),
+        }),
     });
     
     // Execute tools in sequence

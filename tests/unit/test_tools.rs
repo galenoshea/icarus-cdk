@@ -1,8 +1,8 @@
 //! Unit tests for the tools module
 
-use icarus_canister::tools::{ToolRegistry, ToolRegistration, ToolFunction};
+use icarus_canister::tools::{ToolRegistry, ToolRegistration};
 use icarus_core::error::ToolError;
-use serde_json::{json, Value};
+use serde_json::json;
 
 #[test]
 fn test_tool_registry_creation() {
@@ -17,11 +17,11 @@ fn test_tool_registration() {
     let tool = ToolRegistration {
         name: "test_tool".to_string(),
         description: "A test tool".to_string(),
-        function: ToolFunction::Query(Box::new(|_args| {
+        function: Box::new(|_args| {
             Box::pin(async move {
                 Ok(json!({"result": "success"}))
             })
-        })),
+        }),
     };
     
     registry.register(tool);
@@ -45,11 +45,11 @@ async fn test_tool_execution() {
     let tool = ToolRegistration {
         name: "echo".to_string(),
         description: "Echoes input".to_string(),
-        function: ToolFunction::Query(Box::new(|args| {
+        function: Box::new(|args| {
             Box::pin(async move {
                 Ok(args.clone())
             })
-        })),
+        }),
     };
     
     registry.register(tool);
@@ -66,8 +66,8 @@ async fn test_tool_not_found() {
     
     assert!(result.is_err());
     match result.unwrap_err() {
-        ToolError::NotFound(name) => {
-            assert_eq!(name, "nonexistent");
+        ToolError::NotFound(msg) => {
+            assert!(msg.contains("nonexistent"));
         }
         _ => panic!("Expected NotFound error"),
     }
@@ -81,26 +81,26 @@ async fn test_multiple_tools() {
     registry.register(ToolRegistration {
         name: "add".to_string(),
         description: "Adds two numbers".to_string(),
-        function: ToolFunction::Query(Box::new(|args| {
+        function: Box::new(|args| {
             Box::pin(async move {
                 let a = args["a"].as_i64().unwrap_or(0);
                 let b = args["b"].as_i64().unwrap_or(0);
                 Ok(json!({"result": a + b}))
             })
-        })),
+        }),
     });
     
     // Register second tool
     registry.register(ToolRegistration {
         name: "multiply".to_string(),
         description: "Multiplies two numbers".to_string(),
-        function: ToolFunction::Query(Box::new(|args| {
+        function: Box::new(|args| {
             Box::pin(async move {
                 let a = args["a"].as_i64().unwrap_or(1);
                 let b = args["b"].as_i64().unwrap_or(1);
                 Ok(json!({"result": a * b}))
             })
-        })),
+        }),
     });
     
     // Test both tools

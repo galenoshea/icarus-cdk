@@ -8,8 +8,8 @@ fn test_prompt_builder() {
     let prompt = PromptBuilder::new("test_prompt")
         .description("A test prompt")
         .template("Hello {{name}}, you are {{age}} years old")
-        .arg("name", "The person's name", true, None)
-        .arg("age", "The person's age", true, Some("unknown".to_string()))
+        .arg("name", "The person's name", true)
+        .arg_with_default("age", "The person's age", "unknown")
         .build();
 
     assert_eq!(prompt.name, "test_prompt");
@@ -24,7 +24,7 @@ fn test_prompt_registry() {
     let prompt = PromptBuilder::new("greeting")
         .description("Greeting prompt")
         .template("Hello {{name}}!")
-        .arg("name", "Name to greet", true, None)
+        .arg("name", "Name to greet", true)
         .build();
     
     registry.register(prompt);
@@ -41,8 +41,8 @@ fn test_prompt_rendering() {
     let prompt = PromptBuilder::new("welcome")
         .description("Welcome message")
         .template("Welcome {{name}} to {{place}}!")
-        .arg("name", "User name", true, None)
-        .arg("place", "Location", false, Some("Icarus".to_string()))
+        .arg("name", "User name", true)
+        .arg_with_default("place", "Location", "Icarus")
         .build();
     
     registry.register(prompt);
@@ -61,9 +61,9 @@ fn test_prompt_rendering_with_all_args() {
     let prompt = PromptBuilder::new("full")
         .description("Full message")
         .template("{{greeting}} {{name}}, welcome to {{place}}!")
-        .arg("greeting", "Greeting word", false, Some("Hello".to_string()))
-        .arg("name", "User name", true, None)
-        .arg("place", "Location", true, None)
+        .arg_with_default("greeting", "Greeting word", "Hello")
+        .arg("name", "User name", true)
+        .arg("place", "Location", true)
         .build();
     
     registry.register(prompt);
@@ -84,7 +84,7 @@ fn test_missing_required_argument() {
     let prompt = PromptBuilder::new("strict")
         .description("Strict prompt")
         .template("Hello {{name}}!")
-        .arg("name", "Required name", true, None)
+        .arg("name", "Required name", true)
         .build();
     
     registry.register(prompt);
