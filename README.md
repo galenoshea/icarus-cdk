@@ -59,9 +59,9 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-icarus = "0.2.1"
+icarus = "0.2.2"
 # Or if you need individual crates:
-# icarus-canister = "0.2.1"
+# icarus-canister = "0.2.2"
 # ic-cdk = "0.16"
 # candid = "0.10"
 # serde = { version = "1.0", features = ["derive"] }
