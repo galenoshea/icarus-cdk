@@ -35,7 +35,7 @@ async fn test_complete_tool_workflow() {
 
                 let rendered = prompt_registry_clone
                     .render("system", &prompt_args)
-                    .map_err(|e| ToolError::operation_failed(e))?;
+                    .map_err(ToolError::operation_failed)?;
 
                 Ok(json!({
                     "prompt": rendered,

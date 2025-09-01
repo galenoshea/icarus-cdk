@@ -11,5 +11,5 @@ fn test_placeholder() {
     // - InMemorySessionManager
     // - StableSessionManager
     // etc.
-    assert!(true, "Placeholder test for session module");
+    // Placeholder test - SessionManager trait requires concrete implementation for testing
 }
