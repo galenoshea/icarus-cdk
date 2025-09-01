@@ -201,7 +201,7 @@ impl SessionContext {
     /// Set session metadata value
     pub fn set_metadata<T: Serialize>(&mut self, key: String, value: T) -> Result<()> {
         let json_value = serde_json::to_value(value)
-            .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+            .map_err(crate::error::IcarusError::Serialization)?;
         self.session.metadata.insert(key, json_value);
         Ok(())
     }

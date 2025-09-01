@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+// #![warn(missing_docs)] // TODO: Enable after adding all documentation
 
 //! Procedural macros for the Icarus SDK
 //! 

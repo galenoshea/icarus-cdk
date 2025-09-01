@@ -429,7 +429,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
                 
                 // Look for icarus_tool attribute first, then fall back to doc comments
                 let description = func.attrs.iter()
-                    .find_map(|attr| extract_tool_description(attr))
+                    .find_map(extract_tool_description)
                     .or_else(|| {
                         // Fall back to doc comments if no icarus_tool description
                         func.attrs.iter().find_map(|attr| {
@@ -715,7 +715,7 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
             if has_update || has_query {
                 // Look for icarus_tool attribute first, then fall back to doc comments
                 let description = func.attrs.iter()
-                    .find_map(|attr| extract_tool_description(attr))
+                    .find_map(extract_tool_description)
                     .or_else(|| {
                         // Fall back to doc comments if no icarus_tool description
                         func.attrs.iter().find_map(|attr| {

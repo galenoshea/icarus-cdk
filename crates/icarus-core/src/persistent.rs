@@ -36,7 +36,7 @@ pub trait TypedPersistentState: IcarusPersistentState {
     {
         async move {
             let bytes = serde_json::to_vec(value)
-                .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+                .map_err(crate::error::IcarusError::Serialization)?;
             self.set(key, bytes).await
         }
     }
@@ -50,7 +50,7 @@ pub trait TypedPersistentState: IcarusPersistentState {
             match self.get(key).await? {
                 Some(bytes) => {
                     let value = serde_json::from_slice(&bytes)
-                        .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+                        .map_err(crate::error::IcarusError::Serialization)?;
                     Ok(Some(value))
                 }
                 None => Ok(None),
@@ -73,6 +73,12 @@ impl MemoryPersistentState {
         Self {
             data: HashMap::new(),
         }
+    }
+}
+
+impl Default for MemoryPersistentState {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

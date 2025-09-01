@@ -73,6 +73,7 @@ impl BasicCertificateVerifier {
     }
     
     /// Look up a path in the certificate tree
+    #[allow(clippy::only_used_in_recursion)]
     fn lookup_path(&self, tree: &CertificateTree, path: &[&[u8]]) -> Option<Vec<u8>> {
         match tree {
             _ if path.is_empty() => match tree {
@@ -139,6 +140,12 @@ impl CertificatePath {
     /// Build the path segments
     pub fn build(self) -> Vec<Vec<u8>> {
         self.segments
+    }
+}
+
+impl Default for CertificatePath {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

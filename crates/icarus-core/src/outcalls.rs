@@ -63,7 +63,7 @@ pub trait HttpOutcalls: Send + Sync {
     /// Convenience method for POST requests with JSON
     async fn post_json(&self, url: &str, json: &serde_json::Value) -> Result<HttpResponse> {
         let body = serde_json::to_vec(json)
-            .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+            .map_err(crate::error::IcarusError::Serialization)?;
             
         let mut headers = HashMap::new();
         headers.insert("Content-Type".to_string(), "application/json".to_string());
@@ -138,7 +138,7 @@ impl HttpRequestBuilder {
     /// Set JSON body
     pub fn json_body(mut self, json: &serde_json::Value) -> Result<Self> {
         let body = serde_json::to_vec(json)
-            .map_err(|e| crate::error::IcarusError::Serialization(e))?;
+            .map_err(crate::error::IcarusError::Serialization)?;
         self.headers.insert("Content-Type".to_string(), "application/json".to_string());
         Ok(self.body(body))
     }
@@ -177,7 +177,7 @@ impl HttpResponse {
     /// Parse response body as JSON
     pub fn json<T: for<'de> Deserialize<'de>>(&self) -> Result<T> {
         serde_json::from_slice(&self.body)
-            .map_err(|e| crate::error::IcarusError::Serialization(e))
+            .map_err(crate::error::IcarusError::Serialization)
     }
     
     /// Get a header value

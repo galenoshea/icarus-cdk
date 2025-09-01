@@ -50,6 +50,12 @@ impl DefaultToolRegistry {
     }
 }
 
+impl Default for DefaultToolRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[async_trait]
 impl IcarusToolRegistry for DefaultToolRegistry {
     async fn register_tool(&mut self, tool: Box<dyn IcarusTool>) -> Result<()> {

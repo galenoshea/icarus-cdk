@@ -173,6 +173,12 @@ mod tests {
         assert_eq!(prompt.arguments.len(), 2);
     }
     
+impl Default for PromptRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
     #[test]
     fn test_prompt_render() {
         let mut registry = PromptRegistry::new();
