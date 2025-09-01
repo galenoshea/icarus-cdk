@@ -5,7 +5,12 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "ICP canister integration for Icarus MCP servers"
+description = "ICP canister integration with stable memory for persistent MCP servers"
+documentation = "https://docs.rs/icarus"
+homepage = "https://github.com/galenoshea/icarus-sdk"
+readme = "README.md"
+keywords = ["icp", "internet-computer", "mcp", "canister", "stable-memory"]
+categories = ["development-tools", "web-programming", "wasm"]
 
 [dependencies]
 icarus-core = { workspace = true }

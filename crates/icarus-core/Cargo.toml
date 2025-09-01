@@ -6,6 +6,11 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Core abstractions for building MCP servers on ICP"
+documentation = "https://docs.rs/icarus"
+homepage = "https://github.com/galenoshea/icarus-sdk"
+readme = "README.md"
+keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
+categories = ["development-tools", "web-programming", "wasm"]
 
 [dependencies]
 rmcp = { workspace = true }

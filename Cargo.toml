@@ -1,3 +1,22 @@
+[package]
+name = "icarus"
+version = "0.1.0"
+authors = ["Icarus SDK Contributors"]
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/galenoshea/icarus-sdk"
+documentation = "https://docs.rs/icarus"
+homepage = "https://github.com/galenoshea/icarus-sdk"
+readme = "README.md"
+description = "Build MCP (Model Context Protocol) servers that run as Internet Computer canisters"
+keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
+categories = ["development-tools", "web-programming", "wasm"]
+
+[dependencies]
+icarus-core = { version = "0.1.0", path = "crates/icarus-core" }
+icarus-derive = { version = "0.1.0", path = "crates/icarus-derive" }
+icarus-canister = { version = "0.1.0", path = "crates/icarus-canister" }
+
 [workspace]
 members = [
     "crates/icarus-core",

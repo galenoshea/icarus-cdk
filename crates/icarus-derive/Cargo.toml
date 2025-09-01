@@ -5,7 +5,12 @@ authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Procedural macros for the Icarus SDK"
+description = "Procedural macros for the Icarus SDK - enables automatic MCP tool metadata generation"
+documentation = "https://docs.rs/icarus"
+homepage = "https://github.com/galenoshea/icarus-sdk"
+readme = "README.md"
+keywords = ["icp", "internet-computer", "mcp", "ai", "proc-macro"]
+categories = ["development-tools::procedural-macro-helpers", "web-programming", "wasm"]
 
 [lib]
 proc-macro = true
