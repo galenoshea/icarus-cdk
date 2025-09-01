@@ -1,44 +1,53 @@
-# Configuration for cargo-release
-# This ensures all workspace crates are versioned and released together
+# Cargo Release Configuration
+# This file configures cargo-release to automatically update version strings
+# across all project files from a single source of truth
 
-# All workspace members share the same version
-shared-version = true
+# Don't automatically push (we'll do it manually after verification)
+push = false
+publish = false
 
-# Sign commits and tags
+# Commit settings
+pre-release-commit-message = "chore: release version {{version}}"
+tag-message = "Release version {{version}}"
+tag-name = "v{{version}}"
+
+# Sign commits and tags if GPG is configured
 sign-commit = false
 sign-tag = false
 
-# Push changes to remote
-push = true
-push-remote = "origin"
-
-# Create and push tags
-tag = true
-tag-prefix = ""  # Empty to prevent double 'v' when using 'cargo release v0.x.x'
-tag-message = "Release version {{version}}"
-
-# Commit message format
-pre-release-commit-message = "Release version {{version}}"
-
-# Don't publish to crates.io automatically (GitHub Actions will handle this)
-publish = false
-
-# Update dependent crate versions
-dependent-version = "upgrade"
-
-# Verification steps before release
-verify = true
-
-# Consolidate commits into a single commit
-consolidate-commits = true
-
-# Pre-release replacements to update version references
+# Replacements for version strings in documentation
 [[pre-release-replacements]]
 file = "README.md"
-search = 'icarus = "[0-9]+\.[0-9]+"'
+search = 'icarus = "[0-9]+\.[0-9]+\.[0-9]+"'
 replace = 'icarus = "{{version}}"'
+min = 1
 
 [[pre-release-replacements]]
 file = "README.md"
-search = 'icarus-canister = "[0-9]+\.[0-9]+"'
+search = 'icarus-canister = "[0-9]+\.[0-9]+\.[0-9]+"'
 replace = 'icarus-canister = "{{version}}"'
+min = 1
+
+[[pre-release-replacements]]
+file = "README.md"
+search = 'icarus-core = "[0-9]+\.[0-9]+\.[0-9]+"'
+replace = 'icarus-core = "{{version}}"'
+min = 0
+
+[[pre-release-replacements]]
+file = "README.md"
+search = 'icarus-derive = "[0-9]+\.[0-9]+\.[0-9]+"'
+replace = 'icarus-derive = "{{version}}"'
+min = 0
+
+# Update version notices in README if present
+[[pre-release-replacements]]
+file = "README.md"
+search = 'Version [0-9]+\.[0-9]+\.[0-9]+\+'
+replace = 'Version {{version}}+'
+min = 0
+
+# Workspace configuration
+[workspace]
+# Update all workspace members together
+members = ["crates/icarus-core", "crates/icarus-derive", "crates/icarus-canister"]
