@@ -55,6 +55,20 @@ ic_cdk::export_candid!();
 
 ## Installation
 
+### CLI Installation
+
+Install the Icarus CLI to create and manage MCP server projects:
+
+```bash
+# Install the CLI
+cargo install icarus-cli
+
+# Verify installation
+icarus --version
+```
+
+### SDK Installation
+
 Add to your `Cargo.toml`:
 
 ```toml
@@ -69,7 +83,7 @@ icarus = "0.2.3"
 
 ## Project Structure
 
-The SDK consists of three core crates:
+The Icarus project consists of the SDK and CLI:
 
 ### `icarus-core`
 Core traits and types for building MCP servers on ICP:
@@ -89,6 +103,13 @@ ICP canister integration with stable memory:
 - `stable_storage!` macro for declaring persistent data
 - Memory management utilities
 - State persistence helpers
+
+### `icarus-cli`
+Command-line tool for development and deployment:
+- Project scaffolding with `icarus new`
+- Build and optimization with `icarus build`
+- Deployment to ICP with `icarus deploy`
+- MCP-ICP bridge with `icarus bridge`
 
 ## Features
 

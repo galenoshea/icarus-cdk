@@ -1,0 +1,28 @@
+# Rust
+target/
+Cargo.lock
+*.rs.bk
+*.pdb
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Icarus
+.icarus/
+bridge-*.pid
+
+# Test artifacts
+*.wasm
+canister_ids.json
+.dfx/
+
+# Logs
+*.log

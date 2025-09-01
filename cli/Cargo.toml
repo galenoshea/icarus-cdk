@@ -1,0 +1,109 @@
+[package]
+name = "icarus-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Command-line tool for creating, building, testing, and deploying MCP servers to ICP"
+license-file.workspace = true
+repository.workspace = true
+keywords = ["mcp", "icp", "blockchain", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[dependencies]
+# CLI and async runtime
+clap = { version = "4.5", features = ["derive", "env", "unicode", "wrap_help"] }
+tokio = { version = "1.41", features = ["macros", "rt-multi-thread", "net", "time", "process", "fs", "io-util", "io-std"] }
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# HTTP and ICP interaction
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+ic-agent = "0.37"
+candid = "0.10"
+ic-identity-hsm = "0.37"
+url = "2.5"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+ciborium = "0.2"
+
+# MCP Protocol
+rmcp = { version = "0.6.1", features = ["server"] }
+schemars = "1.0"
+
+# Security and credentials
+keyring = "3.0"
+rand = "0.8"
+base64 = "0.22"
+hex = "0.4"
+sha2 = "0.10"
+k256 = "0.13"
+jsonwebtoken = "9.3"
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# User interaction
+indicatif = "0.17.10"
+dialoguer = "0.11"
+console = "0.15"
+colored = "2.1"
+
+# Web server for OAuth callback
+warp = "0.3"
+webbrowser = "1.0"
+urlencoding = "2.1"
+
+# File system and utilities
+dirs = "5.0"
+which = "6.0"
+tempfile = "3.12"
+zip = "2.1"
+tar = "0.4"
+flate2 = "1.0"
+is-terminal = "0.4"
+
+# Platform detection
+os_info = "3.8"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Process management
+sysinfo = "0.31"
+
+# Auto-update
+self_update = { version = "0.40", features = ["archive-tar", "archive-zip", "compression-flate2"] }
+
+# ID generation
+nanoid = "0.4"
+
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# Async utilities
+futures = "0.3"
+futures-util = "0.3"
+tokio-tungstenite = { version = "0.27.0", features = ["native-tls"] }
+
+[dev-dependencies]
+tempfile = "3.14"
+mockall = "0.13"
+serial_test = "3.1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true
+
+[[bin]]
+name = "icarus"
+path = "src/main.rs"

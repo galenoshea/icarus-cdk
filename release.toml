@@ -30,6 +30,12 @@ min = 1
 
 [[pre-release-replacements]]
 file = "README.md"
+search = 'cargo install icarus-cli@[0-9]+\.[0-9]+\.[0-9]+'
+replace = 'cargo install icarus-cli@{{version}}'
+min = 0
+
+[[pre-release-replacements]]
+file = "README.md"
 search = 'icarus-core = "[0-9]+\.[0-9]+\.[0-9]+"'
 replace = 'icarus-core = "{{version}}"'
 min = 0
@@ -50,4 +56,4 @@ min = 0
 # Workspace configuration
 [workspace]
 # Update all workspace members together
-members = ["crates/icarus-core", "crates/icarus-derive", "crates/icarus-canister"]
+members = ["crates/icarus-core", "crates/icarus-derive", "crates/icarus-canister", "cli"]

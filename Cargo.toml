@@ -27,6 +27,7 @@ members = [
     "crates/icarus-core",
     "crates/icarus-derive", 
     "crates/icarus-canister",
+    "cli",
 ]
 resolver = "2"
 
@@ -51,7 +52,7 @@ version = "0.2.3"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
-repository = "https://github.com/icarus-sdk/icarus-sdk"
+repository = "https://github.com/galenoshea/icarus-sdk"
 
 [workspace.dependencies]
 # External dependencies  
