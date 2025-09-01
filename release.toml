@@ -6,6 +6,12 @@
 push = false
 publish = false
 
+# Shared version across workspace
+shared-version = true
+
+# Consolidate all version bumps into a single commit
+consolidate-commits = true
+
 # Commit settings
 pre-release-commit-message = "chore: release version {{version}}"
 tag-message = "Release version {{version}}"
@@ -52,8 +58,3 @@ file = "README.md"
 search = 'Version [0-9]+\.[0-9]+\.[0-9]+\+'
 replace = 'Version {{version}}+'
 min = 0
-
-# Workspace configuration
-[workspace]
-# Update all workspace members together
-members = ["crates/icarus-core", "crates/icarus-derive", "crates/icarus-canister", "cli"]

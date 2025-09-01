@@ -13,17 +13,17 @@ The Icarus CLI is part of the Icarus ecosystem that enables developers to build 
 
 ## Installation
 
-### From Marketplace (Recommended)
+### From crates.io (Recommended)
 
 ```bash
-curl -L https://icarus.dev/install.sh | sh
+cargo install icarus-cli
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/icarus-mcp/icarus-cli
-cd icarus-cli
+git clone https://github.com/icarus-mcp/icarus-sdk
+cd icarus-sdk/cli
 cargo build --release
 cargo install --path .
 ```
