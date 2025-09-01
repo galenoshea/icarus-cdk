@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! # Icarus SDK
 //!
 //! Build MCP (Model Context Protocol) servers that run as Internet Computer canisters.

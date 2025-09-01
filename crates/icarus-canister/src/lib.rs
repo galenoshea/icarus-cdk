@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! ICP canister integration for Icarus MCP servers
 //! 
 //! This crate provides the canister implementation details for running

@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! Core abstractions for building MCP servers on ICP
 //! 
 //! This crate provides the fundamental traits and types for creating
@@ -24,7 +26,12 @@ pub use server::IcarusServer;
 pub use tool::IcarusTool;
 pub use resource::IcarusResource;
 
-// Re-export commonly used types
+/// Prelude module for convenient imports
+/// 
+/// Import everything you need with:
+/// ```
+/// use icarus_core::prelude::*;
+/// ```
 pub mod prelude {
     pub use crate::{
         error::{IcarusError, Result, ToolError},

@@ -1,3 +1,5 @@
+#![warn(missing_docs)]
+
 //! Procedural macros for the Icarus SDK
 //! 
 //! This crate provides derive macros and attribute macros to reduce
