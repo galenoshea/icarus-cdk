@@ -30,7 +30,7 @@ pub struct PromptArgument {
 }
 
 /// Registry for managing prompts
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PromptRegistry {
     prompts: HashMap<String, Prompt>,
 }
@@ -38,9 +38,7 @@ pub struct PromptRegistry {
 impl PromptRegistry {
     /// Create a new prompt registry
     pub fn new() -> Self {
-        Self {
-            prompts: HashMap::new(),
-        }
+        Self::default()
     }
     
     /// Register a new prompt

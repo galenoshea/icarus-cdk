@@ -46,6 +46,11 @@ impl<K: Storable + Ord + Clone, V: Storable> StableMap<K, V> {
         self.inner.borrow().len()
     }
     
+    /// Check if the map is empty
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+    
     /// Clear all entries
     pub fn clear(&self) {
         self.inner.borrow_mut().clear_new()

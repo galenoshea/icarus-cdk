@@ -152,7 +152,7 @@ pub fn derive_icarus_type(input: TokenStream) -> TokenStream {
                 } else {
                     Ok(()) // Ignore other attributes
                 }
-            }).unwrap_or_else(|_| {}); // Ignore parse errors
+            }).unwrap_or(()); // Ignore parse errors
         }
     }
     

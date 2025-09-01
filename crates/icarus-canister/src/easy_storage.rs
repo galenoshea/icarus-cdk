@@ -240,7 +240,7 @@ impl CounterCell {
     }
     
     pub fn get(&self) -> u64 {
-        self.inner.borrow().get().clone()
+        *self.inner.borrow().get()
     }
     
     pub fn set(&self, value: u64) -> IcarusResult<()> {

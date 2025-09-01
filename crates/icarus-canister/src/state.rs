@@ -88,7 +88,7 @@ impl Storable for ResourceState {
 
 thread_local! {
     /// Global canister state
-    pub static STATE: RefCell<Option<IcarusCanisterState>> = RefCell::new(None);
+    pub static STATE: RefCell<Option<IcarusCanisterState>> = const { RefCell::new(None) };
 }
 
 impl IcarusCanisterState {
@@ -125,7 +125,6 @@ impl IcarusCanisterState {
 // Use STATE.with() to access the global state instead
 
 /// Access control functions
-
 /// Assert that the caller is the canister owner
 pub fn assert_owner() {
     let caller = ic_cdk::caller();

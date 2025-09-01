@@ -172,13 +172,12 @@ pub fn authenticate() -> AuthInfo {
 pub fn require_role_or_higher(minimum_role: AuthRole) -> AuthInfo {
     let auth_info = authenticate();
     
-    let has_permission = match (&auth_info.role, &minimum_role) {
-        (AuthRole::Owner, _) => true,
-        (AuthRole::Admin, AuthRole::Admin | AuthRole::User | AuthRole::ReadOnly) => true,
-        (AuthRole::User, AuthRole::User | AuthRole::ReadOnly) => true,
-        (AuthRole::ReadOnly, AuthRole::ReadOnly) => true,
-        _ => false,
-    };
+    let has_permission = matches!((&auth_info.role, &minimum_role), 
+        (AuthRole::Owner, _) | 
+        (AuthRole::Admin, AuthRole::Admin | AuthRole::User | AuthRole::ReadOnly) | 
+        (AuthRole::User, AuthRole::User | AuthRole::ReadOnly) | 
+        (AuthRole::ReadOnly, AuthRole::ReadOnly)
+    );
 
     if has_permission {
         auth_info
@@ -458,20 +457,20 @@ pub fn get_user(principal: Principal) -> Option<User> {
 #[macro_export]
 macro_rules! require_auth {
     () => {
-        crate::auth::authenticate();
+        $crate::auth::authenticate();
     };
 }
 
 #[macro_export]
 macro_rules! require_admin {
     () => {
-        crate::auth::require_role(crate::auth::AuthRole::Admin);
+        $crate::auth::require_role($crate::auth::AuthRole::Admin);
     };
 }
 
 #[macro_export]
 macro_rules! require_owner {
     () => {
-        crate::auth::require_role(crate::auth::AuthRole::Owner);
+        $crate::auth::require_role($crate::auth::AuthRole::Owner);
     };
 }

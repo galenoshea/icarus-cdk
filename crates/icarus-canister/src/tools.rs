@@ -17,15 +17,14 @@ pub struct ToolRegistration {
 }
 
 /// Global tool registry
+#[derive(Default)]
 pub struct ToolRegistry {
     tools: HashMap<String, ToolRegistration>,
 }
 
 impl ToolRegistry {
     pub fn new() -> Self {
-        Self {
-            tools: HashMap::new(),
-        }
+        Self::default()
     }
     
     /// Register a tool
