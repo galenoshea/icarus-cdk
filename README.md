@@ -138,8 +138,11 @@ cargo llvm-cov --html
 # Install pre-commit hooks
 ./scripts/install-hooks.sh
 
-# Run CI tests locally
+# Run CI tests locally  
 ./scripts/test-ci.sh
+
+# Create a new release
+./scripts/release.sh patch
 ```
 
 See [tests/README.md](tests/README.md) for more details.

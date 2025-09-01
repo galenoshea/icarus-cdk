@@ -11,6 +11,17 @@ HOOKS_DIR="$PROJECT_ROOT/.git/hooks"
 
 echo "Installing Git hooks for Icarus SDK..."
 
+# Check if hooks already exist
+if [ -f "$HOOKS_DIR/pre-commit" ]; then
+    echo "⚠️  pre-commit hook already exists. Backing up to pre-commit.bak"
+    cp "$HOOKS_DIR/pre-commit" "$HOOKS_DIR/pre-commit.bak"
+fi
+
+if [ -f "$HOOKS_DIR/pre-push" ]; then
+    echo "⚠️  pre-push hook already exists. Backing up to pre-push.bak"
+    cp "$HOOKS_DIR/pre-push" "$HOOKS_DIR/pre-push.bak"
+fi
+
 # Create pre-commit hook
 cat > "$HOOKS_DIR/pre-commit" << 'EOF'
 #!/bin/bash
