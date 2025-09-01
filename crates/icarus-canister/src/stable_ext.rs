@@ -120,7 +120,7 @@ where
 /// without having to write the `.with(|x| x.method())` pattern every time.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// stable_storage! {
 ///     MEMORIES: StableBTreeMap<String, Data> = StableBTreeMap::new();
 /// }

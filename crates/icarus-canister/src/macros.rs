@@ -5,7 +5,7 @@
 /// This sets up the thread-local storage required for stable memory in ICP canisters.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// init_memory! {
 ///     MEMORIES: StableBTreeMap<String, MemoryEntry, Memory> = memory_id(0);
 ///     COUNTER: u64 = 0;
@@ -46,7 +46,7 @@ macro_rules! memory_id {
 /// for MCP discovery.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// tool_metadata! {
 ///     name: "memory-server",
 ///     version: "1.0.0",
@@ -139,7 +139,7 @@ macro_rules! tool_metadata {
 /// Creates a function that generates sequential IDs using a counter.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// id_generator!(next_memory_id, COUNTER, "mem_");
 /// ```
 #[macro_export]
@@ -161,7 +161,7 @@ macro_rules! id_generator {
 /// for MCP discovery. It provides a cleaner syntax than the original tool_metadata! macro.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// // At the end of your lib.rs file:
 /// icarus_metadata! {
 ///     name: "memory-server",

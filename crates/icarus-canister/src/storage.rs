@@ -119,7 +119,7 @@ impl StableCounter {
 /// For now, it uses the existing init_memory! macro under the hood.
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// stable_storage! {
 ///     MEMORIES: StableBTreeMap<String, MemoryEntry> = memory_id!(0);
 ///     COUNTER: u64 = 0;

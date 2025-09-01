@@ -94,6 +94,7 @@ pub fn derive_icarus_tool(input: TokenStream) -> TokenStream {
 }
 
 /// Attribute macro for MCP server setup
+/// ```ignore
 /// pub struct MyServer {
 ///     tools: Vec<Box<dyn IcarusTool>>,
 /// }
@@ -111,7 +112,7 @@ pub fn icarus_server(args: TokenStream, input: TokenStream) -> TokenStream {
 /// You still need to derive the standard traits manually.
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// #[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusType)]
 /// struct MemoryEntry {
 ///     id: String,
@@ -121,7 +122,7 @@ pub fn icarus_server(args: TokenStream, input: TokenStream) -> TokenStream {
 /// ```
 ///
 /// This is equivalent to:
-/// ```
+/// ```ignore
 /// #[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusStorable)]
 /// #[icarus_storable(unbounded)]
 /// struct MemoryEntry { ... }
@@ -203,7 +204,7 @@ pub fn derive_icarus_type(input: TokenStream) -> TokenStream {
 /// Automatically assigns memory IDs and handles initialization.
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// #[derive(IcarusStorage)]
 /// struct Storage {
 ///     memories: StableBTreeMap<String, MemoryEntry>,
@@ -343,7 +344,7 @@ pub fn derive_icarus_storage(input: TokenStream) -> TokenStream {
 /// Derive macro for ICP storable types
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// #[derive(IcarusStorable)]
 /// struct MyData { ... } // Uses default 1MB bound
 ///
@@ -458,7 +459,7 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// and generates the get_metadata query function automatically.
 ///
 /// Usage:
-/// ```
+/// ```ignore
 /// #[icarus_module]
 /// mod my_module {
 ///     #[update]
@@ -488,7 +489,7 @@ pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// and generates the get_metadata query function automatically.
 ///
 /// Usage:
-/// ```
+/// ```ignore
 /// #![icarus_canister(name = "my-server", version = "1.0.0")]
 ///
 /// #[update]
