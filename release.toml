@@ -14,7 +14,7 @@ push-remote = "origin"
 
 # Create and push tags
 tag = true
-tag-prefix = "v"
+tag-prefix = ""  # Empty to prevent double 'v' when using 'cargo release v0.x.x'
 tag-message = "Release version {{version}}"
 
 # Commit message format
