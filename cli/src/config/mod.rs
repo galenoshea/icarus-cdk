@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use anyhow::Result;
 use dirs::home_dir;
 use serde::{Deserialize, Serialize};

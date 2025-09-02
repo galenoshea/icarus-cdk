@@ -10,6 +10,9 @@ target/
 *.swo
 *~
 
+# Claude Desktop
+.claude/
+
 # OS
 .DS_Store
 Thumbs.db

@@ -48,7 +48,7 @@ pub async fn execute(
         _ => (false, false, false, true),           // Default: balanced with compression
     };
 
-    crate::commands::build::execute(opt_skip, opt_size, opt_perf, compress).await?;
+    crate::commands::build::execute(opt_skip, opt_size, opt_perf, compress, None).await?;
     print_success("Build completed!");
 
     // Ensure dfx is running for local deployment
@@ -59,7 +59,7 @@ pub async fn execute(
     let spinner = create_spinner(&format!("Deploying to {}", network));
 
     // Deploy or upgrade with smart behavior
-    let (canister_id, was_deployed) = if let Some(existing_id) = upgrade {
+    let (canister_id, _was_deployed) = if let Some(existing_id) = upgrade {
         // Explicit upgrade request
         spinner.set_message(format!("Upgrading canister {}", existing_id));
 

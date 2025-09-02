@@ -55,6 +55,11 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
     
+    - name: Check version consistency
+      run: |
+        chmod +x scripts/check-versions.sh
+        ./scripts/check-versions.sh
+    
     - name: Check documentation
       run: RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
     

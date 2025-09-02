@@ -10,6 +10,7 @@ pub async fn execute(
     optimize_size: bool,
     optimize_performance: bool,
     compress: bool,
+    output_dir: Option<String>,
 ) -> Result<()> {
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()
@@ -152,6 +153,11 @@ pub async fn execute(
 
     print_success("Build completed successfully!");
 
+    // Copy artifacts to output directory if specified
+    if let Some(output) = output_dir {
+        copy_artifacts_to_output(&current_dir, &output)?;
+    }
+
     // Show build artifacts info
     print_build_summary(&current_dir, compress)?;
 
@@ -160,6 +166,42 @@ pub async fn execute(
 
 fn is_icarus_project(path: &Path) -> bool {
     path.join("Cargo.toml").exists() && path.join("dfx.json").exists()
+}
+
+fn copy_artifacts_to_output(project_dir: &Path, output_dir: &str) -> Result<()> {
+    let output_path = project_dir.join(output_dir);
+
+    // Create output directory if it doesn't exist
+    std::fs::create_dir_all(&output_path)?;
+
+    let project_name = get_project_name(project_dir)?;
+    let wasm_source_dir = project_dir
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release");
+
+    // Copy WASM file
+    if let Ok(wasm_file) = find_wasm_file(&wasm_source_dir) {
+        let dest_wasm = output_path.join(wasm_file.file_name().unwrap());
+        std::fs::copy(&wasm_file, &dest_wasm)?;
+
+        // Copy compressed WASM if it exists
+        let gz_file = wasm_file.with_extension("wasm.gz");
+        if gz_file.exists() {
+            let dest_gz = output_path.join(gz_file.file_name().unwrap());
+            std::fs::copy(&gz_file, &dest_gz)?;
+        }
+    }
+
+    // Copy Candid file if it exists
+    let candid_file = wasm_source_dir.join(format!("{}.did", project_name));
+    if candid_file.exists() {
+        let dest_candid = output_path.join(candid_file.file_name().unwrap());
+        std::fs::copy(&candid_file, &dest_candid)?;
+    }
+
+    print_success(&format!("Artifacts copied to {}/", output_dir));
+    Ok(())
 }
 
 fn create_dfx_directories(project_dir: &Path) -> Result<()> {

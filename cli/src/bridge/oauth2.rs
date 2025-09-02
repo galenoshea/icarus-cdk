@@ -3,6 +3,8 @@
 //! Provides OAuth2 authorization and token endpoints for secure
 //! authentication between Claude Desktop and the MCP bridge.
 
+#![allow(dead_code)]
+
 use anyhow::{Context, Result};
 use candid::Principal;
 use serde::{Deserialize, Serialize};

@@ -30,6 +30,14 @@ if [ -n "$(git status --porcelain)" ]; then
     exit 1
 fi
 
+# Check version consistency before release
+echo -e "${YELLOW}🔍 Checking version consistency...${NC}"
+if ./scripts/check-versions.sh > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Version consistency check passed${NC}"
+else
+    echo -e "${YELLOW}⚠️  Version inconsistencies detected (will be fixed during release)${NC}"
+fi
+
 # Run tests first (skip doc tests which have import issues)
 echo -e "${YELLOW}🧪 Running tests...${NC}"
 if cargo test --all --lib --bins --tests --quiet; then

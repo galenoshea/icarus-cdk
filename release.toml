@@ -65,3 +65,32 @@ file = "docs/README.md"
 search = 'Version [0-9]+\.[0-9]+\.[0-9]+'
 replace = 'Version {{version}}'
 min = 0
+
+# Update current version in migration guide
+[[pre-release-replacements]]
+file = "docs/migration-guide.md"
+search = 'Current Version \([0-9]+\.[0-9]+\.[0-9]+\)'
+replace = 'Current Version ({{version}})'
+min = 0
+
+
+# Update any version references in migration guide headers
+[[pre-release-replacements]]
+file = "docs/migration-guide.md"
+search = 'Version [0-9]+\.[0-9]+\.[0-9]+ is'
+replace = 'Version {{version}} is'
+min = 0
+
+# Update version examples in migration guide
+[[pre-release-replacements]]
+file = "docs/migration-guide.md"
+search = 'use version [0-9]+\.[0-9]+\.[0-9]+:'
+replace = 'use version {{version}}:'
+min = 0
+
+# Update all workspace crate version references in migration guide
+[[pre-release-replacements]]
+file = "docs/migration-guide.md"
+search = 'same version number \([0-9]+\.[0-9]+\.[0-9]+\)'
+replace = 'same version number ({{version}})'
+min = 0

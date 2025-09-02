@@ -84,3 +84,8 @@ icarus-canister = { path = "crates/icarus-canister", version = "0.2.1" }
 opt-level = 3
 lto = true
 codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+debug = true

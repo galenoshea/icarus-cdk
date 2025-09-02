@@ -2,15 +2,15 @@
 //!
 //! Uses the official rmcp crate to implement Model Context Protocol
 
+#![allow(dead_code)]
+
 use anyhow::Result;
 use candid::Principal;
-use ic_agent::Agent;
 use rmcp::model::{ProtocolVersion, ServerCapabilities, ServerInfo};
 use rmcp::schemars::JsonSchema;
 use rmcp::{tool, tool_handler, tool_router, ServerHandler};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
-use std::future::Future;
 use std::sync::Arc;
 use std::sync::OnceLock;
 use tokio::io::{stdin, stdout};
@@ -107,7 +107,7 @@ impl IcpBridge {
         }
 
         // Try to use dfx identity if available
-        let (principal, agent) = if let Some(dfx) = dfx_path {
+        let (_principal, agent) = if let Some(dfx) = dfx_path {
             match std::process::Command::new(&dfx)
                 .args(&["identity", "whoami"])
                 .output()

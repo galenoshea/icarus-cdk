@@ -116,21 +116,25 @@ tokio = { version = "1", features = ["full"] }
         String::new()
     };
 
-    // Determine the SDK path
-    let sdk_path = if let Some(ref sdk) = local_sdk {
-        // Use provided SDK path - append /crates/icarus-canister if needed
-        let sdk_path_str = if sdk.ends_with("icarus-canister") {
+    // Determine the SDK paths for both icarus and icarus-canister
+    let (icarus_path, canister_path) = if let Some(ref sdk) = local_sdk {
+        // Use provided SDK path for local development
+        let base_path = if sdk.ends_with("icarus-sdk") {
             sdk.clone()
-        } else if sdk.ends_with("icarus-sdk") {
-            format!("{}/crates/icarus-canister", sdk)
         } else {
             sdk.clone()
         };
-        format!("{{ path = \"{}\" }}", sdk_path_str)
+        (
+            format!("{{ path = \"{}\" }}", base_path),
+            format!("{{ path = \"{}/crates/icarus-canister\" }}", base_path),
+        )
     } else {
         // Use the same version as the CLI from crates.io
         let cli_version = env!("CARGO_PKG_VERSION");
-        format!("\"{}\"", cli_version)
+        (
+            format!("\"{}\"", cli_version),
+            format!("\"{}\"", cli_version),
+        )
     };
 
     let cargo_toml = format!(
@@ -139,18 +143,15 @@ name = "{}"
 version = "0.1.0"
 edition = "2021"
 
-[package.metadata.icarus]
-claude_desktop.auto_update = true
-claude_desktop.config_path = ""
-
 [dependencies]
+icarus = {}
+icarus-canister = {}
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"
 candid = "0.10"
 serde = {{ version = "1.0", features = ["derive"] }}
 serde_json = "1.0"
-ic-stable-structures = "0.6"
-icarus-canister = {}{}
+ic-stable-structures = "0.6"{}
 
 [lib]
 crate-type = ["cdylib"]
@@ -163,165 +164,123 @@ strip = "debuginfo"   # Strip debug info
 panic = "abort"       # Smaller binaries, matches WASM behavior
 overflow-checks = false # Disable runtime overflow checks
 "#,
-        name, sdk_path, dev_dependencies_section
+        name, icarus_path, canister_path, dev_dependencies_section
     );
     std::fs::write(project_path.join("Cargo.toml"), cargo_toml)?;
 
-    // Create lib.rs with standard ICP canister using SDK macros
-    let lib_rs = r#"//! A simple memory tool for the Internet Computer
+    // Create lib.rs with Memento - a simple key-value memory storage tool
+    let lib_rs = r#"//! Memento - A simple key-value memory storage tool for the Internet Computer
 
 use icarus_canister::prelude::*;
 
-/// A memory entry stored in the canister
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusType)]
-pub struct MemoryEntry {
-    pub id: String,
-    pub content: String,
-    pub created_at: u64,
-    pub tags: Vec<String>,
-}
-
-// Declare stable storage with automatic memory management
+// Define storage using stable_storage macro
 stable_storage! {
     MEMORIES: StableBTreeMap<String, MemoryEntry, Memory> = memory_id!(0);
-    COUNTER: u64 = 0;
 }
 
-// Tool functions with automatic authentication and metadata generation
-// The init function is auto-generated and sets up authentication
+/// Simple memory entry
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusType)]
+pub struct MemoryEntry {
+    pub key: String,
+    pub content: String,
+    pub created_by: Principal,
+    pub created_at: u64,
+}
+
 #[icarus_module]
 mod tools {
     use super::*;
     
+    /// Store a memory with a unique key
     #[update]
-    #[icarus_tool("Store a new memory with optional tags")]
-    pub fn memorize(content: String, tags: Option<Vec<String>>) -> String {
-        // Authentication is handled automatically by the macro
+    #[icarus_tool("Store a memory with a unique key")]
+    pub fn memorize(key: String, content: String) -> Result<String, String> {
+        // Require User role or higher (User, Admin, Owner can write)
+        require_role_or_higher(AuthRole::User);
+        let caller = ic_cdk::caller();
         
-        // Generate ID
-        let id = COUNTER.with(|c| {
-            let current = *c.borrow();
-            *c.borrow_mut() = current + 1;
-            format!("mem_{}", current + 1)
-        });
+        // Validate inputs
+        if key.trim().is_empty() {
+            return Err("Key cannot be empty".to_string());
+        }
+        if content.trim().is_empty() {
+            return Err("Content cannot be empty".to_string());
+        }
+        if content.len() > 50_000 {
+            return Err("Content too large (max 50KB)".to_string());
+        }
         
-        let memory = MemoryEntry {
-            id: id.clone(),
-            content,
-            created_at: api::time(),
-            tags: tags.unwrap_or_default(),
-        };
-        
+        // Check for duplicate key
         MEMORIES.with(|m| {
-            m.borrow_mut().insert(id.clone(), memory);
-        });
-        
-        id
-    }
-
-    #[update]
-    #[icarus_tool("Remove a specific memory by ID")]
-    pub fn forget(id: String) -> bool {
-        // Authentication is handled automatically by the macro
-        
-        MEMORIES.with(|m| {
-            m.borrow_mut().remove(&id).is_some()
-        })
-    }
-
-    #[update]
-    #[icarus_tool("Remove the oldest memory")]
-    pub fn forget_oldest() -> bool {
-        // Authentication is handled automatically by the macro
-        
-        MEMORIES.with(|m| {
-            let mut memories: Vec<(String, MemoryEntry)> = m
-                .borrow()
-                .iter()
-                .collect();
-
-            if memories.is_empty() {
-                return false;
+            if m.borrow().contains_key(&key) {
+                return Err(format!("Key '{}' already exists", key));
             }
-
-            // Sort by created_at ascending (oldest first)
-            memories.sort_by(|a, b| a.1.created_at.cmp(&b.1.created_at));
             
-            let oldest_id = &memories[0].0;
-            m.borrow_mut().remove(oldest_id).is_some()
+            let memory = MemoryEntry {
+                key: key.clone(),
+                content,
+                created_by: caller,
+                created_at: api::time(),
+            };
+            
+            m.borrow_mut().insert(key.clone(), memory);
+            Ok(key)
         })
     }
-
+    
+    /// Retrieve a memory by its key
     #[query]
-    #[icarus_tool("Retrieve the latest memory")]
-    pub fn recall_latest() -> Option<MemoryEntry> {
-        // Authentication is handled automatically by the macro
+    #[icarus_tool("Retrieve a memory by its key")]
+    pub fn recall(key: String) -> Option<MemoryEntry> {
+        // Anyone except ReadOnly can recall memories
+        require_none_of_roles(&[AuthRole::ReadOnly]);
         
-        MEMORIES.with(|m| {
-            let mut memories: Vec<MemoryEntry> = m.borrow()
-                .iter()
-                .map(|(_, memory)| memory.clone())
-                .collect();
-            
-            memories.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-            
-            memories.into_iter().next()
-        })
+        MEMORIES.with(|m| m.borrow().get(&key))
     }
-
+    
+    /// List all stored memories
     #[query]
     #[icarus_tool("List all stored memories")]
     pub fn list() -> Vec<MemoryEntry> {
-        // Authentication is handled automatically by the macro
+        // Anyone except ReadOnly can list memories
+        require_none_of_roles(&[AuthRole::ReadOnly]);
         
         MEMORIES.with(|m| {
-            let mut memories: Vec<MemoryEntry> = m.borrow()
+            m.borrow()
                 .iter()
-                .map(|(_, memory)| memory.clone())
-                .collect();
-            
-            memories.sort_by(|a, b| b.created_at.cmp(&a.created_at));
-            
-            memories
+                .map(|(_, memory)| memory)
+                .collect()
         })
     }
-
+    
+    /// Remove a memory by its key
     #[update]
-    #[icarus_tool("Add a user to the authorized users list")]
-    pub fn add_authorized_user(principal_text: String, role: String) -> String {
-        let principal = Principal::from_text(principal_text)
-            .unwrap_or_else(|e| trap(&format!("Invalid principal: {}", e)));
+    #[icarus_tool("Remove a memory by its key")]
+    pub fn forget(key: String) -> Result<bool, String> {
+        // User or higher can forget individual memories
+        require_role_or_higher(AuthRole::User);
         
-        let auth_role = match role.to_lowercase().as_str() {
-            "owner" => AuthRole::Owner,
-            "admin" => AuthRole::Admin,
-            "user" => AuthRole::User,
-            "readonly" => AuthRole::ReadOnly,
-            _ => trap("Invalid role. Use: owner, admin, user, or readonly"),
-        };
+        MEMORIES.with(|m| {
+            Ok(m.borrow_mut().remove(&key).is_some())
+        })
+    }
+    
+    /// Clear all memories
+    #[update]
+    #[icarus_tool("Clear all memories")]
+    pub fn forget_all() -> Result<u64, String> {
+        // Only Admin or Owner can clear all memories
+        require_role_or_higher(AuthRole::Admin);
         
-        add_user(principal, auth_role)
-    }
-
-    #[query]
-    #[icarus_tool("Get current authentication status")]
-    pub fn auth_status() -> String {
-        serde_json::to_string(&get_auth_status()).unwrap()
-    }
-
-    #[query]
-    #[icarus_tool("List all authorized users")]
-    pub fn list_authorized_users() -> String {
-        let users = list_users();
-        let result = serde_json::json!({
-            "users": users,
-            "total": users.len()
-        });
-        result.to_string()
+        MEMORIES.with(|m| {
+            let count = m.borrow().len();
+            m.borrow_mut().clear_new();
+            Ok(count)
+        })
     }
 }
 
-// Export the Candid interface
+// Export candid interface
 ic_cdk::export_candid!();
 "#;
     std::fs::write(src_dir.join("lib.rs"), lib_rs)?;

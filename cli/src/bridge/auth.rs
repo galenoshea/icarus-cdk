@@ -2,10 +2,11 @@
 //!
 //! Handles user authentication and identity management for the bridge
 
+#![allow(dead_code)]
+
 use anyhow::{Context, Result};
 use candid::Principal;
 use ic_agent::{Agent, Identity};
-use ic_identity_hsm::HardwareIdentity;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use url::Url;
@@ -138,7 +139,7 @@ impl AuthManager {
         eprintln!("🌐 Using mainnet Internet Identity");
 
         // Create agent
-        let agent = Agent::builder()
+        let _agent = Agent::builder()
             .with_url(&self.config.ic_url)
             .build()
             .context("Failed to create agent")?;
@@ -192,7 +193,7 @@ impl AuthManager {
 /// Helper function to create an authenticated agent
 pub async fn create_authenticated_agent(
     config: &AuthConfig,
-    principal: Principal,
+    _principal: Principal,
 ) -> Result<Agent> {
     let agent = Agent::builder()
         .with_url(&config.ic_url)

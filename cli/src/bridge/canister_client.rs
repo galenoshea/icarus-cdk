@@ -2,6 +2,8 @@
 //!
 //! Handles Candid encoding/decoding and HTTP calls to ICP
 
+#![allow(dead_code)]
+
 use anyhow::Result;
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
 use ic_agent::Agent;

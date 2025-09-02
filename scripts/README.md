@@ -18,11 +18,29 @@ This directory contains automation scripts for development and release workflows
 
 **What it does**:
 1. Checks for clean working directory
-2. Runs all tests
-3. Runs clippy checks
-4. Uses cargo-release to bump versions
-5. Creates git commit and tag
-6. Pushes to GitHub to trigger release workflow
+2. Checks version consistency across project
+3. Runs all tests
+4. Runs clippy checks
+5. Uses cargo-release to bump versions (updates all version references)
+6. Creates git commit and tag
+7. Pushes to GitHub to trigger release workflow
+
+### 🔍 `check-versions.sh`
+**Purpose**: Verify all version references are consistent across the project  
+**Usage**: `./scripts/check-versions.sh`  
+**When to use**: Before releases or to verify version alignment
+
+**What it checks**:
+- Workspace and crate versions in Cargo.toml files
+- Dependency examples in README files
+- Version footers in documentation
+- Migration guide version references
+- CLI installation commands
+
+**Integration**:
+- Automatically run by CI on every push
+- Called by release.sh before creating a release
+- Returns exit code 0 if consistent, 1 if mismatches found
 
 ### 🔧 `install-hooks.sh`
 **Purpose**: Install git hooks for automated quality checks  

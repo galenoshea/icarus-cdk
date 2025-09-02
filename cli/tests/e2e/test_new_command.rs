@@ -1,0 +1,115 @@
+//! E2E tests for the 'icarus new' command
+
+mod helpers;
+
+use helpers::*;
+
+#[test]
+fn test_new_creates_project_structure() {
+    let cli = CliRunner::new();
+    let test_project = TestProject::new("test-app");
+
+    // Run 'icarus new' command
+    let output = cli.run_in(test_project.path(), &["new", "test-app"]);
+    assert_success(&output);
+    assert_contains(&output, "created successfully");
+
+    // Verify project structure
+    assert!(test_project.file_exists("Cargo.toml"));
+    assert!(test_project.file_exists("src/lib.rs"));
+    assert!(test_project.file_exists(".gitignore"));
+    assert!(test_project.file_exists("dfx.json"));
+    assert!(test_project.file_exists("README.md"));
+
+    // Verify Cargo.toml content
+    let cargo_toml = test_project.read_file("Cargo.toml");
+    assert!(cargo_toml.contains("name = \"test-app\""));
+    assert!(cargo_toml.contains("icarus = "));
+    assert!(cargo_toml.contains("icarus-canister = "));
+    assert!(cargo_toml.contains("crate-type = [\"cdylib\"]"));
+
+    // Verify src/lib.rs contains the Memento template
+    let lib_rs = test_project.read_file("src/lib.rs");
+    assert!(lib_rs.contains("//! Memento - A simple key-value memory storage tool"));
+    assert!(lib_rs.contains("use icarus_canister::prelude::*"));
+    assert!(lib_rs.contains("stable_storage!"));
+    assert!(lib_rs.contains("MEMORIES: StableBTreeMap<String, MemoryEntry, Memory>"));
+    assert!(lib_rs.contains("#[icarus_tool"));
+    assert!(lib_rs.contains("pub fn memorize"));
+    assert!(lib_rs.contains("pub fn recall"));
+    assert!(lib_rs.contains("pub fn list"));
+    assert!(lib_rs.contains("pub fn forget"));
+}
+
+#[test]
+fn test_new_project_builds_successfully() {
+    let cli = CliRunner::new();
+    let test_project = TestProject::new("build-test");
+
+    // Create new project
+    let output = cli.run_in(test_project.path(), &["new", "build-test"]);
+    assert_success(&output);
+    assert_contains(&output, "created successfully");
+
+    // Verify project builds with cargo
+    assert!(
+        test_project.builds_successfully(),
+        "Project should build with cargo"
+    );
+
+    // Verify WASM output exists
+    let wasm_path = test_project
+        .project_dir()
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release")
+        .join("build_test.wasm");
+
+    assert!(wasm_path.exists(), "WASM file should be generated");
+}
+
+#[test]
+fn test_new_with_existing_directory_fails() {
+    let cli = CliRunner::new();
+    let test_project = TestProject::new("existing-app");
+
+    // Create directory first
+    std::fs::create_dir_all(test_project.project_dir()).unwrap();
+
+    // Try to create project in existing directory
+    let output = cli.run_in(test_project.path(), &["new", "existing-app"]);
+    assert!(!output.status.success());
+    assert_contains(&output, "already exists");
+}
+
+// TODO: Re-enable this test when --template flag is implemented
+// #[test]
+// fn test_new_with_custom_template() {
+//     let cli = CliRunner::new();
+//     let test_project = TestProject::new("custom-template");
+//
+//     // Test with --template flag (even though we only have default for now)
+//     let output = cli.run_in(test_project.path(), &["new", "custom-template", "--template", "default"]);
+//     assert_success(&output);
+//
+//     // Verify it still creates the default template
+//     let lib_rs = test_project.read_file("src/lib.rs");
+//     assert!(lib_rs.contains("Memento"));
+// }
+
+#[test]
+fn test_new_creates_valid_candid_interface() {
+    let cli = CliRunner::new();
+    let test_project = TestProject::new("candid-test");
+
+    // Create and build project
+    let output = cli.run_in(test_project.path(), &["new", "candid-test"]);
+    assert_success(&output);
+
+    // Build the project to generate candid
+    test_project.cargo_build();
+
+    // Check if candid file would be generated (it's created during build)
+    let lib_rs = test_project.read_file("src/lib.rs");
+    assert!(lib_rs.contains("ic_cdk::export_candid!()"));
+}

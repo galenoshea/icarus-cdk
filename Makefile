@@ -1,4 +1,4 @@
-.PHONY: help test build clean release install-hooks ci
+.PHONY: help test test-e2e test-all build clean deep-clean release install-hooks ci
 
 # Default target
 help:
@@ -9,9 +9,12 @@ help:
 	@echo "  make install-hooks  - Install git hooks for code quality"
 	@echo ""
 	@echo "Development:"
-	@echo "  make test          - Run all tests"
+	@echo "  make test          - Run unit and integration tests"
+	@echo "  make test-e2e      - Run end-to-end CLI tests"
+	@echo "  make test-all      - Run all tests (unit, integration, and E2E)"
 	@echo "  make build         - Build all crates"
-	@echo "  make clean         - Clean build artifacts"
+	@echo "  make clean         - Clean build artifacts (cargo clean)"
+	@echo "  make deep-clean    - Deep clean all artifacts, caches, and temporary files"
 	@echo "  make ci            - Run CI checks locally"
 	@echo ""
 	@echo "Release:"
@@ -23,17 +26,31 @@ help:
 install-hooks:
 	@./scripts/install-hooks.sh
 
-# Run all tests
+# Run unit and integration tests
 test:
-	@cargo test --all
+	@cargo test --all --lib --bins
+
+# Run E2E tests for CLI
+test-e2e:
+	@echo "Building CLI binary for E2E tests..."
+	@cargo build --package icarus-cli --bin icarus --release
+	@echo "Running E2E tests for CLI..."
+	@cd cli && cargo test --test '*' -- --test-threads=1
+
+# Run all tests
+test-all: test test-e2e
 
 # Build all crates
 build:
 	@cargo build --all
 
-# Clean build artifacts
+# Clean build artifacts (basic)
 clean:
 	@cargo clean
+
+# Deep clean - removes all artifacts, caches, and temporary files
+deep-clean:
+	@./scripts/clean.sh
 
 # Run CI simulation locally
 ci:

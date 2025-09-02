@@ -17,8 +17,8 @@ pub async fn execute_with_auth(
     canister_id: String,
     port: u16,
     daemon: bool,
-    authenticate: bool,
-    use_local: bool,
+    _authenticate: bool,
+    _use_local: bool,
 ) -> Result<()> {
     // Check if we're being run by Claude Desktop (MCP mode)
     // Claude Desktop runs MCP servers as subprocesses and communicates via stdio

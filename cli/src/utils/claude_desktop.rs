@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
-use crate::utils::{print_info, print_success, print_warning};
+use crate::utils::{print_info, print_success};
 
 /// Find the Claude Desktop configuration file
 pub fn find_claude_config_path() -> Result<PathBuf> {

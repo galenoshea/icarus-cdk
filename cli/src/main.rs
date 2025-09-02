@@ -60,6 +60,9 @@ enum Commands {
             help = "Skip gzip compression (compression is enabled by default)"
         )]
         no_compress: bool,
+
+        #[arg(long, help = "Output directory for build artifacts")]
+        output: Option<String>,
     },
 
     #[command(about = "Analyze WASM binary size and optimization opportunities")]
@@ -238,6 +241,7 @@ async fn main() -> Result<()> {
             optimize_size,
             optimize_performance,
             no_compress,
+            output,
         } => {
             info!("Building project");
 
@@ -254,7 +258,9 @@ async fn main() -> Result<()> {
                 ), // Use individual flags
             };
 
-            if let Err(e) = commands::build::execute(opt_skip, opt_size, opt_perf, compress).await {
+            if let Err(e) =
+                commands::build::execute(opt_skip, opt_size, opt_perf, compress, output).await
+            {
                 eprintln!("Build error: {:?}", e);
                 return Err(e);
             }

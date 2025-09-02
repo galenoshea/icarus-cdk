@@ -3,7 +3,7 @@ use colored::Colorize;
 use std::path::Path;
 use std::process::Command;
 
-use crate::utils::{print_error, print_info, print_success, print_warning};
+use crate::utils::print_error;
 
 pub async fn execute(top: usize, check_compressed: bool) -> Result<()> {
     // Check if we're in an Icarus project

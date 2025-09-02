@@ -93,17 +93,25 @@ tokio-tungstenite = { version = "0.27.0", features = ["native-tls"] }
 tempfile = "3.14"
 mockall = "0.13"
 serial_test = "3.1"
-
-[profile.release]
-opt-level = 3
-lto = true
-codegen-units = 1
-strip = true
-
-[profile.dev]
-opt-level = 0
-debug = true
+assert_cmd = "2.0"
+predicates = "3.1"
 
 [[bin]]
 name = "icarus"
 path = "src/main.rs"
+
+[[test]]
+name = "test_new_command"
+path = "tests/e2e/test_new_command.rs"
+
+[[test]]
+name = "test_build_command"
+path = "tests/e2e/test_build_command.rs"
+
+[[test]]
+name = "test_validate_command"
+path = "tests/e2e/test_validate_command.rs"
+
+[[test]]
+name = "test_workflow"
+path = "tests/e2e/test_workflow.rs"

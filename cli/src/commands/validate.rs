@@ -530,7 +530,7 @@ async fn retrieve_candid_from_canister(canister_id: &str) -> Result<String> {
     // Method 1: Try using ic-wasm to extract metadata directly from deployed canister
     if which::which("ic-wasm").is_ok() {
         // First get the WASM module from the canister
-        let wasm_output = tokio::process::Command::new("dfx")
+        let _wasm_output = tokio::process::Command::new("dfx")
             .args(&["canister", "info", canister_id, "--network", "local"])
             .output()
             .await?;
@@ -680,10 +680,21 @@ fn find_default_wasm_path() -> Result<PathBuf> {
 
             if dfx_wasm.exists() {
                 return Ok(dfx_wasm);
+            }
+
+            // Also check the target directory from icarus build
+            let target_wasm = current_dir
+                .join("target")
+                .join("wasm32-unknown-unknown")
+                .join("release")
+                .join(format!("{}.wasm", canister_name.replace('-', "_")));
+            if target_wasm.exists() {
+                return Ok(target_wasm);
             } else {
                 anyhow::bail!(
-                    "WASM file not found at {}. Run 'dfx build' or 'icarus build' first to generate the WASM with embedded Candid metadata.",
-                    dfx_wasm.display()
+                    "WASM file not found at {} or {}. Run 'dfx build' or 'icarus build' first to generate the WASM.",
+                    dfx_wasm.display(),
+                    target_wasm.display()
                 );
             }
         }
@@ -700,7 +711,7 @@ fn find_default_wasm_path() -> Result<PathBuf> {
             .and_then(|p| p.get("name"))
             .and_then(|n| n.as_str())
         {
-            // Only check .dfx location - no fallback to target/
+            // Check both .dfx location and target directory
             let dfx_wasm = current_dir
                 .join(".dfx")
                 .join("local")
@@ -710,10 +721,21 @@ fn find_default_wasm_path() -> Result<PathBuf> {
 
             if dfx_wasm.exists() {
                 return Ok(dfx_wasm);
+            }
+
+            // Also check the target directory from icarus build
+            let target_wasm = current_dir
+                .join("target")
+                .join("wasm32-unknown-unknown")
+                .join("release")
+                .join(format!("{}.wasm", name.replace('-', "_")));
+            if target_wasm.exists() {
+                return Ok(target_wasm);
             } else {
                 anyhow::bail!(
-                    "WASM file not found at {}. Run 'dfx build' or 'icarus build' first to generate the WASM with embedded Candid metadata.",
-                    dfx_wasm.display()
+                    "WASM file not found at {} or {}. Run 'dfx build' or 'icarus build' first to generate the WASM.",
+                    dfx_wasm.display(),
+                    target_wasm.display()
                 );
             }
         }
