@@ -29,6 +29,21 @@ This directory contains automation scripts for development and release workflows
 **Usage**: `./scripts/install-hooks.sh`  
 **When to use**: Once after cloning the repository
 
+### 🧹 `clean.sh`
+**Purpose**: Deep clean all build artifacts, caches, and temporary files  
+**Usage**: `./scripts/clean.sh [--non-interactive]`  
+**When to use**: When you need to clean all build artifacts and start fresh
+
+**What it does**:
+1. Removes target directories (Rust build artifacts)
+2. Cleans .dfx directories (ICP local network data)
+3. Removes temporary test directories
+4. Cleans node_modules if present
+5. Removes other build artifacts and caches
+
+**Options**:
+- `--non-interactive`: Skip confirmation prompts (useful in CI)
+
 ## Git Hooks (Installed by install-hooks.sh)
 
 ### Pre-commit Hook

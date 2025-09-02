@@ -1,6 +1,5 @@
 # Rust
 target/
-Cargo.lock
 **/*.rs.bk
 *.pdb
 
@@ -22,6 +21,20 @@ Thumbs.db
 # Test artifacts
 tarpaulin-report.html
 cobertura.xml
+test-output/
+test-results/
+*.profraw
+*.profdata
+test-*.log
+e2e-test-*/
+/tmp/test-*/
+/tmp/*-test/
+
+# DFX / ICP
+.dfx/
+.vessel/
+canister_ids.json
+.azle/
 
 # Sensitive data
 .env

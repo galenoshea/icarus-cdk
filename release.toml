@@ -58,3 +58,10 @@ file = "README.md"
 search = 'Version [0-9]+\.[0-9]+\.[0-9]+\+'
 replace = 'Version {{version}}+'
 min = 0
+
+# Update version in docs README
+[[pre-release-replacements]]
+file = "docs/README.md"
+search = 'Version [0-9]+\.[0-9]+\.[0-9]+'
+replace = 'Version {{version}}'
+min = 0

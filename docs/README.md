@@ -13,6 +13,7 @@ Welcome to the Icarus SDK documentation! This guide will help you build MCP (Mod
 - **[API Reference](api-reference.md)** - Complete API documentation
 - **[Macros Guide](macros.md)** - Understanding Icarus macros
 - **[Stable Storage](stable-storage.md)** - Persistent data storage
+- **[Migration Guide](migration-guide.md)** - Upgrading between versions
 
 ### CLI Documentation
 - **[CLI Commands](../cli/docs/commands.md)** - Complete command reference
@@ -108,4 +109,4 @@ The Icarus SDK is licensed under the Business Source License (BSL-1.1). See [LIC
 
 ---
 
-*Last updated: September 2025 | Version 0.2.5*
+*Last updated: September 2025 | Version 0.2.6*
