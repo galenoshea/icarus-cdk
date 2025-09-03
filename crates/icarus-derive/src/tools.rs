@@ -410,19 +410,19 @@ fn inject_authenticate_call(func: &mut ItemFn) {
         });
 
     let auth_call: Stmt = if let Some(role) = role_requirement {
-        // Create require_role() call based on the role
+        // Create require_role_or_higher() call based on the role
         match role.as_str() {
             "Owner" => parse_quote! {
-                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::Owner);
+                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::Owner);
             },
             "Admin" => parse_quote! {
-                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::Admin);
+                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::Admin);
             },
             "User" => parse_quote! {
-                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::User);
+                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::User);
             },
             "ReadOnly" => parse_quote! {
-                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::ReadOnly);
+                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::ReadOnly);
             },
             _ => parse_quote! {
                 ::icarus::canister::auth::authenticate();

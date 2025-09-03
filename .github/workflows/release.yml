@@ -1,127 +1,332 @@
-name: Release
+name: Release Pipeline
 
-# Trigger on version tags
 on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
       - 'v[0-9]+.[0-9]+.[0-9]+-*'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Perform a dry run without publishing'
+        required: false
+        default: false
+        type: boolean
 
-# Grant write permissions for creating GitHub releases
 permissions:
   contents: write
+  packages: write
 
 env:
   CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
-  # Ensure all tests pass before publishing
-  test:
-    name: Test before release
+  # Validate release readiness
+  validate-release:
+    name: Validate Release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Rust
-      uses: dtolnay/rust-toolchain@stable
+    - name: Extract version info
+      id: version
+      run: |
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        else
+          VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+        fi
+        echo "version=${VERSION}" >> $GITHUB_OUTPUT
+        
+        # Check if prerelease
+        if [[ "$VERSION" == *"-"* ]]; then
+          echo "prerelease=true" >> $GITHUB_OUTPUT
+        else
+          echo "prerelease=false" >> $GITHUB_OUTPUT
+        fi
+        
+        echo "📦 Preparing release for version: ${VERSION}"
+    
+    - name: Verify version consistency
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        CARGO_VERSION=$(grep '^version = ' Cargo.toml | head -1 | cut -d'"' -f2)
+        
+        if [[ "$CARGO_VERSION" != "$VERSION" ]]; then
+          echo "❌ Version mismatch: Cargo.toml has $CARGO_VERSION but tag/input is $VERSION"
+          exit 1
+        fi
+        
+        # Run full version check
+        chmod +x scripts/check-versions.sh
+        ./scripts/check-versions.sh
+    
+    - name: Check CHANGELOG
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        if ! grep -q "## \[$VERSION\]" CHANGELOG.md; then
+          echo "❌ No CHANGELOG entry found for version $VERSION"
+          exit 1
+        fi
+        echo "✅ CHANGELOG entry found for $VERSION"
+    
+    - name: Validate crate dependencies
+      run: |
+        # Ensure all workspace crates have matching versions
+        for crate in crates/*; do
+          if [[ -f "$crate/Cargo.toml" ]]; then
+            if ! grep -q 'version.workspace = true' "$crate/Cargo.toml"; then
+              echo "❌ Crate $(basename $crate) doesn't use workspace version"
+              exit 1
+            fi
+          fi
+        done
+        echo "✅ All crates use workspace versioning"
+
+  # Run comprehensive tests before release
+  test-release:
+    name: Release Tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: validate-release
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
       with:
+        toolchain: ${{ matrix.rust }}
         targets: wasm32-unknown-unknown
         components: rustfmt, clippy
     
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-release-
+    
     - name: Run tests
-      run: cargo test --verbose
+      run: |
+        cargo fmt -- --check
+        cargo clippy --all-targets --all-features -- -D warnings
+        cargo test --all-features
     
-    - name: Run clippy
-      run: cargo clippy -- -D warnings
-    
-    - name: Check formatting
-      run: cargo fmt -- --check
-    
-    - name: Build WASM
+    - name: Build WASM target
       run: cargo build --target wasm32-unknown-unknown --release
+    
+    - name: Build release binaries
+      run: cargo build --release --all-features
 
-  # Publish crates to crates.io in dependency order
-  publish:
-    name: Publish to crates.io
-    needs: test
-    runs-on: ubuntu-latest
+  # Build and prepare release artifacts
+  build-artifacts:
+    name: Build Release Artifacts
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    needs: test-release
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact_name: icarus-linux-amd64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            artifact_name: icarus-macos-amd64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact_name: icarus-macos-arm64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            artifact_name: icarus-windows-amd64
     steps:
     - uses: actions/checkout@v4
     
-    - name: Install Rust
+    - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
-    
-    - name: Cache cargo registry
-      uses: actions/cache@v3
       with:
-        path: ~/.cargo/registry
-        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        targets: ${{ matrix.target }}
     
-    - name: Get version from tag
-      id: get_version
-      run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-    
-    - name: Verify versions match
+    - name: Build CLI binary
       run: |
-        CARGO_VERSION=$(grep "^version" Cargo.toml | head -1 | cut -d'"' -f2)
-        TAG_VERSION="${{ steps.get_version.outputs.VERSION }}"
-        if [ "$CARGO_VERSION" != "$TAG_VERSION" ]; then
-          echo "Error: Cargo.toml version ($CARGO_VERSION) doesn't match tag version ($TAG_VERSION)"
-          exit 1
+        cargo build --package icarus-cli --release --target ${{ matrix.target }}
+        
+        # Package the binary
+        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
+          7z a ${{ matrix.artifact_name }}.zip ./target/${{ matrix.target }}/release/icarus.exe
+        else
+          tar -czf ${{ matrix.artifact_name }}.tar.gz -C ./target/${{ matrix.target }}/release icarus
         fi
     
-    # Publish in dependency order
-    - name: Publish icarus-core
-      run: |
-        cd crates/icarus-core
-        cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --no-verify
-        # Wait for crates.io to index
-        sleep 30
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.artifact_name }}
+        path: ${{ matrix.artifact_name }}.*
+        retention-days: 7
+
+  # Publish to crates.io
+  publish-crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [validate-release, build-artifacts]
+    if: github.event.inputs.dry_run != 'true'
+    steps:
+    - uses: actions/checkout@v4
     
-    - name: Publish icarus-derive
-      run: |
-        cd crates/icarus-derive
-        cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --no-verify
-        sleep 30
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
     
-    - name: Publish icarus-canister
-      run: |
-        cd crates/icarus-canister
-        cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --no-verify
-        sleep 30
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
     
-    - name: Publish icarus (main crate)
+    - name: Publish crates in order
+      env:
+        CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
       run: |
-        cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --no-verify
-        sleep 30
+        set -e
+        
+        # Function to publish and wait for availability
+        publish_crate() {
+          local crate_path=$1
+          local crate_name=$2
+          local version=$3
+          
+          echo "📦 Publishing $crate_name v$version..."
+          
+          cd "$crate_path"
+          
+          # Check if already published
+          if cargo search "$crate_name" | grep -q "^$crate_name = \"$version\""; then
+            echo "✅ $crate_name v$version already published"
+            cd - > /dev/null
+            return 0
+          fi
+          
+          # Publish the crate
+          cargo publish --no-verify --token "$CARGO_REGISTRY_TOKEN"
+          
+          cd - > /dev/null
+          
+          # Wait for crate to be available
+          echo "⏳ Waiting for $crate_name to be available on crates.io..."
+          for i in {1..30}; do
+            if cargo search "$crate_name" | grep -q "^$crate_name = \"$version\""; then
+              echo "✅ $crate_name v$version is now available"
+              return 0
+            fi
+            sleep 2
+          done
+          
+          echo "⚠️ Timeout waiting for $crate_name to be available"
+          return 1
+        }
+        
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        
+        # Publish in dependency order
+        publish_crate "crates/icarus-core" "icarus-core" "$VERSION"
+        publish_crate "crates/icarus-derive" "icarus-derive" "$VERSION"
+        publish_crate "crates/icarus-canister" "icarus-canister" "$VERSION"
+        publish_crate "." "icarus" "$VERSION"
+        publish_crate "cli" "icarus-cli" "$VERSION"
+        
+        echo "🎉 All crates published successfully!"
+
+  # Create GitHub release
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-artifacts, publish-crates]
+    if: always() && needs.validate-release.result == 'success' && needs.build-artifacts.result == 'success'
+    steps:
+    - uses: actions/checkout@v4
     
-    - name: Publish icarus-cli
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: Extract CHANGELOG entry
       run: |
-        cd cli
-        cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }} --no-verify
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        
+        # Extract changelog for this version
+        awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release-notes.md
+        
+        # Add installation instructions
+        cat >> release-notes.md << 'EOF'
+        
+        ## Installation
+        
+        ### Using Cargo
+        ```bash
+        cargo install icarus-cli
+        ```
+        
+        ### Add to Project
+        ```toml
+        [dependencies]
+        icarus = "VERSION"
+        ```
+        
+        ### Binary Downloads
+        Pre-built binaries are available below for:
+        - Linux (x86_64)
+        - macOS (x86_64, ARM64)
+        - Windows (x86_64)
+        
+        ## Crates Published
+        EOF
+        
+        # Add crate links
+        echo "- [icarus](https://crates.io/crates/icarus/$VERSION)" >> release-notes.md
+        echo "- [icarus-cli](https://crates.io/crates/icarus-cli/$VERSION)" >> release-notes.md
+        echo "- [icarus-core](https://crates.io/crates/icarus-core/$VERSION)" >> release-notes.md
+        echo "- [icarus-derive](https://crates.io/crates/icarus-derive/$VERSION)" >> release-notes.md
+        echo "- [icarus-canister](https://crates.io/crates/icarus-canister/$VERSION)" >> release-notes.md
+        
+        # Replace VERSION placeholder
+        sed -i "s/VERSION/$VERSION/g" release-notes.md
     
     - name: Create GitHub Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
-        body: |
-          ## Icarus SDK v${{ steps.get_version.outputs.VERSION }}
-          
-          ### Installation
-          ```toml
-          [dependencies]
-          icarus = "${{ steps.get_version.outputs.VERSION }}"
-          ```
-          
-          ### What's Changed
-          See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
-          
-          ### Crates Published
-          - [icarus](https://crates.io/crates/icarus/${{ steps.get_version.outputs.VERSION }})
-          - [icarus-cli](https://crates.io/crates/icarus-cli/${{ steps.get_version.outputs.VERSION }})
-          - [icarus-core](https://crates.io/crates/icarus-core/${{ steps.get_version.outputs.VERSION }})
-          - [icarus-derive](https://crates.io/crates/icarus-derive/${{ steps.get_version.outputs.VERSION }})
-          - [icarus-canister](https://crates.io/crates/icarus-canister/${{ steps.get_version.outputs.VERSION }})
+        name: v${{ needs.validate-release.outputs.version }}
+        body_path: release-notes.md
+        prerelease: ${{ needs.validate-release.outputs.prerelease }}
         draft: false
-        prerelease: ${{ contains(steps.get_version.outputs.VERSION, '-') }}
+        files: |
+          artifacts/**/*.tar.gz
+          artifacts/**/*.zip
+        fail_on_unmatched_files: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Post-release notification
+      if: success()
+      run: |
+        echo "🎉 Release v${{ needs.validate-release.outputs.version }} completed successfully!"
+        echo "📦 View on crates.io: https://crates.io/crates/icarus"
+        echo "🔗 View on GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate-release.outputs.version }}"

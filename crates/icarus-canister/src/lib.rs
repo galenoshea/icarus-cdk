@@ -25,8 +25,8 @@ pub mod tools;
 pub use auth::{
     add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users, get_user,
     init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
-    require_none_of_roles, require_role, require_role_or_higher, update_user_role, AuthAction,
-    AuthAuditEntry, AuthInfo, AuthRole, User,
+    require_none_of_roles, require_role_or_higher, update_user_role, AuthAction, AuthAuditEntry,
+    AuthInfo, AuthRole, User,
 };
 pub use endpoints::{
     get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest, HttpResponse,
@@ -71,8 +71,8 @@ pub mod prelude {
         auth::{
             add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users,
             get_user, init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
-            require_none_of_roles, require_role, require_role_or_higher, update_user_role,
-            AuthAction, AuthAuditEntry, AuthInfo, AuthRole, User,
+            require_none_of_roles, require_role_or_higher, update_user_role, AuthAction,
+            AuthAuditEntry, AuthInfo, AuthRole, User,
         },
         // Easy storage patterns
         easy_storage::{CounterCell, StorageCell, StorageMap},

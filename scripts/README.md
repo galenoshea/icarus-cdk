@@ -4,10 +4,48 @@ This directory contains automation scripts for development and release workflows
 
 ## Core Scripts
 
-### 🧪 `test-ci.sh`
-**Purpose**: Simulate GitHub Actions CI locally before pushing  
-**Usage**: `./scripts/test-ci.sh`  
+### 🧪 `ci.sh`
+**Purpose**: Optimized CI runner with parallel execution and comprehensive checks  
+**Usage**: 
+- `./scripts/ci.sh` - Run all checks (default)
+- `./scripts/ci.sh fmt clippy test` - Run specific checks
+- `./scripts/ci.sh -j 8 all` - Run with 8 parallel jobs
+- `./scripts/ci.sh --coverage test` - Run tests with coverage
 **When to use**: Before pushing changes to ensure CI will pass
+
+**Options**:
+- `-h, --help` - Show help message
+- `-v, --verbose` - Enable verbose output
+- `-q, --quiet` - Suppress non-error output
+- `-j, --jobs NUM` - Number of parallel jobs
+- `--no-cache` - Disable cargo cache
+- `--no-fail-fast` - Continue on errors
+- `--coverage` - Run with coverage enabled
+
+**Commands**:
+- `all` - Run all checks (format, clippy, tests, build, version)
+- `fmt`, `format` - Check code formatting
+- `clippy` - Run clippy lints
+- `test` - Run all tests
+- `build` - Build all targets
+- `version` - Check version consistency
+
+### 🏥 `health-check.sh`
+**Purpose**: Comprehensive project health monitoring  
+**Usage**: `./scripts/health-check.sh`  
+**When to use**: Periodic project health assessment
+
+**What it checks**:
+- Environment setup and dependencies
+- Project structure and organization
+- Code quality metrics
+- Build system health
+- Test coverage status
+- Git repository status
+- CI/CD configuration
+- Performance metrics
+
+**Output**: Health score with grade (A+ to F) and recommendations
 
 ### 🚀 `release.sh`
 **Purpose**: Create a new release with automatic version bumping  
@@ -70,7 +108,7 @@ This directory contains automation scripts for development and release workflows
 - Runs tests
 
 ### Pre-push Hook
-- Runs full CI simulation via test-ci.sh
+- Runs full CI simulation via ci.sh
 - Ensures all checks pass before push
 
 ## Quick Start for New Contributors
@@ -84,7 +122,7 @@ cd icarus-sdk
 ./scripts/install-hooks.sh
 
 # 3. Before pushing changes, test locally
-./scripts/test-ci.sh
+./scripts/ci.sh
 
 # 4. To create a release
 ./scripts/release.sh patch

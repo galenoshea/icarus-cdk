@@ -232,12 +232,6 @@ pub fn require_none_of_roles(excluded: &[AuthRole]) -> AuthInfo {
     }
 }
 
-/// Check if caller has specific role or higher
-/// @deprecated Use require_role_or_higher for clarity
-pub fn require_role(required_role: AuthRole) -> AuthInfo {
-    require_role_or_higher(required_role)
-}
-
 /// Add a new user (requires Admin or Owner role)
 pub fn add_user(principal: Principal, role: AuthRole) -> String {
     // Security check: prevent anonymous principal from being added
@@ -245,7 +239,7 @@ pub fn add_user(principal: Principal, role: AuthRole) -> String {
         ic_cdk::trap("Security Error: Anonymous principal cannot be authorized");
     }
 
-    let auth_info = require_role(AuthRole::Admin);
+    let auth_info = require_role_or_higher(AuthRole::Admin);
     let caller = ic_cdk::caller();
 
     // Prevent self-elevation (Admins can't create Owners)
@@ -290,7 +284,7 @@ pub fn add_user(principal: Principal, role: AuthRole) -> String {
 
 /// Remove a user (requires Admin or Owner role)
 pub fn remove_user(principal: Principal) -> String {
-    let auth_info = require_role(AuthRole::Admin);
+    let auth_info = require_role_or_higher(AuthRole::Admin);
     let caller = ic_cdk::caller();
 
     AUTH_USERS.with(|users| {
@@ -336,7 +330,7 @@ pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
         ic_cdk::trap("Security Error: Anonymous principal cannot have a role");
     }
 
-    require_role(AuthRole::Owner); // Only owners can change roles
+    require_role_or_higher(AuthRole::Owner); // Only owners can change roles
     let caller = ic_cdk::caller();
 
     AUTH_USERS.with(|users| {
@@ -368,7 +362,7 @@ pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
 
 /// Get all authorized users (requires Admin or Owner role)
 pub fn get_authorized_users() -> Vec<User> {
-    require_role(AuthRole::Admin);
+    require_role_or_higher(AuthRole::Admin);
     let caller = ic_cdk::caller();
 
     log_auth_action(
@@ -391,7 +385,7 @@ pub fn get_authorized_users() -> Vec<User> {
 
 /// Get authentication audit log (requires Owner role)
 pub fn get_auth_audit(limit: Option<u32>) -> Vec<AuthAuditEntry> {
-    require_role(AuthRole::Owner);
+    require_role_or_higher(AuthRole::Owner);
     let caller = ic_cdk::caller();
     let limit = limit.unwrap_or(100).min(1000) as usize;
 
@@ -477,13 +471,13 @@ macro_rules! require_auth {
 #[macro_export]
 macro_rules! require_admin {
     () => {
-        $crate::auth::require_role($crate::auth::AuthRole::Admin);
+        $crate::auth::require_role_or_higher($crate::auth::AuthRole::Admin);
     };
 }
 
 #[macro_export]
 macro_rules! require_owner {
     () => {
-        $crate::auth::require_role($crate::auth::AuthRole::Owner);
+        $crate::auth::require_role_or_higher($crate::auth::AuthRole::Owner);
     };
 }
