@@ -1,218 +1,241 @@
-# Icarus SDK
+<div align="center">
 
-Build MCP (Model Context Protocol) servers that run as Internet Computer canisters.
+# 🚀 Icarus SDK
 
-## Overview
+**Build persistent AI tools that run forever on the blockchain**
 
-Icarus SDK enables developers to create persistent AI tools by combining:
-- **MCP**: The Model Context Protocol for AI assistant tools
-- **ICP**: The Internet Computer's blockchain-based compute platform
+[![Crates.io](https://img.shields.io/crates/v/icarus.svg)](https://crates.io/crates/icarus)
+[![Documentation](https://docs.rs/icarus/badge.svg)](https://docs.rs/icarus)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+[![CI](https://github.com/icarusai/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/icarusai/icarus-sdk/actions)
 
-Write your MCP servers in Rust, deploy them to ICP, and they run forever with built-in persistence.
+[Getting Started](#-quick-start) • [Documentation](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
 
-## Quick Start
+</div>
 
-```rust,ignore
-use icarus_canister::prelude::*;
-use candid::{CandidType, Deserialize};
-use serde::Serialize;
+---
 
-// Define your data structures
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusStorable)]
-pub struct MemoryEntry {
+## ✨ Why Icarus?
+
+Traditional MCP servers are ephemeral - they lose state when restarted. **Icarus changes that.**
+
+By combining the **Model Context Protocol** (MCP) with the **Internet Computer Protocol** (ICP), Icarus enables you to build AI tools that:
+
+- 🔄 **Persist Forever** - No more lost state between sessions
+- 🌐 **Run Globally** - Deploy once, accessible from anywhere
+- 🔒 **Stay Secure** - Built-in blockchain security and authentication
+- 💰 **Cost Pennies** - ICP's reverse gas model means predictable, low costs
+- ⚡ **Scale Instantly** - Automatic scaling with canister architecture
+
+### 📊 Comparison
+
+| Feature | Traditional MCP | Icarus MCP |
+|---------|----------------|------------|
+| **State Persistence** | ❌ Lost on restart | ✅ Permanent storage |
+| **Deployment** | Manual server management | One command to ICP |
+| **Global Access** | Requires hosting setup | Built-in global CDN |
+| **Cost Model** | Pay for hosting | Pay per computation |
+| **Authentication** | Build your own | Internet Identity built-in |
+
+---
+
+## 🎯 Perfect For
+
+- **🤖 AI Assistants** - Build Claude/ChatGPT tools with persistent memory
+- **📊 Data Tools** - Analytics and monitoring that never forget
+- **🎮 Game Backends** - Persistent game state and player data
+- **💼 Enterprise Tools** - Secure, auditable business automation
+- **🔬 Research Tools** - Long-running experiments and data collection
+
+---
+
+## 🚀 Quick Start
+
+### Installation
+
+```bash
+# Install the CLI
+cargo install icarus-cli
+
+# Create a new project
+icarus new my-ai-tool
+cd my-ai-tool
+
+# Deploy to ICP
+icarus deploy
+```
+
+### Your First Persistent Tool
+
+```rust
+use icarus::prelude::*;
+
+#[icarus_module]
+mod tools {
+    // This memory persists forever on the blockchain
+    stable_storage! {
+        MEMORIES: StableBTreeMap<String, String, Memory> = memory_id!(0);
+    }
+    
+    #[update]
+    #[icarus_tool("Store a memory that lasts forever")]
+    pub fn remember(key: String, value: String) -> Result<String, String> {
+        MEMORIES.with(|m| m.borrow_mut().insert(key, value));
+        Ok("Memory stored permanently! 🎉".to_string())
+    }
+    
+    #[query]
+    #[icarus_tool("Recall a memory from any session")]
+    pub fn recall(key: String) -> Result<String, String> {
+        MEMORIES.with(|m| 
+            m.borrow()
+                .get(&key)
+                .ok_or_else(|| "Memory not found".to_string())
+        )
+    }
+}
+```
+
+### Connect to Claude Desktop
+
+```bash
+# Add your deployed canister to Claude
+icarus bridge add <your-canister-id>
+
+# Now Claude has persistent memory! 🧠
+```
+
+---
+
+## 📦 Project Structure
+
+```
+icarus/
+├── 🧩 icarus-core        # Core MCP protocol implementation
+├── 🔮 icarus-derive      # Procedural macros for less boilerplate
+├── 📦 icarus-canister    # ICP canister integration
+├── 🛠️  icarus-cli         # Command-line tools
+└── 📚 examples/          # Ready-to-deploy examples
+```
+
+---
+
+## 🌟 Features
+
+### 🔧 Developer Experience
+
+- **Zero Boilerplate** - Macros generate all the MCP metadata
+- **Type Safety** - Full Rust type checking and IDE support
+- **Hot Reload** - Local development with instant feedback
+- **Rich CLI** - Project scaffolding, deployment, and management
+
+### 💾 Stable Storage
+
+```rust
+// Your data structures
+#[derive(IcarusStorable)]
+struct UserProfile {
     id: String,
-    content: String,
+    preferences: HashMap<String, String>,
     created_at: u64,
 }
 
-// Use stable storage for persistence
+// Automatic persistence with stable storage
 stable_storage! {
-    MEMORIES: StableBTreeMap<String, MemoryEntry, Memory> = memory_id!(0);
+    USERS: StableBTreeMap<String, UserProfile, Memory> = memory_id!(0);
+    SETTINGS: StableVec<Settings, Memory> = memory_id!(1);
 }
-
-// Define your tools with automatic metadata generation
-#[icarus_module]
-mod tools {
-    use super::*;
-    
-    #[update]
-    #[icarus_tool("Store a new memory")]
-    pub fn memorize(content: String) -> Result<String, String> {
-        let id = generate_id();
-        let memory = MemoryEntry {
-            id: id.clone(),
-            content,
-            created_at: ic_cdk::api::time(),
-        };
-        MEMORIES.with(|m| m.borrow_mut().insert(id.clone(), memory));
-        Ok(id)
-    }
-}
-
-// Export the Candid interface
-ic_cdk::export_candid!();
 ```
 
-## Installation
+### 🔐 Built-in Security
 
-### CLI Installation
+- **Internet Identity** - Secure authentication out of the box
+- **Principal-based Access** - Fine-grained permissions
+- **Candid Interface** - Type-safe client generation
 
-Install the Icarus CLI to create and manage MCP server projects:
+---
+
+## 📚 Examples
+
+Check out our [examples directory](examples/) for complete, deployable projects:
+
+- **[Memory Assistant](examples/basic-memory/)** - Persistent note-taking for AI
+- **[GitHub Integration](examples/github-tool/)** - Repository management tool
+- **[Data Analytics](examples/analytics/)** - Time-series data storage
+
+---
+
+## 🛠️ CLI Commands
 
 ```bash
-# Install from crates.io
-cargo install icarus-cli
+# Project Management
+icarus new <name>           # Create a new project
+icarus build               # Build your canister
+icarus deploy              # Deploy to ICP
+icarus test                # Run tests
 
-# Verify installation
-icarus --version
+# Bridge Commands (Claude Desktop integration)
+icarus bridge add <id>     # Add canister to Claude
+icarus bridge list         # List connected canisters
+icarus bridge remove <id>  # Remove a canister
+
+# Development
+icarus dev                 # Start local development
+icarus logs <id>          # View canister logs
 ```
 
-### SDK Installation
+---
 
-Add to your `Cargo.toml`:
+## 📖 Documentation
 
-```toml
-[dependencies]
-icarus = "0.2.6"
-# Or if you need individual crates:
-# icarus-canister = "0.2.6"
-# ic-cdk = "0.16"
-# candid = "0.10"
-# serde = { version = "1.0", features = ["derive"] }
-```
+- **[Getting Started Guide](docs/getting-started.md)** - Step-by-step tutorial
+- **[API Documentation](https://docs.rs/icarus)** - Complete API reference
+- **[Architecture Overview](docs/architecture.md)** - How Icarus works
+- **[Migration Guide](docs/migration-guide.md)** - Migrate existing MCP servers
 
-## Project Structure
+---
 
-The Icarus project consists of the SDK and CLI:
+## 🤝 Contributing
 
-### `icarus-core`
-Core traits and types for building MCP servers on ICP:
-- Protocol types
-- Error handling
-- Session management
-- Tool and resource abstractions
+We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
 
-### `icarus-derive`
-Procedural macros that reduce boilerplate:
-- `#[icarus_module]` - Generates tool metadata and exports
-- `#[icarus_tool]` - Marks functions as MCP tools
-- `#[derive(IcarusStorable)]` - Enables stable storage
-
-### `icarus-canister`
-ICP canister integration with stable memory:
-- `stable_storage!` macro for declaring persistent data
-- Memory management utilities
-- State persistence helpers
-
-### `icarus-cli`
-Command-line tool for development and deployment:
-- Project scaffolding with `icarus new`
-- Build and optimization with `icarus build`
-- Deployment to ICP with `icarus deploy`
-- MCP-ICP bridge with `icarus bridge`
-
-## Features
-
-- 🔧 Simple Rust macros for MCP tools
-- 💾 Automatic state persistence with stable structures
-- 🌐 Global accessibility via ICP
-- 🔒 Blockchain-grade security
-- 🚀 Deploy once, run forever
-- 🧪 PocketIC integration for testing
-- 📦 Zero-copy stable memory operations
-
-## How It Works
-
-1. **Write Tools**: Use `#[icarus_tool]` to mark functions as MCP tools
-2. **Generate Metadata**: The `#[icarus_module]` macro creates a `get_metadata()` query
-3. **Deploy**: Use the Icarus CLI to deploy your canister
-4. **Bridge**: The CLI's bridge translates between MCP and your canister
-
-The generated canister is a standard ICP backend with no MCP awareness. All protocol translation happens in the bridge, keeping your code clean and testable.
-
-## Requirements
-
-- Rust 1.75+
-- dfx (ICP SDK) - via Icarus CLI
-- wasm32-unknown-unknown target
-
-## Documentation
-
-Comprehensive documentation is available in the [docs/](docs/) folder:
-
-- **[Documentation Index](docs/README.md)** - Start here for navigation
-- **[Getting Started Guide](docs/getting-started.md)** - Build your first MCP server
-- **[API Reference](docs/api-reference.md)** - Complete API documentation
-- **[Examples](examples/)** - Working example projects
-- **[CLI Documentation](cli/docs/)** - Command reference and guides
-- **[Contributing](CONTRIBUTING.md)** - How to contribute
-- **[Changelog](CHANGELOG.md)** - Version history and migration notes
-
-## Testing
-
-The SDK includes a comprehensive test suite:
+### Development Setup
 
 ```bash
-# Run all tests
+# Clone the repository
+git clone https://github.com/icarusai/icarus-sdk
+cd icarus-sdk
+
+# Install dependencies
+./scripts/install-deps.sh
+
+# Run tests
 cargo test
 
-# Run with coverage
-cargo install cargo-llvm-cov
-cargo llvm-cov --html
-
-# Install pre-commit hooks
-./scripts/install-hooks.sh
-
-# Run CI tests locally  
-./scripts/test-ci.sh
-
-# Create a new release
-./scripts/release.sh patch
+# Build everything
+cargo build --all
 ```
 
-See [tests/README.md](tests/README.md) for more details.
+---
 
-## License
+## 💬 Community & Support
 
-⚠️ **IMPORTANT**: This SDK is licensed under the Business Source License 1.1 (BSL-1.1), 
-which is **NOT** an open source license.
+- **[Discord](https://discord.gg/icarus)** - Join our community
+- **[GitHub Issues](https://github.com/icarusai/icarus-sdk/issues)** - Report bugs
+- **[Discussions](https://github.com/icarusai/icarus-sdk/discussions)** - Ask questions
 
-### Version Notice
-- ❌ Version 0.1.0 was published in error and has been yanked - DO NOT USE
-- ✅ Version 0.2.0+ is the official release under BSL-1.1
+---
 
-### ✅ You CAN:
-- Build and deploy MCP tools to Icarus Marketplace
-- Modify the SDK for internal use
-- Integrate with your applications that use Icarus
-- Use for education and research
-- Create commercial MCP tools using this SDK
+## 📄 License
 
-### ❌ You CANNOT:
-- Create competing MCP marketplaces
-- Redistribute the SDK or derivatives
-- Remove signature verification
-- White-label or rebrand the SDK
-- Reverse engineer for competition
-- Offer SDK as a service
-- Bypass telemetry or usage reporting
+Icarus is dual-licensed under MIT and Apache 2.0. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) for details.
 
-### 🔒 Security & Verification
-This SDK includes:
-- Cryptographic signature verification for authenticity
-- Telemetry for service improvement and compliance
-- Connection restrictions to official Icarus infrastructure
+---
 
-Tampering with these mechanisms violates the license and may result in legal action.
+<div align="center">
+  
+**Built with ❤️ by the Icarus Team**
 
-### 📅 Open Source Conversion
-On **January 1, 2029**, this SDK automatically converts to Apache License 2.0.
+[Website](https://icarus.ai) • [Twitter](https://twitter.com/icarusai) • [Blog](https://blog.icarus.ai)
 
-### 📄 Legal
-- See [LICENSE](./LICENSE) for complete BSL-1.1 terms
-- See [NOTICE](./NOTICE) for important restrictions
-- Commercial licenses available: licensing@icarus.dev
-- Report violations: legal@icarus.dev
-
-### ™️ Trademarks
-"Icarus" and the Icarus logo are registered trademarks. Unauthorized use is prohibited.
+</div>
