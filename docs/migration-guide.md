@@ -2,27 +2,94 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
-## Migrating from 0.2.5 to 0.2.6
+## Migrating from 0.2.7 to 0.3.0
 
 ### Overview
-Version 0.2.6 is primarily a maintenance release with improved documentation and synchronized versioning across all workspace crates.
+Version 0.3.0 introduces significant improvements to package management and fixes critical issues with Claude Desktop integration.
+
+### Breaking Changes
+
+#### Import Path Change
+The main breaking change is the simplified import path:
+
+**Before (0.2.x):**
+```rust
+use icarus_canister::prelude::*;
+```
+
+**After (0.3.0):**
+```rust
+use icarus::prelude::*;
+```
+
+#### Simplified Dependencies
+Projects no longer need to include `icarus-canister` separately:
+
+**Before (0.2.x):**
+```toml
+[dependencies]
+icarus = "0.2.7"
+icarus-canister = "0.2.7"  # No longer needed!
+```
+
+**After (0.3.0):**
+```toml
+[dependencies]
+icarus = "0.3.0"  # Includes everything via feature flags
+```
+
+### New Features
+
+- **Feature flags**: The main `icarus` crate now uses feature flags for modular dependency management
+- **Claude Desktop fix**: The CLI now uses full paths to resolve the executable location  
+- **Cleaner project templates**: `icarus new` generates projects with the simplified import structure
+- **Professional documentation**: Completely redesigned README with badges and better organization
+
+### Migration Steps
+
+1. Update your `Cargo.toml`:
+   ```toml
+   [dependencies]
+   icarus = "0.3.0"
+   # Remove icarus-canister line if present
+   ```
+
+2. Update your imports:
+   ```rust
+   // Change this:
+   use icarus_canister::prelude::*;
+   
+   // To this:
+   use icarus::prelude::*;
+   ```
+
+3. Rebuild your project:
+   ```bash
+   cargo clean
+   cargo build --target wasm32-unknown-unknown --release
+   ```
+
+## Migrating from 0.2.5 to 0.3.0
+
+### Overview
+Version 0.3.0 is primarily a maintenance release with improved documentation and synchronized versioning across all workspace crates.
 
 ### Changes
 
 #### Version Synchronization
-All crates in the workspace now use the same version number (0.2.6):
+All crates in the workspace now use the same version number (0.3.0):
 - `icarus`
 - `icarus-core`
 - `icarus-derive`
 - `icarus-canister`
 - `icarus-cli`
 
-**Action Required**: Update your `Cargo.toml` dependencies to use version 0.2.6:
+**Action Required**: Update your `Cargo.toml` dependencies to use version 0.3.0:
 ```toml
 [dependencies]
-icarus = "0.2.6"
+icarus = "0.3.0"
 # Or if using individual crates:
-icarus-canister = "0.2.6"
+icarus-canister = "0.3.0"
 ```
 
 #### No Breaking Changes
@@ -161,7 +228,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.2.6)**: Full support
+- **Current Version (0.3.0)**: Full support
 - **Previous Minor (0.2.5)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
 
