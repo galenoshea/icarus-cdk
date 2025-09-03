@@ -21,20 +21,39 @@ echo -e "Main version from Cargo.toml: ${GREEN}$MAIN_VERSION${NC}"
 ERRORS=0
 
 # Function to check version in a file
+# Now with context awareness - skips historical references
 check_version() {
     local file=$1
     local pattern=$2
     local description=$3
+    local skip_historical=${4:-false}
     
     if [ -f "$file" ]; then
-        if grep -q "$pattern" "$file"; then
-            local found_versions=$(grep -o "$pattern" "$file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | sort -u)
-            for version in $found_versions; do
-                if [ "$version" != "$MAIN_VERSION" ]; then
-                    echo -e "${RED}❌ Version mismatch in $file: found $version (expected $MAIN_VERSION) - $description${NC}"
-                    ERRORS=$((ERRORS + 1))
-                fi
-            done
+        # For migration guide, skip historical version references
+        if [[ "$file" == *"migration-guide.md"* ]] && [ "$skip_historical" = "true" ]; then
+            # Only check lines that indicate current version
+            local lines_to_check=$(grep -n "$pattern" "$file" | grep -E "(Current Version|current version|Latest|latest)" | cut -d: -f1)
+            if [ -n "$lines_to_check" ]; then
+                for line_num in $lines_to_check; do
+                    local line_content=$(sed -n "${line_num}p" "$file")
+                    local found_version=$(echo "$line_content" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | head -1)
+                    if [ -n "$found_version" ] && [ "$found_version" != "$MAIN_VERSION" ]; then
+                        echo -e "${RED}❌ Version mismatch in $file line $line_num: found $found_version (expected $MAIN_VERSION) - $description${NC}"
+                        ERRORS=$((ERRORS + 1))
+                    fi
+                done
+            fi
+        else
+            # Standard version checking for non-migration files
+            if grep -q "$pattern" "$file"; then
+                local found_versions=$(grep -o "$pattern" "$file" | grep -o '[0-9]\+\.[0-9]\+\.[0-9]\+' | sort -u)
+                for version in $found_versions; do
+                    if [ "$version" != "$MAIN_VERSION" ]; then
+                        echo -e "${RED}❌ Version mismatch in $file: found $version (expected $MAIN_VERSION) - $description${NC}"
+                        ERRORS=$((ERRORS + 1))
+                    fi
+                done
+            fi
         fi
     fi
 }
@@ -84,11 +103,10 @@ check_version "README.md" 'icarus-canister = "[0-9]\+\.[0-9]\+\.[0-9]\+"' "canis
 check_version "README.md" 'icarus-cli@[0-9]\+\.[0-9]\+\.[0-9]\+' "CLI installation"
 check_version "docs/README.md" 'Version [0-9]\+\.[0-9]\+\.[0-9]\+' "docs version footer"
 
-# Check migration guide
+# Check migration guide - only check current version references
 echo -e "\n${YELLOW}Checking migration guide...${NC}"
-check_version "docs/migration-guide.md" 'Version [0-9]\+\.[0-9]\+\.[0-9]\+ is' "version header"
-check_version "docs/migration-guide.md" 'Current Version ([0-9]\+\.[0-9]\+\.[0-9]\+)' "current version"
-check_version "docs/migration-guide.md" 'version [0-9]\+\.[0-9]\+\.[0-9]\+:' "version examples"
+# Only check the "Current Version" line in Version Support Policy section
+check_version "docs/migration-guide.md" 'Current Version ([0-9]\+\.[0-9]\+\.[0-9]\+)' "current version" true
 
 # Special check for 0.2.0+ reference (this should stay as is)
 echo -e "\n${YELLOW}Checking special version references...${NC}"

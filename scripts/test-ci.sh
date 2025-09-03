@@ -86,6 +86,15 @@ else
     exit 1
 fi
 
+# Check version consistency
+print_step "Checking version consistency..."
+if ./scripts/check-versions.sh; then
+    print_success "Version consistency check passed"
+else
+    print_error "Version inconsistencies found"
+    exit 1
+fi
+
 # Build for WASM
 print_step "Building for WASM target..."
 if cargo build --target wasm32-unknown-unknown --release; then
