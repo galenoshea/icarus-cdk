@@ -162,15 +162,15 @@ jobs:
         targets: ${{ matrix.target }}
     
     - name: Build CLI binary
-      run: |
-        cargo build --package icarus-cli --release --target ${{ matrix.target }}
-        
-        # Package the binary
-        if [[ "${{ matrix.os }}" == "windows-latest" ]]; then
-          7z a ${{ matrix.artifact_name }}.zip ./target/${{ matrix.target }}/release/icarus.exe
-        else
-          tar -czf ${{ matrix.artifact_name }}.tar.gz -C ./target/${{ matrix.target }}/release icarus
-        fi
+      run: cargo build --package icarus-cli --release --target ${{ matrix.target }}
+    
+    - name: Package Windows binary
+      if: matrix.os == 'windows-latest'
+      run: 7z a ${{ matrix.artifact_name }}.zip ./target/${{ matrix.target }}/release/icarus.exe
+    
+    - name: Package Unix binary
+      if: matrix.os != 'windows-latest'
+      run: tar -czf ${{ matrix.artifact_name }}.tar.gz -C ./target/${{ matrix.target }}/release icarus
     
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
