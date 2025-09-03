@@ -5,6 +5,34 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2025-09-03
+
+### Fixed
+- Fixed coverage workflow failures with 'can't find crate for profiler_builtins' error
+- Updated all macro paths from `::icarus_canister::` to `::icarus::canister::` for v0.3.0 compatibility
+- WASM builds now work correctly when run under `cargo llvm-cov`
+- Cleared LLVM_PROFILE and coverage-related environment variables in subprocess cargo commands
+
+### Changed
+- Improved build reliability in CI/CD environments
+- Enhanced compatibility with coverage testing tools
+
+## [0.3.0] - 2025-09-03
+
+### Added
+- Simplified package imports - users now only need `icarus = "0.3.0"` in dependencies
+- Feature flags for modular dependency management
+- Fixed Claude Desktop integration with full path resolution
+
+### Changed
+- **BREAKING**: Import path changed from `icarus_canister::prelude::*` to `icarus::prelude::*`
+- Unified all crate versions to 0.3.0
+- Improved project templates with cleaner import structure
+
+### Fixed
+- Claude Desktop ENOENT error when spawning icarus executable
+- Simplified dependency management - no longer need separate icarus-canister dependency
+
 ## [0.2.6] - 2025-09-01
 
 ### Changed

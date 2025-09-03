@@ -2,6 +2,24 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
+## Migrating from 0.3.0 to 0.3.1
+
+### Overview
+Version 0.3.1 is a patch release that fixes critical issues with the v0.3.0 release.
+
+### Bug Fixes
+- **Fixed**: Coverage workflow failures - cleared LLVM_PROFILE environment variables in subprocess cargo commands
+- **Fixed**: Macro compilation errors - updated all macro paths from `::icarus_canister::` to `::icarus::canister::`
+- **Fixed**: WASM builds now work correctly when run under `cargo llvm-cov`
+
+### No Breaking Changes
+This is a patch release with no breaking changes. Simply update your dependency:
+
+```toml
+[dependencies]
+icarus = "0.3.1"
+```
+
 ## Migrating from 0.2.7 to 0.3.0
 
 ### Overview
@@ -228,7 +246,8 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.3.0)**: Full support
+- **Current Version (0.3.1)**: Full support
+- **Previous Minor (0.3.0)**: Critical fixes only
 - **Previous Minor (0.2.5)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
 
