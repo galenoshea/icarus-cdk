@@ -23,7 +23,16 @@ impl CliRunner {
 
         // If not built, build it now
         if !binary_path.exists() {
-            let output = Command::new("cargo")
+            let mut cmd = Command::new("cargo");
+            // Clear coverage-related environment variables that break builds
+            cmd.env_remove("LLVM_PROFILE_FILE")
+                .env_remove("RUSTFLAGS")
+                .env_remove("CARGO_INCREMENTAL")
+                .env_remove("CARGO_LLVM_COV")
+                .env_remove("CARGO_LLVM_COV_SHOW_ENV")
+                .env_remove("CARGO_LLVM_COV_TARGET_DIR");
+
+            let output = cmd
                 .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap())
                 .args(&[
                     "build",
@@ -118,8 +127,16 @@ impl TestProject {
     /// Run cargo build in the project
     #[allow(dead_code)]
     pub fn cargo_build(&self) -> Output {
-        Command::new("cargo")
-            .current_dir(self.project_dir())
+        let mut cmd = Command::new("cargo");
+        // Clear coverage-related environment variables that break WASM builds
+        cmd.env_remove("LLVM_PROFILE_FILE")
+            .env_remove("RUSTFLAGS")
+            .env_remove("CARGO_INCREMENTAL")
+            .env_remove("CARGO_LLVM_COV")
+            .env_remove("CARGO_LLVM_COV_SHOW_ENV")
+            .env_remove("CARGO_LLVM_COV_TARGET_DIR");
+
+        cmd.current_dir(self.project_dir())
             .args(&["build", "--target", "wasm32-unknown-unknown", "--release"])
             .output()
             .expect("Failed to run cargo build")

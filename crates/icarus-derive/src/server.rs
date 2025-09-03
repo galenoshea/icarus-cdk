@@ -42,8 +42,8 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
 
         impl #struct_name {
             /// Create server configuration
-            pub fn config() -> icarus_canister::state::ServerConfig {
-                icarus_canister::state::ServerConfig {
+            pub fn config() -> ::icarus::canister::state::ServerConfig {
+                ::icarus::canister::state::ServerConfig {
                     name: #name.to_string(),
                     version: #version.to_string(),
                     canister_id: ic_cdk::id(),
@@ -73,7 +73,7 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
         #[ic_cdk_macros::init]
         fn __icarus_init() {
             let config = #struct_name::config();
-            icarus_canister::state::IcarusCanisterState::init(config);
+            ::icarus::canister::state::IcarusCanisterState::init(config);
 
             // Initialize server instance
             #struct_name::init_instance();
@@ -85,13 +85,13 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
         // Generate metadata query endpoint
         #[ic_cdk_macros::query]
         fn __icarus_metadata() -> icarus_core::protocol::IcarusMetadata {
-            icarus_canister::endpoints::icarus_metadata()
+            ::icarus::canister::endpoints::icarus_metadata()
         }
 
         // HTTP gateway endpoint
         #[ic_cdk_macros::query]
-        fn http_request(req: icarus_canister::endpoints::HttpRequest) -> icarus_canister::endpoints::HttpResponse {
-            icarus_canister::endpoints::http_request(req)
+        fn http_request(req: ::icarus::canister::endpoints::HttpRequest) -> ::icarus::canister::endpoints::HttpResponse {
+            ::icarus::canister::endpoints::http_request(req)
         }
 
         // Generate pre/post upgrade hooks
@@ -103,7 +103,7 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
         #[ic_cdk_macros::post_upgrade]
         fn __icarus_post_upgrade() {
             let config = #struct_name::config();
-            icarus_canister::state::IcarusCanisterState::init(config);
+            ::icarus::canister::state::IcarusCanisterState::init(config);
 
             // Initialize server instance
             #struct_name::init_instance();

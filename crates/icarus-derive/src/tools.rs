@@ -68,11 +68,11 @@ pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
 
                     // Register tool in canister state
                     tool_registrations.push(quote! {
-                        icarus_canister::state::STATE.with(|s| {
+                        ::icarus::canister::state::STATE.with(|s| {
                             if let Some(state) = s.borrow_mut().as_mut() {
                                 state.tools.insert(
                                     #tool_name.to_string(),
-                                    icarus_canister::state::ToolState {
+                                    ::icarus::canister::state::ToolState {
                                         name: #tool_name.to_string(),
                                         enabled: true,
                                         call_count: 0,
@@ -145,7 +145,7 @@ fn generate_query_method(
     } else {
         quote! {
             // Verify caller is the canister owner
-            icarus_canister::assert_owner();
+            ::icarus::canister::assert_owner();
         }
     };
 
@@ -188,7 +188,7 @@ fn generate_update_method(
     } else {
         quote! {
             // Verify caller is the canister owner
-            icarus_canister::assert_owner();
+            ::icarus::canister::assert_owner();
         }
     };
 
@@ -333,7 +333,7 @@ fn generate_async_update_method(
     } else {
         quote! {
             // Verify caller is the canister owner
-            icarus_canister::assert_owner();
+            ::icarus::canister::assert_owner();
         }
     };
 
@@ -413,25 +413,25 @@ fn inject_authenticate_call(func: &mut ItemFn) {
         // Create require_role() call based on the role
         match role.as_str() {
             "Owner" => parse_quote! {
-                require_role(AuthRole::Owner);
+                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::Owner);
             },
             "Admin" => parse_quote! {
-                require_role(AuthRole::Admin);
+                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::Admin);
             },
             "User" => parse_quote! {
-                require_role(AuthRole::User);
+                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::User);
             },
             "ReadOnly" => parse_quote! {
-                require_role(AuthRole::ReadOnly);
+                ::icarus::canister::auth::require_role(::icarus::canister::auth::AuthRole::ReadOnly);
             },
             _ => parse_quote! {
-                authenticate();
+                ::icarus::canister::auth::authenticate();
             },
         }
     } else {
         // Default to authenticate()
         parse_quote! {
-            authenticate();
+            ::icarus::canister::auth::authenticate();
         }
     };
 
@@ -602,7 +602,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         #[::ic_cdk_macros::init]
         fn init(owner: ::candid::Principal) {
             // Initialize the authentication system with the provided owner
-            ::icarus_canister::auth::init_auth(owner);
+            ::icarus::canister::auth::init_auth(owner);
 
             // Log initialization
             ::ic_cdk::print(format!(
@@ -625,7 +625,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// Requires Admin role or higher
         #[::ic_cdk_macros::update]
         pub fn add_authorized_user(principal_text: String, role: String) -> Result<String, String> {
-            use ::icarus_canister::auth::{add_user, AuthRole, require_role_or_higher};
+            use ::icarus::canister::auth::{add_user, AuthRole, require_role_or_higher};
             use ::candid::Principal;
 
             // Require Admin or Owner role
@@ -657,7 +657,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// Requires Admin role or higher
         #[::ic_cdk_macros::update]
         pub fn remove_authorized_user(principal_text: String) -> Result<String, String> {
-            use ::icarus_canister::auth::{remove_user, AuthRole, require_role_or_higher};
+            use ::icarus::canister::auth::{remove_user, AuthRole, require_role_or_higher};
             use ::candid::Principal;
 
             // Require Admin or Owner role
@@ -675,7 +675,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// Requires Owner role
         #[::ic_cdk_macros::update]
         pub fn update_user_role(principal_text: String, new_role: String) -> Result<String, String> {
-            use ::icarus_canister::auth::{update_user_role, AuthRole, require_role_or_higher};
+            use ::icarus::canister::auth::{update_user_role, AuthRole, require_role_or_higher};
             use ::candid::Principal;
 
             // Only Owner can change roles
@@ -707,7 +707,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// Requires Admin role or higher
         #[::ic_cdk_macros::query]
         pub fn list_authorized_users() -> String {
-            use ::icarus_canister::auth::{get_authorized_users, AuthRole, require_role_or_higher};
+            use ::icarus::canister::auth::{get_authorized_users, AuthRole, require_role_or_higher};
 
             // Require Admin or Owner role
             require_role_or_higher(AuthRole::Admin);
@@ -724,7 +724,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// Available to all authenticated users
         #[::ic_cdk_macros::query]
         pub fn get_auth_status() -> String {
-            use ::icarus_canister::auth::get_auth_status;
+            use ::icarus::canister::auth::get_auth_status;
 
             // Get auth status and serialize to JSON
             ::serde_json::to_string(&get_auth_status())

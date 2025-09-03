@@ -37,7 +37,16 @@ pub async fn execute(
 
     let pb = create_progress_bar(100, "Compiling Rust code");
 
-    let output = Command::new("cargo")
+    let mut cmd = Command::new("cargo");
+    // Clear coverage-related environment variables that break WASM builds
+    cmd.env_remove("LLVM_PROFILE_FILE")
+        .env_remove("RUSTFLAGS")
+        .env_remove("CARGO_INCREMENTAL")
+        .env_remove("CARGO_LLVM_COV")
+        .env_remove("CARGO_LLVM_COV_SHOW_ENV")
+        .env_remove("CARGO_LLVM_COV_TARGET_DIR");
+
+    let output = cmd
         .args(&cargo_args)
         .current_dir(&current_dir)
         .output()
@@ -263,7 +272,16 @@ fn extract_candid_from_wasm(project_dir: &Path) -> Result<()> {
         print_info("candid-extractor not found. Installing...");
 
         // Install candid-extractor
-        let output = Command::new("cargo")
+        let mut cmd = Command::new("cargo");
+        // Clear coverage-related environment variables
+        cmd.env_remove("LLVM_PROFILE_FILE")
+            .env_remove("RUSTFLAGS")
+            .env_remove("CARGO_INCREMENTAL")
+            .env_remove("CARGO_LLVM_COV")
+            .env_remove("CARGO_LLVM_COV_SHOW_ENV")
+            .env_remove("CARGO_LLVM_COV_TARGET_DIR");
+
+        let output = cmd
             .args(&["install", "candid-extractor"])
             .output()
             .map_err(|e| anyhow::anyhow!("Failed to run cargo install: {}", e))?;
