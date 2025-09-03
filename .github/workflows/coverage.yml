@@ -25,14 +25,7 @@ jobs:
       uses: taiki-e/install-action@cargo-llvm-cov
     
     - name: Generate code coverage
-      run: |
-        # Skip e2e tests that build WASM (incompatible with profiler instrumentation)
-        cargo llvm-cov --all-features --workspace \
-          --lcov --output-path lcov.info \
-          -- --skip test_build_creates_optimized_wasm \
-             --skip test_build_preserves_candid_interface \
-             --skip test_build_shows_size_reduction \
-             --skip test_new_project_builds_successfully
+      run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
