@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
 [![CI](https://github.com/icarusai/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/icarusai/icarus-sdk/actions)
 
-[Getting Started](#-quick-start) • [Documentation](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
+[Quick Start](#-quick-start) • [Docs](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
 
 </div>
 
