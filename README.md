@@ -6,7 +6,7 @@
 
 [![Crates.io](https://img.shields.io/crates/v/icarus.svg)](https://crates.io/crates/icarus)
 [![Documentation](https://docs.rs/icarus/badge.svg)](https://docs.rs/icarus)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE-MIT)
+[![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
 [![CI](https://github.com/icarusai/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/icarusai/icarus-sdk/actions)
 
 [Getting Started](#-quick-start) • [Documentation](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
@@ -228,7 +228,9 @@ cargo build --all
 
 ## 📄 License
 
-Icarus is dual-licensed under MIT and Apache 2.0. See [LICENSE-MIT](LICENSE-MIT) and [LICENSE-APACHE](LICENSE-APACHE) for details.
+Icarus SDK is licensed under the Business Source License 1.1 (BSL). See [LICENSE](LICENSE) for details.
+
+The BSL allows you to use Icarus SDK for developing and deploying MCP tools to the Icarus Marketplace.
 
 ---
 
