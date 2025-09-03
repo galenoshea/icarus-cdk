@@ -2,6 +2,17 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
+## Migrating from 0.3.1 to 0.3.2
+
+This is a patch release with CI/CD improvements and cleanup. No code changes are required.
+
+### What Changed
+- CI/CD pipeline optimized for 40-60% faster execution
+- Deprecated `require_role` function removed (use `require_role_or_higher`)
+- Redundant scripts and workflow files removed
+
+No migration required for existing code.
+
 ## Migrating from 0.3.0 to 0.3.1
 
 ### Overview
@@ -17,7 +28,7 @@ This is a patch release with no breaking changes. Simply update your dependency:
 
 ```toml
 [dependencies]
-icarus = "0.3.1"
+icarus = "0.3.2"
 ```
 
 ## Migrating from 0.2.7 to 0.3.0
@@ -246,7 +257,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.3.1)**: Full support
+- **Current Version (0.3.2)**: Full support
 - **Previous Minor (0.3.0)**: Critical fixes only
 - **Previous Minor (0.2.5)**: Security updates only
 - **Older Versions**: No support, upgrade recommended

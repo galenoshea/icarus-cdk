@@ -5,6 +5,23 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-09-03
+
+### Changed
+- Optimized CI/CD pipeline with 40-60% performance improvement
+- Unified CI script with parallel execution support
+- Cleaned up redundant workflow files and scripts
+- Pre-push hook now uses optimized ci.sh script
+
+### Fixed
+- Pre-push hook now properly validates all CI checks
+- Version consistency check handles migration guide correctly
+
+### Removed
+- Deprecated `require_role` function (use `require_role_or_higher`)
+- Redundant test-ci.sh and migrate-ci.sh scripts
+- Duplicate GitHub workflow files
+
 ## [0.3.1] - 2025-09-03
 
 ### Fixed
