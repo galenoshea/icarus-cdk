@@ -25,13 +25,12 @@ fn test_new_creates_project_structure() {
     let cargo_toml = test_project.read_file("Cargo.toml");
     assert!(cargo_toml.contains("name = \"test-app\""));
     assert!(cargo_toml.contains("icarus = "));
-    assert!(cargo_toml.contains("icarus-canister = "));
     assert!(cargo_toml.contains("crate-type = [\"cdylib\"]"));
 
     // Verify src/lib.rs contains the Memento template
     let lib_rs = test_project.read_file("src/lib.rs");
     assert!(lib_rs.contains("//! Memento - A simple key-value memory storage tool"));
-    assert!(lib_rs.contains("use icarus_canister::prelude::*"));
+    assert!(lib_rs.contains("use icarus::prelude::*"));
     assert!(lib_rs.contains("stable_storage!"));
     assert!(lib_rs.contains("MEMORIES: StableBTreeMap<String, MemoryEntry, Memory>"));
     assert!(lib_rs.contains("#[icarus_tool"));

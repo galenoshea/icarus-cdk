@@ -117,24 +117,18 @@ tokio = { version = "1", features = ["full"] }
     };
 
     // Determine the SDK paths for both icarus and icarus-canister
-    let (icarus_path, canister_path) = if let Some(ref sdk) = local_sdk {
+    let icarus_dep = if let Some(ref sdk) = local_sdk {
         // Use provided SDK path for local development
         let base_path = if sdk.ends_with("icarus-sdk") {
             sdk.clone()
         } else {
             sdk.clone()
         };
-        (
-            format!("{{ path = \"{}\" }}", base_path),
-            format!("{{ path = \"{}/crates/icarus-canister\" }}", base_path),
-        )
+        format!("{{ path = \"{}\" }}", base_path)
     } else {
         // Use the same version as the CLI from crates.io
         let cli_version = env!("CARGO_PKG_VERSION");
-        (
-            format!("\"{}\"", cli_version),
-            format!("\"{}\"", cli_version),
-        )
+        format!("\"{}\"", cli_version)
     };
 
     let cargo_toml = format!(
@@ -145,7 +139,6 @@ edition = "2021"
 
 [dependencies]
 icarus = {}
-icarus-canister = {}
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"
 candid = "0.10"
@@ -164,14 +157,14 @@ strip = "debuginfo"   # Strip debug info
 panic = "abort"       # Smaller binaries, matches WASM behavior
 overflow-checks = false # Disable runtime overflow checks
 "#,
-        name, icarus_path, canister_path, dev_dependencies_section
+        name, icarus_dep, dev_dependencies_section
     );
     std::fs::write(project_path.join("Cargo.toml"), cargo_toml)?;
 
     // Create lib.rs with Memento - a simple key-value memory storage tool
     let lib_rs = r#"//! Memento - A simple key-value memory storage tool for the Internet Computer
 
-use icarus_canister::prelude::*;
+use icarus::prelude::*;
 
 // Define storage using stable_storage macro
 stable_storage! {
