@@ -7,7 +7,7 @@
 [![Crates.io](https://img.shields.io/crates/v/icarus.svg)](https://crates.io/crates/icarus)
 [![Documentation](https://docs.rs/icarus/badge.svg)](https://docs.rs/icarus)
 [![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
-[![CI](https://github.com/icarusai/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/icarusai/icarus-sdk/actions)
+[![CI](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions)
 
 [Quick Start](#-quick-start) • [Docs](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
 
@@ -63,6 +63,22 @@ cd my-ai-tool
 
 # Deploy to ICP
 icarus deploy
+```
+
+### Add to Your Project
+
+```toml
+[dependencies]
+# Recommended: Simple, includes everything for canister development
+icarus = "0.2.7"
+
+# Or specify features explicitly
+icarus = { version = "0.2.7", features = ["canister"] }
+
+# Other required dependencies for canister development
+ic-cdk = "0.16"
+candid = "0.10"
+serde = { version = "1.0", features = ["derive"] }
 ```
 
 ### Your First Persistent Tool
@@ -203,7 +219,7 @@ We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for deta
 
 ```bash
 # Clone the repository
-git clone https://github.com/icarusai/icarus-sdk
+git clone https://github.com/galenoshea/icarus-sdk
 cd icarus-sdk
 
 # Install dependencies
@@ -221,8 +237,8 @@ cargo build --all
 ## 💬 Community & Support
 
 - **[Discord](https://discord.gg/icarus)** - Join our community
-- **[GitHub Issues](https://github.com/icarusai/icarus-sdk/issues)** - Report bugs
-- **[Discussions](https://github.com/icarusai/icarus-sdk/discussions)** - Ask questions
+- **[GitHub Issues](https://github.com/galenoshea/icarus-sdk/issues)** - Report bugs
+- **[Discussions](https://github.com/galenoshea/icarus-sdk/discussions)** - Ask questions
 
 ---
 

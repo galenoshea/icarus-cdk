@@ -49,19 +49,30 @@
 //! ```
 
 // Re-export core functionality
+#[cfg(feature = "core")]
 pub use icarus_core as core;
 
 // Re-export derive macros
+#[cfg(feature = "canister")]
 pub use icarus_derive as derive;
 
 // Re-export canister functionality
+#[cfg(feature = "canister")]
 pub use icarus_canister as canister;
 
 // Re-export commonly used items
+#[cfg(feature = "canister")]
 pub use icarus_derive::{icarus_module, icarus_tool};
 
 /// Prelude module for convenient imports
+#[cfg(feature = "canister")]
 pub mod prelude {
     pub use crate::canister::prelude::*;
     pub use crate::derive::{icarus_module, icarus_tool};
-} // test
+}
+
+// Provide a minimal prelude when only core is enabled
+#[cfg(all(feature = "core", not(feature = "canister")))]
+pub mod prelude {
+    pub use crate::core::*;
+}

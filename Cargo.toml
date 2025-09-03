@@ -12,10 +12,15 @@ description = "Build MCP (Model Context Protocol) servers that run as Internet C
 keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
 categories = ["development-tools", "web-programming", "wasm"]
 
+[features]
+default = ["canister"]
+canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
+core = ["dep:icarus-core"]
+
 [dependencies]
-icarus-core = { version = "0.2.7", path = "crates/icarus-core" }
-icarus-derive = { version = "0.2.7", path = "crates/icarus-derive" }
-icarus-canister = { version = "0.2.7", path = "crates/icarus-canister" }
+icarus-core = { version = "0.2.7", path = "crates/icarus-core", optional = true }
+icarus-derive = { version = "0.2.7", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.2.7", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
