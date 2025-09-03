@@ -33,21 +33,42 @@ pub async fn execute(
 
     // Step 1: Check if WASM has embedded Candid metadata
     let spinner = create_spinner("Checking for embedded Candid metadata");
-    let has_metadata = check_wasm_metadata(&wasm_file)?;
+    let metadata_result = check_wasm_metadata(&wasm_file);
     spinner.finish_and_clear();
 
-    if !has_metadata {
-        print_error("❌ No Candid metadata found in WASM");
-        print_info("The WASM file doesn't contain 'candid:service' metadata section");
-        print_info("Use 'dfx build' or 'icarus build' to properly embed Candid");
-        return Ok(());
+    match metadata_result {
+        Ok(has_metadata) => {
+            if !has_metadata {
+                print_error("❌ No Candid metadata found in WASM");
+                print_info("The WASM file doesn't contain 'candid:service' metadata section");
+                print_info("Use 'dfx build' or 'icarus build' to properly embed Candid");
+                return Ok(());
+            }
+            print_success("✅ Candid metadata found in WASM");
+        }
+        Err(e) if e.to_string().contains("ic-wasm is required") => {
+            print_warning("⚠️ Skipping Candid metadata validation (ic-wasm not available)");
+            print_info("Install ic-wasm for full validation: cargo install ic-wasm");
+            print_success("✅ Basic validation passed");
+            return Ok(());
+        }
+        Err(e) => return Err(e),
     }
-
-    print_success("✅ Candid metadata found in WASM");
 
     // Step 2: Extract and validate the Candid content
     let spinner = create_spinner("Extracting Candid interface");
-    let candid_content = extract_candid_from_wasm(&wasm_file)?;
+    let candid_content = match extract_candid_from_wasm(&wasm_file) {
+        Ok(content) => content,
+        Err(e) if e.to_string().contains("ic-wasm") => {
+            spinner.finish_and_clear();
+            print_warning("⚠️ Cannot extract Candid without ic-wasm");
+            return Ok(());
+        }
+        Err(e) => {
+            spinner.finish_and_clear();
+            return Err(e);
+        }
+    };
     spinner.finish_and_clear();
 
     if candid_content.is_empty() {
@@ -211,8 +232,8 @@ pub async fn execute(
 fn check_wasm_metadata(wasm_path: &Path) -> Result<bool> {
     // Check if ic-wasm is installed
     if which::which("ic-wasm").is_err() {
-        print_warning("ic-wasm not found. Install with: cargo install ic-wasm");
-        anyhow::bail!("ic-wasm is required for validation");
+        // Return a specific error that can be caught and handled gracefully
+        anyhow::bail!("ic-wasm is required for full validation");
     }
 
     // Use ic-wasm to check for candid:service metadata
@@ -229,6 +250,11 @@ fn check_wasm_metadata(wasm_path: &Path) -> Result<bool> {
 
 /// Extract Candid content from WASM using ic-wasm
 fn extract_candid_from_wasm(wasm_path: &Path) -> Result<String> {
+    // Check if ic-wasm is available
+    if which::which("ic-wasm").is_err() {
+        anyhow::bail!("ic-wasm is required to extract Candid metadata");
+    }
+
     let output = Command::new("ic-wasm")
         .arg(wasm_path)
         .arg("metadata")

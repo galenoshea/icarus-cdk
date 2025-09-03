@@ -175,6 +175,23 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-cargo-
     
+    - name: Cache cargo binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin
+        key: ${{ runner.os }}-cargo-bin-ic-wasm
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-
+    
+    - name: Install ic-wasm if not cached
+      run: |
+        if ! command -v ic-wasm &> /dev/null; then
+          echo "Installing ic-wasm..."
+          cargo install ic-wasm --locked
+        else
+          echo "ic-wasm already installed"
+        fi
+    
     - name: Build CLI for E2E tests
       run: |
         cargo build --package icarus-cli --release
@@ -213,6 +230,23 @@ jobs:
         key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
         restore-keys: |
           ${{ runner.os }}-cargo-
+    
+    - name: Cache cargo binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin
+        key: ${{ runner.os }}-cargo-bin-ic-wasm
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-
+    
+    - name: Install ic-wasm if not cached
+      run: |
+        if ! command -v ic-wasm &> /dev/null; then
+          echo "Installing ic-wasm..."
+          cargo install ic-wasm --locked
+        else
+          echo "ic-wasm already installed"
+        fi
     
     - name: Generate code coverage
       run: |
