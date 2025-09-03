@@ -69,8 +69,11 @@ pub async fn execute(
     // Add the new canister configuration
     let server_name = format!("icarus-{}", name.to_lowercase().replace(' ', "-"));
 
+    // Get the full path to icarus executable (installed via cargo)
+    let icarus_command = get_icarus_executable_path();
+
     config["mcpServers"][&server_name] = json!({
-        "command": "icarus",
+        "command": icarus_command,
         "args": ["bridge", "start", "--canister-id", canister_id],
         "description": description
     });
@@ -162,6 +165,19 @@ async fn create_agent() -> Result<Agent> {
                 .map_err(|e| anyhow::anyhow!("Failed to create mainnet agent: {}", e))
         }
     }
+}
+
+fn get_icarus_executable_path() -> String {
+    // Get the full path to icarus executable in cargo bin directory
+    let home = dirs::home_dir().expect("Cannot find home directory");
+    let icarus_path = if cfg!(target_os = "windows") {
+        home.join(".cargo").join("bin").join("icarus.exe")
+    } else {
+        home.join(".cargo").join("bin").join("icarus")
+    };
+
+    // Convert to string, using forward slashes even on Windows for consistency
+    icarus_path.to_string_lossy().to_string()
 }
 
 fn get_claude_config_path() -> Result<PathBuf> {
