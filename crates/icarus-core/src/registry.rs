@@ -96,3 +96,26 @@ impl IcarusToolRegistry for DefaultToolRegistry {
         Ok(self.resources.keys().cloned().collect())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_default_registry() {
+        let registry = DefaultToolRegistry::default();
+        assert_eq!(registry.tools.len(), 0);
+        assert_eq!(registry.resources.len(), 0);
+    }
+
+    #[test]
+    fn test_new_registry() {
+        let registry = DefaultToolRegistry::new();
+        assert_eq!(registry.tools.len(), 0);
+        assert_eq!(registry.resources.len(), 0);
+    }
+
+    // Note: Full async tests with mock implementations would require
+    // complex setup of rmcp types. The trait implementations are tested
+    // through integration tests instead.
+}

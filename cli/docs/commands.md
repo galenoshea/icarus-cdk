@@ -330,7 +330,7 @@ The CLI stores configuration in `~/.icarus/config.toml`:
 ```toml
 [auth]
 session_token = "..."
-expires_at = "2024-01-01T00:00:00Z"
+expires_at = "2025-01-01T00:00:00Z"
 
 [telemetry]
 enabled = true
@@ -338,7 +338,7 @@ anonymous_id = "..."
 
 [updates]
 check_on_startup = true
-last_check = "2024-01-01T00:00:00Z"
+last_check = "2025-01-01T00:00:00Z"
 
 [preferences]
 default_network = "local"
