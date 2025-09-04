@@ -55,8 +55,9 @@ pub fn get_cached_result(key: &str) -> Option<Vec<u8>> {
 /// Get a unique test project directory based on test name or matrix
 pub fn get_test_project_dir(test_name: &str) -> PathBuf {
     // Check for environment variable set by CI matrix
-    if let Ok(dir) = env::var("ICARUS_TEST_PROJECT_DIR") {
-        PathBuf::from(dir)
+    if let Ok(base_dir) = env::var("ICARUS_TEST_PROJECT_DIR") {
+        // Append test_name to make it unique even in CI
+        PathBuf::from(base_dir).join(test_name)
     } else {
         // Use a unique directory per test for local parallel execution
         env::temp_dir().join(format!("icarus-e2e-{}", test_name))
