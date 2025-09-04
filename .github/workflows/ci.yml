@@ -148,14 +148,13 @@ jobs:
     
     - name: Run tests with coverage
       run: |
-        # Run all tests (unit, integration, doc) with coverage instrumentation
-        # This replaces the separate test job, avoiding duplicate test execution
+        # Run only fast tests with coverage instrumentation (exclude E2E tests)
+        # E2E tests require WASM compilation and run in comprehensive.yml instead
         cargo llvm-cov --all-features --workspace \
           --lcov --output-path lcov.info \
-          --ignore-filename-regex '(tests?/|examples/|target/|e2e/)' \
-          -- --skip e2e
+          --ignore-filename-regex '(test_build_command|test_new_command|test_add_command|test_list_command|test_remove_command|e2e/)'
         
-        echo "✅ All tests passed with coverage instrumentation"
+        echo "✅ All unit and integration tests passed with coverage instrumentation"
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
