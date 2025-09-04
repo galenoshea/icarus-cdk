@@ -1,4 +1,4 @@
-name: Comprehensive Tests
+name: Comprehensive
 
 # This pipeline runs the full test suite including E2E tests
 # It's designed for thorough testing rather than quick feedback
@@ -13,7 +13,6 @@ on:
   push:
     branches:
       - 'release/**'
-      - 'main'  # Also run on main for E2E coverage
     paths-ignore:
       - '**.md'
       - 'docs/**'

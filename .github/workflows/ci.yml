@@ -1,4 +1,4 @@
-name: CI Pipeline
+name: CI
 
 # Fast CI for PRs and main branch pushes
 # For comprehensive tests including full E2E, see comprehensive.yml
