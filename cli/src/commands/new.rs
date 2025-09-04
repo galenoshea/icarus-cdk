@@ -126,14 +126,9 @@ tokio = { version = "1", features = ["full"] }
         };
         format!("{{ path = \"{}\" }}", base_path)
     } else {
-        // For CI/tests, use latest published version instead of current version
-        // since 0.3.3 isn't published yet
-        if std::env::var("CI").is_ok() || cfg!(test) {
-            "\"0.3.2\"".to_string() // Latest published version on crates.io
-        } else {
-            let cli_version = env!("CARGO_PKG_VERSION");
-            format!("\"{}\"", cli_version)
-        }
+        // Use the same version as the CLI from crates.io
+        let cli_version = env!("CARGO_PKG_VERSION");
+        format!("\"{}\"", cli_version)
     };
 
     let cargo_toml = format!(

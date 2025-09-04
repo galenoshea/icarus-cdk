@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.3.3"
+version = "0.3.4"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
