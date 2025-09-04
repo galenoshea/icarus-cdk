@@ -1,15 +1,23 @@
 name: Comprehensive Tests
 
+# This pipeline runs the full test suite including E2E tests
+# It's designed for thorough testing rather than quick feedback
+
 on:
-  # Run comprehensive tests on schedule
+  # Nightly builds for continuous quality assurance
   schedule:
-    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight
-  # Allow manual trigger
+    - cron: '0 0 * * *'  # Daily at midnight UTC
+  # Allow manual trigger for on-demand testing
   workflow_dispatch:
-  # Run on release branches
+  # Run on release branches for release validation
   push:
     branches:
       - 'release/**'
+      - 'main'  # Also run on main for E2E coverage
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/ci.yml'  # Don't run if only CI changes
 
 env:
   CARGO_TERM_COLOR: always

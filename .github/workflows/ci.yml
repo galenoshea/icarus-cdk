@@ -147,67 +147,12 @@ jobs:
             ;;
         esac
 
-  # E2E tests run separately due to different requirements
-  e2e:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10  # Reduced from 20 since we use shared project
-    needs: build
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-        path: target
-    
-    - name: Cache cargo registry & git
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-    
-    - name: Cache cargo binaries
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/bin
-        key: ${{ runner.os }}-cargo-bin-ic-wasm
-        restore-keys: |
-          ${{ runner.os }}-cargo-bin-
-    
-    - name: Install ic-wasm if not cached
-      run: |
-        if ! command -v ic-wasm &> /dev/null; then
-          echo "Installing ic-wasm..."
-          cargo install ic-wasm --locked
-        else
-          echo "ic-wasm already installed"
-        fi
-    
-    - name: Build CLI for E2E tests
-      run: |
-        cargo build --package icarus-cli --release
-        chmod +x target/release/icarus
-    
-    - name: Run E2E tests
-      run: |
-        cd cli
-        # Run tests sequentially to avoid conflicts with shared project
-        cargo test --test '*' --release -- --test-threads=1
-      env:
-        RUST_LOG: debug
-        # Ensure tests run sequentially for shared project
-        RUST_TEST_THREADS: 1
+  # E2E tests moved to comprehensive.yml for better resource management
+  # They run on:
+  # - Nightly schedule (comprehensive.yml)
+  # - Release branches
+  # - Manual workflow_dispatch
+  # This keeps regular CI fast (<5 min) while still ensuring quality
 
   # Coverage analysis with thresholds
   coverage:
