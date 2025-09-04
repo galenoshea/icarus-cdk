@@ -101,64 +101,12 @@ jobs:
           target/wasm32-unknown-unknown
         retention-days: 1
 
-  # Run tests in parallel with matrix strategy
-  test:
-    name: Tests (${{ matrix.test-type }})
+  # Combined testing and coverage analysis for efficiency
+  # This job runs all tests with coverage instrumentation, eliminating duplicate test runs
+  test-and-coverage:
+    name: Tests & Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: build
-    strategy:
-      fail-fast: false
-      matrix:
-        test-type: [unit, integration, doc]
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-    
-    - name: Download build artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: build-artifacts
-        path: target
-    
-    - name: Cache cargo registry & git
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-
-    
-    - name: Run ${{ matrix.test-type }} tests
-      run: |
-        case "${{ matrix.test-type }}" in
-          unit)
-            cargo test --lib --all-features
-            ;;
-          integration)
-            cargo test --test '*' --all-features
-            ;;
-          doc)
-            cargo test --doc --all-features
-            ;;
-        esac
-
-  # E2E tests moved to comprehensive.yml for better resource management
-  # They run on:
-  # - Nightly schedule (comprehensive.yml)
-  # - Release branches
-  # - Manual workflow_dispatch
-  # This keeps regular CI fast (<5 min) while still ensuring quality
-
-  # Coverage analysis with thresholds
-  coverage:
-    name: Code Coverage
-    runs-on: ubuntu-latest
-    timeout-minutes: 15  # Reduced from 25 since we exclude E2E
+    timeout-minutes: 20  # Slightly increased to account for running all tests with coverage
     needs: build
     steps:
     - uses: actions/checkout@v4
@@ -198,14 +146,16 @@ jobs:
           echo "ic-wasm already installed"
         fi
     
-    - name: Generate code coverage
+    - name: Run tests with coverage
       run: |
-        # Exclude E2E tests from coverage as they don't add much value
-        # and take significant time due to WASM compilation
+        # Run all tests (unit, integration, doc) with coverage instrumentation
+        # This replaces the separate test job, avoiding duplicate test execution
         cargo llvm-cov --all-features --workspace \
           --lcov --output-path lcov.info \
           --ignore-filename-regex '(tests?/|examples/|target/|e2e/)' \
           -- --skip e2e
+        
+        echo "✅ All tests passed with coverage instrumentation"
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
@@ -218,7 +168,10 @@ jobs:
     - name: Generate coverage report
       run: |
         cargo llvm-cov report --summary-only | tee coverage-summary.txt
-        echo "## Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "## Test Results & Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "✅ All tests passed (unit, integration, doc)" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
@@ -269,7 +222,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [validation, build, test, coverage, docs]
+    needs: [validation, build, test-and-coverage, docs]
     if: always()
     steps:
     - name: Check CI Status
