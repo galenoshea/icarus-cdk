@@ -1,8 +1,9 @@
 //! E2E tests for the 'icarus build' command
 
-mod helpers;
+#[path = "../common/mod.rs"]
+mod common;
 
-use helpers::*;
+use common::*;
 
 #[test]
 fn test_build_creates_optimized_wasm() {

@@ -1,8 +1,9 @@
 //! E2E tests for the 'icarus new' command
 
-mod helpers;
+#[path = "../common/mod.rs"]
+mod common;
 
-use helpers::*;
+use common::*;
 
 #[test]
 fn test_new_creates_project_structure() {

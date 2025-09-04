@@ -23,6 +23,7 @@
 //! ## Quick Start
 //!
 //! ```ignore
+//! // Note: This example uses procedural macros which can't be tested in doc tests
 //! use icarus::prelude::*;
 //! use candid::{CandidType, Deserialize};
 //! use serde::Serialize;

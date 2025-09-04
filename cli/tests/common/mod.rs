@@ -4,7 +4,6 @@ use once_cell::sync::OnceCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
-use std::sync::Mutex;
 use tempfile::TempDir;
 
 /// Helper for running CLI commands
@@ -84,6 +83,7 @@ pub struct TestProject {
     name: String,
 }
 
+#[allow(dead_code)]
 impl TestProject {
     /// Create a new test project directory
     pub fn new(name: &str) -> Self {
@@ -176,6 +176,7 @@ impl TestCleanup {
 }
 
 /// Assert that command output contains a string
+#[allow(dead_code)]
 pub fn assert_contains(output: &Output, expected: &str) {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -210,6 +211,7 @@ pub struct SharedTestProject {
     _temp_dir: TempDir,
 }
 
+#[allow(dead_code)]
 impl SharedTestProject {
     /// Get or create the shared test project
     pub fn get() -> &'static SharedTestProject {
@@ -297,6 +299,7 @@ impl SharedTestProject {
 }
 
 // Helper function to recursively copy directories
+#[allow(dead_code)]
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
 
@@ -317,14 +320,4 @@ fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     }
 
     Ok(())
-}
-
-/// Lock for tests that need exclusive access to modify files
-static MODIFY_LOCK: OnceCell<Mutex<()>> = OnceCell::new();
-
-/// Get a lock for tests that need to modify the shared project
-/// This ensures only one test modifies at a time
-pub fn get_modify_lock() -> std::sync::MutexGuard<'static, ()> {
-    let lock = MODIFY_LOCK.get_or_init(|| Mutex::new(()));
-    lock.lock().unwrap()
 }
