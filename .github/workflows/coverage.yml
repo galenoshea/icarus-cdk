@@ -1,0 +1,113 @@
+name: Coverage
+
+# Dedicated coverage analysis workflow - runs separately from main CI
+on:
+  # Weekly coverage analysis
+  schedule:
+    - cron: '0 0 * * 0'  # Sunday at midnight UTC
+  # Manual trigger for on-demand coverage
+  workflow_dispatch:
+  # Coverage on release branches
+  push:
+    branches:
+      - 'release/**'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  coverage:
+    name: Code Coverage Analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+        components: llvm-tools-preview
+    
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-registry-
+    
+    - name: Cache cargo binaries (ic-wasm)
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin
+        key: ${{ runner.os }}-cargo-bin-ic-wasm-v1
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-
+    
+    - name: Install ic-wasm if not cached
+      run: |
+        if ! command -v ic-wasm &> /dev/null; then
+          echo "Installing ic-wasm..."
+          cargo install ic-wasm --locked
+        else
+          echo "ic-wasm already installed"
+        fi
+    
+    - name: Run tests with coverage (including E2E)
+      run: |
+        # Full coverage including all test types
+        cargo llvm-cov --all-features --workspace \
+          --lcov --output-path lcov.info
+        
+        echo "✅ Coverage analysis complete"
+    
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: lcov.info
+        fail_ci_if_error: false
+        verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+    
+    - name: Generate coverage report
+      run: |
+        cargo llvm-cov report --summary-only | tee coverage-summary.txt
+        echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "📊 **Full test suite coverage analysis**" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        
+        # Extract and display coverage percentage
+        COVERAGE=$(grep -oP 'TOTAL.*?\K[0-9.]+(?=%)' coverage-summary.txt | head -1)
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Coverage: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+        
+        # Coverage targets
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "#### Coverage Goals" >> $GITHUB_STEP_SUMMARY
+        echo "- Current: ${COVERAGE}%" >> $GITHUB_STEP_SUMMARY
+        echo "- Q1 2025 Target: 30%" >> $GITHUB_STEP_SUMMARY
+        echo "- Q2 2025 Target: 60%" >> $GITHUB_STEP_SUMMARY
+        echo "- Q3 2025 Target: 80%" >> $GITHUB_STEP_SUMMARY
+    
+    - name: Generate detailed HTML report
+      run: |
+        cargo llvm-cov report --html
+        echo "📁 HTML coverage report generated in target/llvm-cov/html/"
+    
+    - name: Upload HTML coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage-report
+        path: target/llvm-cov/html/
+        retention-days: 30

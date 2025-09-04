@@ -1,5 +1,7 @@
 //! E2E test helper utilities
 
+pub mod parallel;
+
 use once_cell::sync::OnceCell;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -36,7 +38,7 @@ impl CliRunner {
 
             let output = cmd
                 .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap())
-                .args(&[
+                .args([
                     "build",
                     "--package",
                     "icarus-cli",
@@ -114,7 +116,7 @@ impl TestProject {
     /// Read a file from the project
     pub fn read_file(&self, path: &str) -> String {
         fs::read_to_string(self.project_dir().join(path))
-            .expect(&format!("Failed to read file: {}", path))
+            .unwrap_or_else(|_| panic!("Failed to read file: {}", path))
     }
 
     /// Write a file to the project
@@ -124,7 +126,7 @@ impl TestProject {
         if let Some(parent) = file_path.parent() {
             fs::create_dir_all(parent).expect("Failed to create directories");
         }
-        fs::write(file_path, content).expect(&format!("Failed to write file: {}", path));
+        fs::write(file_path, content).unwrap_or_else(|_| panic!("Failed to write file: {}", path));
     }
 
     /// Run cargo build in the project
@@ -298,7 +300,7 @@ impl SharedTestProject {
     /// Read a file from the shared project
     pub fn read_file(&self, path: &str) -> String {
         fs::read_to_string(self.project_dir.join(path))
-            .expect(&format!("Failed to read file: {}", path))
+            .unwrap_or_else(|_| panic!("Failed to read file: {}", path))
     }
 
     /// Acquire a lock for modifying the shared project
