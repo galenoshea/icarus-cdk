@@ -175,16 +175,16 @@ run_tests() {
     
     case "$test_type" in
         unit)
-            run_check "Unit tests" cargo test --lib "${CARGO_FLAGS[@]}"
+            run_check "Unit tests" cargo test --lib ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
             ;;
         integration)
-            run_check "Integration tests" cargo test --test '*' "${CARGO_FLAGS[@]}"
+            run_check "Integration tests" cargo test --test '*' ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
             ;;
         e2e)
             run_check "E2E tests" bash -c "cd cli && cargo test --test '*' --release"
             ;;
         doc)
-            run_check "Doc tests" cargo test --doc "${CARGO_FLAGS[@]}"
+            run_check "Doc tests" cargo test --doc ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
             ;;
         all)
             # Run tests in parallel
@@ -193,13 +193,13 @@ run_tests() {
             local pids=()
             
             # Start parallel test runs
-            cargo test --lib "${CARGO_FLAGS[@]}" &
+            cargo test --lib ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"} &
             pids+=($!)
             
-            cargo test --test '*' "${CARGO_FLAGS[@]}" &
+            cargo test --test '*' ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"} &
             pids+=($!)
             
-            cargo test --doc "${CARGO_FLAGS[@]}" &
+            cargo test --doc ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"} &
             pids+=($!)
             
             (cd cli && cargo test --test '*' --release) &
@@ -244,13 +244,13 @@ run_coverage() {
 # Build documentation
 build_docs() {
     run_check "Documentation" env RUSTDOCFLAGS="-D warnings" \
-        cargo doc --no-deps --all-features "${CARGO_FLAGS[@]}"
+        cargo doc --no-deps --all-features ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
 }
 
 # Build targets
 build_all() {
-    run_check "Debug build" cargo build --all-features "${CARGO_FLAGS[@]}"
-    run_check "Release build" cargo build --release --all-features "${CARGO_FLAGS[@]}"
+    run_check "Debug build" cargo build --all-features ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
+    run_check "Release build" cargo build --release --all-features ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
 }
 
 # Build WASM target
