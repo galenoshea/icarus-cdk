@@ -1,5 +1,7 @@
 name: CI Pipeline
 
+# Fast CI for PRs and main branch pushes
+# For comprehensive tests including full E2E, see comprehensive.yml
 on:
   push:
     branches: [ main ]
@@ -149,7 +151,7 @@ jobs:
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10  # Reduced from 20 since we use shared project
     needs: build
     steps:
     - uses: actions/checkout@v4
@@ -200,15 +202,18 @@ jobs:
     - name: Run E2E tests
       run: |
         cd cli
-        cargo test --test '*' --release
+        # Run tests sequentially to avoid conflicts with shared project
+        cargo test --test '*' --release -- --test-threads=1
       env:
         RUST_LOG: debug
+        # Ensure tests run sequentially for shared project
+        RUST_TEST_THREADS: 1
 
   # Coverage analysis with thresholds
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15  # Reduced from 25 since we exclude E2E
     needs: build
     steps:
     - uses: actions/checkout@v4
@@ -250,9 +255,12 @@ jobs:
     
     - name: Generate code coverage
       run: |
+        # Exclude E2E tests from coverage as they don't add much value
+        # and take significant time due to WASM compilation
         cargo llvm-cov --all-features --workspace \
           --lcov --output-path lcov.info \
-          --ignore-filename-regex '(tests?/|examples/|target/)'
+          --ignore-filename-regex '(tests?/|examples/|target/|e2e/)' \
+          -- --skip e2e
     
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4

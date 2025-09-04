@@ -1,0 +1,175 @@
+name: Comprehensive Tests
+
+on:
+  # Run comprehensive tests on schedule
+  schedule:
+    - cron: '0 0 * * 0'  # Weekly on Sunday at midnight
+  # Allow manual trigger
+  workflow_dispatch:
+  # Run on release branches
+  push:
+    branches:
+      - 'release/**'
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  # Full E2E tests with all scenarios
+  full-e2e:
+    name: Full E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+    
+    - name: Cache cargo registry & git
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Cache cargo binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin
+        key: ${{ runner.os }}-cargo-bin-ic-wasm
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-
+    
+    - name: Install ic-wasm if not cached
+      run: |
+        if ! command -v ic-wasm &> /dev/null; then
+          echo "Installing ic-wasm..."
+          cargo install ic-wasm --locked
+        else
+          echo "ic-wasm already installed"
+        fi
+    
+    - name: Build CLI
+      run: cargo build --package icarus-cli --release
+    
+    - name: Run all E2E tests (no shared project optimization)
+      run: |
+        cd cli
+        # Remove any cached shared project to test full workflow
+        rm -rf /tmp/icarus-e2e-shared-project
+        cargo test --test '*' --release
+      env:
+        RUST_LOG: debug
+
+  # Full coverage analysis including E2E
+  full-coverage:
+    name: Full Code Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: wasm32-unknown-unknown
+        components: llvm-tools-preview
+    
+    - name: Install cargo-llvm-cov
+      uses: taiki-e/install-action@cargo-llvm-cov
+    
+    - name: Cache cargo registry & git
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-
+    
+    - name: Cache cargo binaries
+      uses: actions/cache@v4
+      with:
+        path: ~/.cargo/bin
+        key: ${{ runner.os }}-cargo-bin-ic-wasm
+        restore-keys: |
+          ${{ runner.os }}-cargo-bin-
+    
+    - name: Install ic-wasm if not cached
+      run: |
+        if ! command -v ic-wasm &> /dev/null; then
+          echo "Installing ic-wasm..."
+          cargo install ic-wasm --locked
+        else
+          echo "ic-wasm already installed"
+        fi
+    
+    - name: Generate comprehensive coverage
+      run: |
+        cargo llvm-cov --all-features --workspace \
+          --lcov --output-path lcov-comprehensive.info \
+          --ignore-filename-regex '(examples/|target/)'
+    
+    - name: Upload comprehensive coverage to Codecov
+      uses: codecov/codecov-action@v4
+      with:
+        files: lcov-comprehensive.info
+        fail_ci_if_error: false
+        verbose: true
+        token: ${{ secrets.CODECOV_TOKEN }}
+        flags: comprehensive
+    
+    - name: Generate coverage report
+      run: |
+        cargo llvm-cov report --summary-only | tee coverage-summary.txt
+        echo "## Comprehensive Coverage Summary" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  # Cross-platform testing
+  cross-platform:
+    name: Cross-Platform Tests
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        rust: [stable, beta]
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@master
+      with:
+        toolchain: ${{ matrix.rust }}
+        targets: wasm32-unknown-unknown
+    
+    - name: Cache cargo
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ matrix.rust }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-${{ matrix.rust }}-
+    
+    - name: Run tests
+      run: |
+        cargo test --all-features
+        cargo test --doc
+    
+    - name: Build all targets
+      run: |
+        cargo build --all-features
+        cargo build --target wasm32-unknown-unknown --release

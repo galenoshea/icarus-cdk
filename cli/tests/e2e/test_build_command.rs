@@ -7,26 +7,23 @@ use helpers::*;
 #[test]
 fn test_build_creates_optimized_wasm() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("build-opt-test");
+    let shared_project = SharedTestProject::get();
 
-    // Create new project
-    let output = cli.run_in(test_project.path(), &["new", "build-opt-test"]);
-    assert_success(&output);
-
-    // Run 'icarus build' command
-    let output = cli.run_in(&test_project.project_dir(), &["build"]);
-    assert_success(&output);
-    assert_contains(&output, "Building");
-
-    // Verify WASM exists (not optimized by default)
-    let wasm_path = test_project
+    // Verify that the shared project was built successfully
+    // The WASM should already exist from the initial build
+    let wasm_path = shared_project
         .project_dir()
         .join("target")
         .join("wasm32-unknown-unknown")
         .join("release")
-        .join("build_opt_test.wasm");
+        .join("shared_test_project.wasm");
 
     assert!(wasm_path.exists(), "WASM should be created");
+
+    // Run 'icarus build' command again to test it works on existing project
+    let output = cli.run_in(shared_project.project_dir(), &["build"]);
+    assert_success(&output);
+    assert_contains(&output, "Building");
 
     // Candid generation is expected through export_candid macro
     // The .did file is generated but location may vary
@@ -40,11 +37,10 @@ fn test_build_creates_optimized_wasm() {
 #[test]
 fn test_build_shows_size_reduction() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("size-test");
+    let shared_project = SharedTestProject::get();
 
-    // Create and build project
-    cli.run_in(test_project.path(), &["new", "size-test"]);
-    let output = cli.run_in(&test_project.project_dir(), &["build"]);
+    // Run build on the shared project
+    let output = cli.run_in(shared_project.project_dir(), &["build"]);
 
     assert_success(&output);
 
@@ -72,10 +68,10 @@ fn test_build_without_project_fails() {
 #[test]
 fn test_build_with_broken_code_fails() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("broken-test");
+    let shared_project = SharedTestProject::get();
 
-    // Create new project
-    cli.run_in(test_project.path(), &["new", "broken-test"]);
+    // Create a copy for this test since we need to modify files
+    let test_project = shared_project.create_copy("broken-test");
 
     // Break the code
     test_project.write_file("src/lib.rs", "this is not valid rust code!");
@@ -89,16 +85,15 @@ fn test_build_with_broken_code_fails() {
 #[test]
 fn test_build_preserves_candid_interface() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("candid-preserve-test");
+    let shared_project = SharedTestProject::get();
 
-    // Create and build project
-    cli.run_in(test_project.path(), &["new", "candid-preserve-test"]);
-    let output = cli.run_in(&test_project.project_dir(), &["build"]);
+    // Run build on the shared project
+    let output = cli.run_in(shared_project.project_dir(), &["build"]);
     assert_success(&output);
 
     // The template uses ic_cdk::export_candid!() which generates candid
     // The exact location may vary, so we just verify build succeeded
     // and the source contains the export_candid macro
-    let lib_content = test_project.read_file("src/lib.rs");
+    let lib_content = shared_project.read_file("src/lib.rs");
     assert!(lib_content.contains("ic_cdk::export_candid!()"));
 }

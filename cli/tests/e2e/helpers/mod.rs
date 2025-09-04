@@ -1,8 +1,10 @@
 //! E2E test helper utilities
 
+use once_cell::sync::OnceCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::Mutex;
 use tempfile::TempDir;
 
 /// Helper for running CLI commands
@@ -197,4 +199,132 @@ pub fn assert_success(output: &Output) {
         stdout,
         stderr
     );
+}
+
+// Global shared project instance
+static SHARED_PROJECT: OnceCell<SharedTestProject> = OnceCell::new();
+
+/// Shared test project that's created once and reused across all tests
+pub struct SharedTestProject {
+    project_dir: PathBuf,
+    _temp_dir: TempDir,
+}
+
+impl SharedTestProject {
+    /// Get or create the shared test project
+    pub fn get() -> &'static SharedTestProject {
+        SHARED_PROJECT.get_or_init(|| {
+            println!("Creating shared test project (one-time setup)...");
+
+            // Use a persistent directory in /tmp to share across test files
+            let temp_dir_path = std::env::temp_dir().join("icarus-e2e-shared-project");
+
+            // Check if it already exists from a previous test run
+            if temp_dir_path.exists()
+                && temp_dir_path
+                    .join("shared-test-project")
+                    .join("target")
+                    .exists()
+            {
+                println!("Reusing existing shared test project from previous run");
+                // Create a fake TempDir that won't delete the directory
+                let temp_dir = TempDir::new().expect("Failed to create temp dir");
+                std::mem::forget(temp_dir.path().to_path_buf()); // Prevent deletion
+                return SharedTestProject {
+                    project_dir: temp_dir_path.join("shared-test-project"),
+                    _temp_dir: temp_dir,
+                };
+            }
+
+            // Create the directory
+            std::fs::create_dir_all(&temp_dir_path).expect("Failed to create shared project dir");
+
+            let project_name = "shared-test-project";
+
+            // Create the CLI runner
+            let cli = CliRunner::new();
+
+            // Create a new project
+            let output = cli.run_in(&temp_dir_path, &["new", project_name]);
+            assert_success(&output);
+
+            let project_dir = temp_dir_path.join(project_name);
+
+            // Build the project once
+            println!("Building shared test project (this may take a minute)...");
+            let output = cli.run_in(&project_dir, &["build"]);
+            assert_success(&output);
+
+            println!("Shared test project ready!");
+
+            // Create a fake TempDir that won't delete the directory
+            let temp_dir = TempDir::new().expect("Failed to create temp dir");
+            std::mem::forget(temp_dir.path().to_path_buf()); // Prevent deletion
+
+            SharedTestProject {
+                project_dir,
+                _temp_dir: temp_dir,
+            }
+        })
+    }
+
+    /// Get the project directory path
+    pub fn project_dir(&self) -> &Path {
+        &self.project_dir
+    }
+
+    /// Create a copy of the shared project for tests that need to modify it
+    pub fn create_copy(&self, name: &str) -> TestProject {
+        let copy = TestProject::new(name);
+
+        // Copy the entire project directory
+        copy_dir_all(&self.project_dir, &copy.project_dir())
+            .expect("Failed to copy shared project");
+
+        copy
+    }
+
+    /// Check if a file exists in the shared project
+    pub fn file_exists(&self, path: &str) -> bool {
+        self.project_dir.join(path).exists()
+    }
+
+    /// Read a file from the shared project
+    pub fn read_file(&self, path: &str) -> String {
+        fs::read_to_string(self.project_dir.join(path))
+            .expect(&format!("Failed to read file: {}", path))
+    }
+}
+
+// Helper function to recursively copy directories
+fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
+    fs::create_dir_all(dst)?;
+
+    for entry in fs::read_dir(src)? {
+        let entry = entry?;
+        let ty = entry.file_type()?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if ty.is_dir() {
+            // Skip target directory to avoid copying build artifacts
+            if entry.file_name() != "target" {
+                copy_dir_all(&src_path, &dst_path)?;
+            }
+        } else {
+            fs::copy(&src_path, &dst_path)?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Lock for tests that need exclusive access to modify files
+static MODIFY_LOCK: OnceCell<Mutex<()>> = OnceCell::new();
+
+/// Get a lock for tests that need to modify the shared project
+/// This ensures only one test modifies at a time
+pub fn get_modify_lock() -> std::sync::MutexGuard<'static, ()> {
+    let lock = MODIFY_LOCK.get_or_init(|| Mutex::new(()));
+    lock.lock().unwrap()
 }

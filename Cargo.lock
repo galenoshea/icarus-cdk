@@ -1867,6 +1867,7 @@ dependencies = [
  "keyring",
  "mockall",
  "nanoid",
+ "once_cell",
  "os_info",
  "predicates",
  "rand 0.8.5",

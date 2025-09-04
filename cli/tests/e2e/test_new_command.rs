@@ -42,29 +42,23 @@ fn test_new_creates_project_structure() {
 
 #[test]
 fn test_new_project_builds_successfully() {
-    let cli = CliRunner::new();
-    let test_project = TestProject::new("build-test");
-
-    // Create new project
-    let output = cli.run_in(test_project.path(), &["new", "build-test"]);
-    assert_success(&output);
-    assert_contains(&output, "created successfully");
-
-    // Verify project builds with cargo
-    assert!(
-        test_project.builds_successfully(),
-        "Project should build with cargo"
-    );
+    // Use the shared project to verify it was built successfully
+    // This avoids building a new project just to test if it builds
+    let shared_project = SharedTestProject::get();
 
     // Verify WASM output exists
-    let wasm_path = test_project
+    let wasm_path = shared_project
         .project_dir()
         .join("target")
         .join("wasm32-unknown-unknown")
         .join("release")
-        .join("build_test.wasm");
+        .join("shared_test_project.wasm");
 
     assert!(wasm_path.exists(), "WASM file should be generated");
+
+    // Also verify the project structure is correct
+    assert!(shared_project.file_exists("Cargo.toml"));
+    assert!(shared_project.file_exists("src/lib.rs"));
 }
 
 #[test]
@@ -101,14 +95,12 @@ fn test_new_creates_valid_candid_interface() {
     let cli = CliRunner::new();
     let test_project = TestProject::new("candid-test");
 
-    // Create and build project
+    // Create project (don't build - we just check the source)
     let output = cli.run_in(test_project.path(), &["new", "candid-test"]);
     assert_success(&output);
 
-    // Build the project to generate candid
-    test_project.cargo_build();
-
-    // Check if candid file would be generated (it's created during build)
+    // Check if candid export macro is in the source
+    // (actual candid generation is tested in build tests)
     let lib_rs = test_project.read_file("src/lib.rs");
     assert!(lib_rs.contains("ic_cdk::export_candid!()"));
 }

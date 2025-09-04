@@ -7,17 +7,10 @@ use helpers::*;
 #[test]
 fn test_validate_valid_project() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("validate-valid");
+    let shared_project = SharedTestProject::get();
 
-    // Create new project
-    cli.run_in(test_project.path(), &["new", "validate-valid"]);
-
-    // Build the project first to generate WASM
-    let build_output = cli.run_in(&test_project.project_dir(), &["build"]);
-    assert_success(&build_output);
-
-    // Run validate command
-    let output = cli.run_in(&test_project.project_dir(), &["validate"]);
+    // The shared project is already built, so just validate it
+    let output = cli.run_in(shared_project.project_dir(), &["validate"]);
     assert_success(&output);
     assert_contains(&output, "valid");
 }
@@ -25,10 +18,12 @@ fn test_validate_valid_project() {
 #[test]
 fn test_validate_missing_dfx_json() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("validate-missing-config");
+    let shared_project = SharedTestProject::get();
 
-    // Create project and remove dfx.json
-    cli.run_in(test_project.path(), &["new", "validate-missing-config"]);
+    // Create a copy since we need to modify it
+    let test_project = shared_project.create_copy("validate-missing-config");
+
+    // Remove dfx.json
     std::fs::remove_file(test_project.project_dir().join("dfx.json")).unwrap();
 
     // Run validate - should warn or fail about missing dfx.json
@@ -50,10 +45,12 @@ fn test_validate_missing_dfx_json() {
 #[test]
 fn test_validate_invalid_cargo_toml() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("validate-invalid");
+    let shared_project = SharedTestProject::get();
 
-    // Create project and break Cargo.toml
-    cli.run_in(test_project.path(), &["new", "validate-invalid"]);
+    // Create a copy since we need to modify it
+    let test_project = shared_project.create_copy("validate-invalid");
+
+    // Break Cargo.toml
     test_project.write_file("Cargo.toml", "invalid toml content {");
 
     // Run validate - should fail
@@ -64,20 +61,14 @@ fn test_validate_invalid_cargo_toml() {
 #[test]
 fn test_validate_with_icarus_macros() {
     let cli = CliRunner::new();
-    let test_project = TestProject::new("validate-macros");
+    let shared_project = SharedTestProject::get();
 
-    // Create project (already has icarus macros in template)
-    cli.run_in(test_project.path(), &["new", "validate-macros"]);
-
-    // Build the project first to generate WASM
-    let build_output = cli.run_in(&test_project.project_dir(), &["build"]);
-    assert_success(&build_output);
-
+    // The shared project already has icarus macros and is built
     // Validate should pass
-    let output = cli.run_in(&test_project.project_dir(), &["validate"]);
+    let output = cli.run_in(shared_project.project_dir(), &["validate"]);
     assert_success(&output);
 
     // Should detect the icarus_tool macros
-    let lib_rs = test_project.read_file("src/lib.rs");
+    let lib_rs = shared_project.read_file("src/lib.rs");
     assert!(lib_rs.contains("#[icarus_tool"));
 }
