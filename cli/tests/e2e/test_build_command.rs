@@ -10,6 +10,9 @@ fn test_build_creates_optimized_wasm() {
     let cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
 
+    // Acquire lock before building on shared project
+    let _lock = SharedTestProject::lock();
+
     // Verify that the shared project was built successfully
     // The WASM should already exist from the initial build
     let wasm_path = shared_project
@@ -39,6 +42,9 @@ fn test_build_creates_optimized_wasm() {
 fn test_build_shows_size_reduction() {
     let cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
+
+    // Acquire lock before building on shared project
+    let _lock = SharedTestProject::lock();
 
     // Run build on the shared project
     let output = cli.run_in(shared_project.project_dir(), &["build"]);
@@ -87,6 +93,9 @@ fn test_build_with_broken_code_fails() {
 fn test_build_preserves_candid_interface() {
     let cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
+
+    // Acquire lock before building on shared project
+    let _lock = SharedTestProject::lock();
 
     // Run build on the shared project
     let output = cli.run_in(shared_project.project_dir(), &["build"]);

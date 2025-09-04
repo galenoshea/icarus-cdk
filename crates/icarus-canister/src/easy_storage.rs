@@ -13,6 +13,7 @@ type Memory = VirtualMemory<DefaultMemoryImpl>;
 ///
 /// # Example
 /// ```ignore
+/// // This macro requires IC canister context and stable structures
 /// use icarus_canister::prelude::*;
 ///
 /// // Define your storage

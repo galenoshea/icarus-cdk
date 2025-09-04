@@ -120,6 +120,7 @@ impl StableCounter {
 ///
 /// # Example
 /// ```ignore
+/// // This macro requires IC stable structures context
 /// stable_storage! {
 ///     MEMORIES: StableBTreeMap<String, MemoryEntry> = memory_id!(0);
 ///     COUNTER: u64 = 0;

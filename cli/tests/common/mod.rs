@@ -4,6 +4,7 @@ use once_cell::sync::OnceCell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::Mutex;
 use tempfile::TempDir;
 
 /// Helper for running CLI commands
@@ -205,6 +206,9 @@ pub fn assert_success(output: &Output) {
 // Global shared project instance
 static SHARED_PROJECT: OnceCell<SharedTestProject> = OnceCell::new();
 
+// Global lock for shared project modifications
+static SHARED_PROJECT_LOCK: OnceCell<Mutex<()>> = OnceCell::new();
+
 /// Shared test project that's created once and reused across all tests
 pub struct SharedTestProject {
     project_dir: PathBuf,
@@ -295,6 +299,13 @@ impl SharedTestProject {
     pub fn read_file(&self, path: &str) -> String {
         fs::read_to_string(self.project_dir.join(path))
             .expect(&format!("Failed to read file: {}", path))
+    }
+
+    /// Acquire a lock for modifying the shared project
+    /// This should be used when tests need to modify files in the shared project
+    pub fn lock() -> std::sync::MutexGuard<'static, ()> {
+        let lock = SHARED_PROJECT_LOCK.get_or_init(|| Mutex::new(()));
+        lock.lock().expect("Failed to acquire shared project lock")
     }
 }
 

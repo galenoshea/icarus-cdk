@@ -140,6 +140,7 @@ macro_rules! tool_metadata {
 ///
 /// # Example
 /// ```ignore
+/// // This macro requires IC stable memory context
 /// id_generator!(next_memory_id, COUNTER, "mem_");
 /// ```
 #[macro_export]

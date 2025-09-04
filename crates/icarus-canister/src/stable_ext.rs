@@ -121,6 +121,7 @@ where
 ///
 /// # Example
 /// ```ignore
+/// // This example requires IC stable structures and macros
 /// stable_storage! {
 ///     MEMORIES: StableBTreeMap<String, Data> = StableBTreeMap::new();
 /// }

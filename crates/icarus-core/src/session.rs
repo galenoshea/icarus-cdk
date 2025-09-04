@@ -80,18 +80,15 @@ impl Default for SessionConfig {
 /// In-memory session manager for testing
 pub struct MemorySessionManager {
     sessions: HashMap<String, Session>,
-    #[allow(dead_code)]
-    config: SessionConfig,
     #[cfg(test)]
     mock_time: Option<u64>,
 }
 
 impl MemorySessionManager {
     /// Create a new memory session manager
-    pub fn new(config: SessionConfig) -> Self {
+    pub fn new(_config: SessionConfig) -> Self {
         Self {
             sessions: HashMap::new(),
-            config,
             #[cfg(test)]
             mock_time: None,
         }
