@@ -7,7 +7,9 @@
 [![Crates.io](https://img.shields.io/crates/v/icarus.svg)](https://crates.io/crates/icarus)
 [![Documentation](https://docs.rs/icarus/badge.svg)](https://docs.rs/icarus)
 [![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
-[![CI](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions)
+[![CI](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml)
+[![Coverage](https://github.com/galenoshea/icarus-sdk/actions/workflows/coverage.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/coverage.yml)
+[![Release](https://github.com/galenoshea/icarus-sdk/actions/workflows/release.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/release.yml)
 
 [Quick Start](#-quick-start) • [Docs](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
 

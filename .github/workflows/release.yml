@@ -17,6 +17,11 @@ permissions:
   contents: write
   packages: write
 
+# Prevent concurrent releases
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
   RUST_BACKTRACE: 1
