@@ -6,13 +6,16 @@
 
 use anyhow::Result;
 use candid::Principal;
-use rmcp::model::{ProtocolVersion, ServerCapabilities, ServerInfo};
-use rmcp::schemars::JsonSchema;
-use rmcp::{tool, tool_handler, tool_router, ServerHandler};
+use rmcp::model::{
+    CallToolRequestParam, CallToolResult, ListToolsResult, PaginatedRequestParam, ProtocolVersion,
+    ServerCapabilities, ServerInfo, Tool,
+};
+use rmcp::service::RequestContext;
+use rmcp::{ErrorData, RoleServer, ServerHandler};
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
+use serde_json::Map as JsonObject;
+use std::borrow::Cow;
 use std::sync::Arc;
-use std::sync::OnceLock;
 use tokio::io::{stdin, stdout};
 
 use crate::bridge::canister_client::CanisterClient;
@@ -34,45 +37,15 @@ pub struct CanisterTool {
     pub input_schema: serde_json::Value,
 }
 
-/// Request to store a memory
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct MemorizeRequest {
-    pub content: String,
-    #[serde(default)]
-    pub tags: Option<Vec<String>>,
-}
-
-/// Request to forget a specific memory
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct ForgetRequest {
-    pub id: String,
-}
-
-/// Generic request for dynamic tool calls
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct GenericToolRequest {
-    pub method: String,
-    pub args: serde_json::Value,
-}
-
-/// Request to validate a JWT token
-#[derive(Debug, Deserialize, JsonSchema)]
-pub struct ValidateJwtRequest {
-    pub token: String,
-}
-
 /// ICP Canister Bridge service
 #[derive(Clone)]
 pub struct IcpBridge {
     canister_id: Principal,
     canister_client: Arc<CanisterClient>,
     discovered_tools: Arc<tokio::sync::RwLock<Vec<CanisterTool>>>,
-    tool_router: rmcp::handler::server::router::tool::ToolRouter<Self>,
-    bridge_tool_names: Arc<OnceLock<HashSet<String>>>,
 }
 
-// Implement the tool router for ICP bridge
-#[tool_router]
+// Implementation for ICP bridge
 impl IcpBridge {
     pub async fn new(canister_id: Principal) -> Result<Self> {
         // Use dfx identity for authentication
@@ -208,8 +181,6 @@ impl IcpBridge {
             canister_id,
             canister_client,
             discovered_tools: Arc::new(tokio::sync::RwLock::new(Vec::new())),
-            tool_router: Self::tool_router(),
-            bridge_tool_names: Arc::new(OnceLock::new()),
         })
     }
 
@@ -229,8 +200,8 @@ impl IcpBridge {
             // Add timeout to prevent hanging
             let timeout_duration = std::time::Duration::from_secs(10);
             let discovery_future = async {
-                // Try to get canister metadata
-                match self.canister_client.get_metadata().await {
+                // Try to get canister tools list
+                match self.canister_client.list_tools().await {
                     Ok(metadata_str) => {
                         if debug {
                             eprintln!("[DEBUG] Got metadata: {}", metadata_str);
@@ -295,94 +266,6 @@ impl IcpBridge {
         }
     }
 
-    /// Get bridge tool names with caching
-    fn get_bridge_tool_names(&self) -> &HashSet<String> {
-        self.bridge_tool_names.get_or_init(|| {
-            self.tool_router
-                .list_all()
-                .into_iter()
-                .map(|tool| tool.name.to_string())
-                .collect()
-        })
-    }
-
-    /// Get the current caller's principal identity
-    #[tool(description = "Get the current caller's principal identity")]
-    async fn whoami(&self) -> String {
-        self.call_dynamic_tool("whoami", serde_json::json!({}))
-            .await
-    }
-
-    /// Store a new memory
-    #[tool(description = "Store a new memory")]
-    async fn memorize(&self) -> String {
-        // For now, just call with empty content as an example
-        let args = serde_json::json!({ "content": "example memory" });
-        self.call_dynamic_tool("memorize", args).await
-    }
-
-    /// List all stored memories
-    #[tool(description = "List all stored memories")]
-    async fn list(&self) -> String {
-        self.call_dynamic_tool("list", serde_json::json!({})).await
-    }
-
-    /// Remove the first available memory
-    #[tool(description = "Remove the first available memory")]
-    async fn forget(&self) -> String {
-        // For now, call without specific ID
-        let args = serde_json::json!({ "id": "1" });
-        self.call_dynamic_tool("forget", args).await
-    }
-
-    /// Remove the oldest memory
-    #[tool(description = "Remove the oldest memory")]
-    async fn forget_oldest(&self) -> String {
-        self.call_dynamic_tool("forget_oldest", serde_json::json!({}))
-            .await
-    }
-
-    /// Retrieve the latest memory
-    #[tool(description = "Retrieve the latest memory")]
-    async fn recall_latest(&self) -> String {
-        self.call_dynamic_tool("recall_latest", serde_json::json!({}))
-            .await
-    }
-
-    /// Add a principal to the whitelist (simplified without auth)
-    #[tool(description = "Add a principal to the whitelist")]
-    async fn add_to_whitelist(&self) -> String {
-        // For now, use anonymous principal
-        let args = serde_json::json!({ "principal": Principal::anonymous().to_text() });
-        self.call_dynamic_tool("add_to_whitelist", args).await
-    }
-
-    /// Generate JWT session token (simplified without auth)
-    #[tool(description = "Generate a JWT session token for authenticated user")]
-    async fn create_jwt_session(&self) -> String {
-        // For now, return a dummy token
-        serde_json::json!({
-            "success": true,
-            "token": "dummy_token",
-            "token_type": "Bearer",
-            "expires_in": 3600,
-            "refresh_token": "dummy_refresh"
-        })
-        .to_string()
-    }
-
-    /// Check if bridge is authenticated and get principal
-    #[tool(description = "Check if bridge is authenticated and get principal")]
-    async fn bridge_auth_status(&self) -> String {
-        // For now, always return anonymous principal
-        serde_json::json!({
-            "authenticated": false,
-            "principal": Principal::anonymous().to_text(),
-            "message": "Authentication removed for now"
-        })
-        .to_string()
-    }
-
     /// Internal helper to call canister tools dynamically
     async fn call_dynamic_tool(&self, tool_name: &str, args: serde_json::Value) -> String {
         let debug = std::env::var("ICARUS_DEBUG").is_ok();
@@ -390,19 +273,15 @@ impl IcpBridge {
             eprintln!("[DEBUG] Calling dynamic tool: {}", tool_name);
         }
 
-        // Check if this tool exists in discovered tools or is a bridge tool
+        // Check if this tool exists in discovered tools
         let tools = self.discovered_tools.read().await;
-        let tool_exists_in_canister = tools.iter().any(|t| t.name == tool_name);
+        let tool_exists = tools.iter().any(|t| t.name == tool_name);
         drop(tools);
 
-        // Get bridge tools dynamically from the tool router
-        let bridge_tool_names = self.get_bridge_tool_names();
-        let is_bridge_tool = bridge_tool_names.contains(tool_name);
-
-        if !tool_exists_in_canister && !is_bridge_tool {
+        if !tool_exists {
             if debug {
                 eprintln!(
-                    "[DEBUG] Tool '{}' not found in discovered canister tools or bridge tools",
+                    "[DEBUG] Tool '{}' not found in discovered canister tools",
                     tool_name
                 );
             }
@@ -411,13 +290,6 @@ impl IcpBridge {
                 "error": format!("Tool '{}' not available in this canister", tool_name)
             })
             .to_string();
-        }
-
-        if debug && is_bridge_tool && !tool_exists_in_canister {
-            eprintln!(
-                "[DEBUG] Using bridge tool '{}' (not in discovered canister tools)",
-                tool_name
-            );
         }
 
         // Call the canister method
@@ -498,8 +370,7 @@ impl IcpBridge {
     }
 }
 
-// Implement the ServerHandler trait using the tool_handler macro
-#[tool_handler]
+// Implement the ServerHandler trait manually for custom tool listing
 impl ServerHandler for IcpBridge {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
@@ -512,6 +383,80 @@ impl ServerHandler for IcpBridge {
                 version: "0.1.0".to_string(),
             },
             instructions: Some("ICP Canister Bridge for MCP - provides tools to interact with Internet Computer canisters".to_string()),
+        }
+    }
+
+    async fn list_tools(
+        &self,
+        _request: Option<PaginatedRequestParam>,
+        _context: RequestContext<RoleServer>,
+    ) -> std::result::Result<ListToolsResult, ErrorData> {
+        // Return dynamically discovered tools instead of the single execute_tool
+        let tools = self.discovered_tools.read().await;
+
+        let tool_infos: Vec<Tool> = tools
+            .iter()
+            .map(|tool| {
+                // Convert the input_schema Value to JsonObject
+                let schema = if let serde_json::Value::Object(obj) = &tool.input_schema {
+                    Arc::new(obj.clone())
+                } else {
+                    Arc::new(JsonObject::new())
+                };
+
+                Tool {
+                    name: Cow::Owned(tool.name.clone()),
+                    description: Some(Cow::Owned(tool.description.clone())),
+                    input_schema: schema,
+                    output_schema: None,
+                    annotations: None,
+                }
+            })
+            .collect();
+
+        Ok(ListToolsResult {
+            tools: tool_infos,
+            next_cursor: None,
+        })
+    }
+
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParam,
+        _context: RequestContext<RoleServer>,
+    ) -> std::result::Result<CallToolResult, ErrorData> {
+        // Convert Option<Map> to Value for arguments
+        let args = request
+            .arguments
+            .map(|map| serde_json::Value::Object(map))
+            .unwrap_or(serde_json::Value::Object(JsonObject::new()));
+
+        // Route all tool calls through our dynamic handler
+        let result = self.call_dynamic_tool(&request.name, args).await;
+
+        // Parse the result and format as CallToolResult
+        match serde_json::from_str::<serde_json::Value>(&result) {
+            Ok(json_result) => Ok(CallToolResult {
+                content: vec![rmcp::model::Content::text(json_result.to_string())],
+                structured_content: Some(json_result.clone()),
+                is_error: Some(
+                    json_result
+                        .get("success")
+                        .and_then(|v| v.as_bool())
+                        .map(|success| !success)
+                        .unwrap_or(false),
+                ),
+                meta: Default::default(),
+            }),
+            Err(_) => {
+                // If result is not JSON, return as plain text
+                Ok(CallToolResult {
+                    content: vec![rmcp::model::Content::text(result)],
+                    structured_content: None,
+                    is_error: Some(false),
+                    meta: Default::default(),
+                })
+            }
         }
     }
 }

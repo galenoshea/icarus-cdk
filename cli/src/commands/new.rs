@@ -414,7 +414,7 @@ register_bridge(token: DelegationToken) -> (variant {{ Ok: null; Err: text }})
 - `forget_oldest() -> (variant {{ Ok: bool; Err: text }})`
 - `recall_latest() -> (opt MemoryEntry)`
 - `list() -> (vec MemoryEntry)`
-- `get_metadata() -> (text)`
+- `list_tools() -> (text)`
 
 ### Bridge Management Functions
 

@@ -30,7 +30,7 @@ The Icarus bridge is a crucial component that enables Claude Desktop (or any MCP
 - Simpler security model
 
 ### 3. Dynamic Discovery
-- Bridge queries canister's `get_metadata()` function
+- Bridge queries canister's `list_tools()` function
 - Automatically discovers available tools
 - No hardcoded tool definitions
 
@@ -44,7 +44,7 @@ When you run `icarus bridge start --canister-id <id>`:
 // Bridge startup sequence
 1. Parse command line arguments
 2. Create ICP agent with canister ID
-3. Query canister's get_metadata() function
+3. Query canister's list_tools() function
 4. Parse tool definitions from metadata
 5. Initialize stdio MCP server
 6. Start listening for MCP messages
@@ -56,7 +56,7 @@ The bridge discovers tools dynamically:
 
 ```rust
 // Query canister for metadata
-let metadata_response = canister.query("get_metadata", ()).await?;
+let metadata_response = canister.query("list_tools", ()).await?;
 let metadata: String = decode_one(&metadata_response)?;
 let tools: ToolMetadata = serde_json::from_str(&metadata)?;
 
@@ -296,7 +296,7 @@ RUST_LOG=debug icarus bridge start --canister-id <id>
 - Ensure canister is deployed
 
 #### 2. "Tool not found"
-- Verify canister has `get_metadata()` function
+- Verify canister has `list_tools()` function
 - Check tool names match exactly
 - Ensure metadata format is correct
 

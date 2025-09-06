@@ -125,7 +125,7 @@ icarus-sdk/
 #### 4. **Tool Registration** (`icarus-core`)
 - Tools self-register via `linkme` crate sections
 - `TOOL_REGISTRY` collects all tools at compile time
-- `get_metadata()` query endpoint exposes tools to MCP clients
+- `list_tools()` query endpoint exposes tools to MCP clients
 
 #### 5. **Session Management**
 - Sessions stored in canister stable memory

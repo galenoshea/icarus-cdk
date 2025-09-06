@@ -30,7 +30,7 @@ candid = "0.10"
 [workspace]
 members = [
     "crates/icarus-core",
-    "crates/icarus-derive", 
+    "crates/icarus-derive",
     "crates/icarus-canister",
     "cli",
 ]
@@ -61,9 +61,12 @@ repository = "https://github.com/galenoshea/icarus-sdk"
 
 [workspace.dependencies]
 # External dependencies  
-rmcp = "0.6.1"
+rmcp = "0.6.3"
 # Override problematic time dependencies to disable wasm features
-chrono = { version = "0.4.41", default-features = false, features = ["std", "serde"] }
+chrono = { version = "0.4.41", default-features = false, features = [
+    "std",
+    "serde",
+] }
 web-time = { version = "1.1.0", default-features = false }
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"

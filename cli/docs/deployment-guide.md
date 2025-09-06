@@ -58,7 +58,7 @@ Canister ID: bkyz2-fmaaa-aaaaa-qaaaq-cai
 
 Using dfx:
 ```bash
-dfx canister call my-server get_metadata '()'
+dfx canister call my-server list_tools '()'
 ```
 
 Using the bridge:
@@ -121,7 +121,7 @@ Options:
 dfx canister status my-server --network ic
 
 # Test functionality
-dfx canister call my-server get_metadata '()' --network ic
+dfx canister call my-server list_tools '()' --network ic
 ```
 
 ## Deployment Options
@@ -354,7 +354,7 @@ CYCLES=$(dfx canister status $CANISTER_ID --network ic | grep Cycles | awk '{pri
 echo "Cycles remaining: $CYCLES"
 
 # Test endpoint
-RESPONSE=$(dfx canister call $CANISTER_ID get_metadata '()' --network ic 2>&1)
+RESPONSE=$(dfx canister call $CANISTER_ID list_tools '()' --network ic 2>&1)
 if [[ $RESPONSE == *"error"* ]]; then
     echo "ERROR: Canister not responding"
     exit 1

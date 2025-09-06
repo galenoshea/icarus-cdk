@@ -392,7 +392,7 @@ cat src/*.did
 du -h .dfx/local/canisters/*/*.wasm
 
 # View metadata
-dfx canister call <name> get_metadata '()'
+dfx canister call <name> list_tools '()'
 ```
 
 ### Test in Isolation

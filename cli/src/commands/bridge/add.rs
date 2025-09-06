@@ -116,13 +116,13 @@ async fn fetch_canister_metadata(canister_id: &str) -> Result<(String, String)> 
     // Create an agent (try local first, then mainnet)
     let agent = create_agent().await?;
 
-    // Call get_metadata() on the canister
+    // Call list_tools() on the canister
     let response = agent
-        .query(&principal, "get_metadata")
+        .query(&principal, "list_tools")
         .with_arg(candid::encode_args(()).unwrap())
         .call()
         .await
-        .map_err(|e| anyhow::anyhow!("Failed to call get_metadata: {}", e))?;
+        .map_err(|e| anyhow::anyhow!("Failed to call list_tools: {}", e))?;
 
     spinner.finish_and_clear();
 

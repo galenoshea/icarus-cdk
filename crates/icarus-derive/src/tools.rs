@@ -580,11 +580,11 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         })
         .collect();
 
-    // Generate the get_metadata function
-    let get_metadata_fn = quote! {
-        /// Get canister metadata for tool discovery
+    // Generate the list_tools function
+    let list_tools_fn = quote! {
+        /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
-        pub fn get_metadata() -> String {
+        pub fn list_tools() -> String {
             let tools = vec![#(#tool_entries),*];
 
             ::serde_json::json!({
@@ -738,7 +738,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         #(#functions_to_export)*
 
         // Export the metadata function
-        #get_metadata_fn
+        #list_tools_fn
 
         // Export the init and post_upgrade functions (always included for security)
         #init_fn
@@ -874,11 +874,11 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
         })
         .collect();
 
-    // Generate the get_metadata function
-    let get_metadata_fn = quote! {
-        /// Get canister metadata for tool discovery
+    // Generate the list_tools function
+    let list_tools_fn = quote! {
+        /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
-        pub fn get_metadata() -> String {
+        pub fn list_tools() -> String {
             let tools = vec![#(#tool_entries),*];
 
             ::serde_json::json!({
@@ -889,8 +889,8 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
         }
     };
 
-    // Add the get_metadata function to the crate items
-    let metadata_fn_item: ItemFn = syn::parse2(get_metadata_fn.clone()).unwrap();
+    // Add the list_tools function to the crate items
+    let metadata_fn_item: ItemFn = syn::parse2(list_tools_fn.clone()).unwrap();
     input.items.push(Item::Fn(metadata_fn_item));
 
     // Return the modified crate

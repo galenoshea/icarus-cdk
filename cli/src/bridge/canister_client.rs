@@ -68,7 +68,7 @@ impl CanisterClient {
     pub async fn get_canister_metadata(&self) -> Result<String> {
         let result = self
             .agent
-            .query(&self.canister_id, "get_metadata")
+            .query(&self.canister_id, "list_tools")
             .call()
             .await?;
 
@@ -192,10 +192,10 @@ impl CanisterClient {
     }
 
     /// Get canister metadata
-    pub async fn get_metadata(&self) -> Result<String> {
+    pub async fn list_tools(&self) -> Result<String> {
         let response = self
             .agent
-            .query(&self.canister_id, "get_metadata")
+            .query(&self.canister_id, "list_tools")
             .with_arg(Encode!(&()).unwrap())
             .call()
             .await?;

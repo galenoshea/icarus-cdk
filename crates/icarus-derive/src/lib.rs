@@ -456,7 +456,7 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Module-level attribute macro that collects all icarus_tool functions
-/// and generates the get_metadata query function automatically.
+/// and generates the list_tools query function automatically.
 ///
 /// Usage:
 /// ```ignore
@@ -486,7 +486,7 @@ pub fn icarus_module(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Crate-level attribute macro that scans for all icarus_tool functions
-/// and generates the get_metadata query function automatically.
+/// and generates the list_tools query function automatically.
 ///
 /// Usage:
 /// ```ignore

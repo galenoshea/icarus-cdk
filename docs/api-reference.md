@@ -55,7 +55,7 @@ Generates tool metadata and exports functions at crate level.
 **Attributes:**
 - Applied to a module containing tool functions
 - Automatically processes `#[icarus_tool]` attributes
-- Generates `get_metadata()` query function
+- Generates `list_tools()` query function
 
 **Example:**
 ```rust

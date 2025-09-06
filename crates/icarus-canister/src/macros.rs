@@ -42,7 +42,7 @@ macro_rules! memory_id {
 
 /// Macro to generate tool metadata function
 ///
-/// This creates the get_metadata query function that returns tool information
+/// This creates the list_tools query function that returns tool information
 /// for MCP discovery.
 ///
 /// # Example
@@ -69,9 +69,9 @@ macro_rules! tool_metadata {
             ),* $(,)?
         ]
     ) => {
-        /// Get canister metadata for tool discovery
+        /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
-        pub fn get_metadata() -> String {
+        pub fn list_tools() -> String {
             let tools = vec![
                 $(
                     {
@@ -158,7 +158,7 @@ macro_rules! id_generator {
 
 /// Macro to generate canister metadata function with auto-discovery syntax
 ///
-/// This macro generates the get_metadata query function that returns tool information
+/// This macro generates the list_tools query function that returns tool information
 /// for MCP discovery. It provides a cleaner syntax than the original tool_metadata! macro.
 ///
 /// # Example
@@ -186,9 +186,9 @@ macro_rules! icarus_metadata {
             $($fn_name:ident: $desc:expr),* $(,)?
         }
     ) => {
-        /// Get canister metadata for tool discovery
+        /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
-        pub fn get_metadata() -> String {
+        pub fn list_tools() -> String {
             let tools = vec![
                 $(
                     ::serde_json::json!({

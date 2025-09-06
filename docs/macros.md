@@ -14,7 +14,7 @@ The most important macro that processes a module containing tool functions.
 
 #### What it does:
 1. Exports all public functions at crate level
-2. Generates `get_metadata()` query function
+2. Generates `list_tools()` query function
 3. Preserves `#[update]` and `#[query]` attributes
 4. Creates tool metadata from `#[icarus_tool]` attributes
 
@@ -40,7 +40,7 @@ mod tools {
 
 #### Generated code:
 - `store` and `get` functions exported at crate level
-- `get_metadata()` query function returning tool information
+- `list_tools()` query function returning tool information
 - Standard Candid methods with proper attributes
 
 ## Function-Level Macros
@@ -389,7 +389,7 @@ To check metadata generation:
 ```rust
 #[test]
 fn test_metadata() {
-    let metadata = get_metadata();
+    let metadata = list_tools();
     println!("{}", metadata);
 }
 ```
