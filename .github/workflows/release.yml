@@ -264,7 +264,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [validate-release, build-artifacts, publish-crates]
-    if: always() && needs.validate-release.result == 'success' && needs.build-artifacts.result == 'success'
+    if: needs.publish-crates.result == 'success'
     steps:
     - uses: actions/checkout@v4
     
