@@ -37,7 +37,7 @@ cargo build --target wasm32-unknown-unknown --release
 
 # Run CI checks locally before pushing
 make ci
-./scripts/test-ci.sh
+./scripts/ci.sh
 
 # Check code quality
 cargo clippy --all-targets --all-features -- -D warnings
@@ -140,7 +140,7 @@ icarus-sdk/
 3. **MCP Protocol Tests**: Test protocol compliance
 4. **Integration Tests**: Full E2E with bridge
 
-**E2E Test Helpers** (`cli/tests/e2e/helpers/`):
+**E2E Test Helpers** (`cli/tests/common/`):
 - `CliRunner`: Executes CLI commands for testing
 - `TestProject`: Creates temporary test projects
 - Assertion helpers for output validation

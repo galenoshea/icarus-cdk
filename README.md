@@ -72,10 +72,10 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.3.4"
+icarus = "0.4.0"
 
 # Or specify features explicitly
-icarus = { version = "0.3.4", features = ["canister"] }
+icarus = { version = "0.4.0", features = ["canister"] }
 
 # Other required dependencies for canister development
 ic-cdk = "0.16"
@@ -201,6 +201,19 @@ icarus bridge remove <id>  # Remove a canister
 icarus dev                 # Start local development
 icarus logs <id>          # View canister logs
 ```
+
+---
+
+## 🔄 Migration from 0.3.x to 0.4.0
+
+**Breaking Change**: The canister tool discovery endpoint has been renamed from `get_metadata()` to `list_tools()`.
+
+To upgrade:
+1. Update your dependency: `icarus = "0.4.0"`
+2. Rebuild your canister: `icarus build`
+3. Redeploy: `icarus deploy`
+
+The bridge will automatically use the new `list_tools()` endpoint. No code changes needed unless you were directly calling `get_metadata()`.
 
 ---
 

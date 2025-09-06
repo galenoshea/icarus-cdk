@@ -5,6 +5,31 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2025-09-06
+
+### ⚠️ BREAKING CHANGES
+- **Renamed `get_metadata` to `list_tools`**: All canisters must be rebuilt with the new SDK version. The canister query endpoint for tool discovery has been renamed from `get_metadata()` to `list_tools()` for better MCP protocol alignment.
+
+### Added
+- **Fully Dynamic Bridge**: The bridge now dynamically discovers tools from canisters at runtime with zero hardcoded tool definitions
+- **Workflow Documentation**: Added comprehensive GitHub Actions workflow documentation in `.github/workflows/README.md`
+
+### Changed
+- **Bridge Architecture**: Complete redesign to remove all hardcoded tools and implement true runtime discovery
+- **Tool Discovery**: Renamed tool discovery endpoint from `get_metadata` to `list_tools` across entire codebase
+- **CI/CD Workflows**: Reorganized and optimized GitHub Actions workflows for better maintainability
+
+### Fixed
+- **CI Workflow**: Removed duplicate concurrency block that was causing workflow validation errors
+- **Bridge Tool Mismatch**: Fixed issue where bridge exposed phantom tools that didn't exist in canisters
+
+### Migration Guide
+To upgrade from 0.3.x to 0.4.0:
+1. Update your `Cargo.toml` dependency to `icarus = "0.4.0"`
+2. Rebuild your canister with `icarus build`
+3. Redeploy with `icarus deploy`
+4. The bridge will automatically use the new `list_tools()` endpoint
+
 ## [0.3.4] - 2025-09-05
 
 ### Fixed

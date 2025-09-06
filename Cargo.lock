@@ -1810,7 +1810,7 @@ dependencies = [
 
 [[package]]
 name = "icarus"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "candid",
  "icarus-canister",
@@ -1822,7 +1822,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-canister"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "candid",
@@ -1841,7 +1841,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-cli"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -1899,7 +1899,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-core"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "async-trait",
  "candid",
@@ -1914,7 +1914,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-derive"
-version = "0.3.4"
+version = "0.4.0"
 dependencies = [
  "icarus-core",
  "proc-macro2",
