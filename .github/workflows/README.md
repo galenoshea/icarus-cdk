@@ -14,7 +14,7 @@ This directory contains the CI/CD workflows for the Icarus SDK project.
 
 **Features**:
 - ⚡ Optimized for speed (5-7 minutes typical runtime)
-- 🔄 Parallel test execution with 4-way sharding
+- 🔄 Parallel test execution for unit and integration tests
 - 📦 Smart caching for dependencies and build artifacts
 - 🚫 Auto-cancels in-progress runs when new commits are pushed
 - ✅ Runs unit tests, integration tests, and E2E tests
@@ -23,7 +23,7 @@ This directory contains the CI/CD workflows for the Icarus SDK project.
 1. **Build & Cache**: Builds all artifacts and caches for subsequent jobs
 2. **Quick Tests**: Runs unit and doc tests in parallel
 3. **Integration Tests**: Tests individual crates
-4. **E2E Tests**: Parallel execution of end-to-end tests
+4. **E2E Tests**: Sequential execution following real user workflow (new → build → validate)
 
 ---
 
