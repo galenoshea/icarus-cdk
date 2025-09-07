@@ -110,4 +110,4 @@ The Icarus SDK is licensed under the Business Source License (BSL-1.1). See [LIC
 
 ---
 
-*Last updated: September 2025 | Version 0.5.1*
+*Last updated: September 2025 | Version 0.5.2*

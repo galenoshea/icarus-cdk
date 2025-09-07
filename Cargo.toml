@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -18,9 +18,9 @@ canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
 core = ["dep:icarus-core"]
 
 [dependencies]
-icarus-core = { version = "0.5.1", path = "crates/icarus-core", optional = true }
-icarus-derive = { version = "0.5.1", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.5.1", path = "crates/icarus-canister", optional = true }
+icarus-core = { version = "0.5.2", path = "crates/icarus-core", optional = true }
+icarus-derive = { version = "0.5.2", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.5.2", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -52,7 +52,7 @@ name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
-version = "0.5.1"
+version = "0.5.2"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -84,9 +84,9 @@ proc-macro2 = "1.0"
 linkme = "0.3"
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.5.1" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.5.1" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.5.1" }
+icarus-core = { path = "crates/icarus-core", version = "0.5.2" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.5.2" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.5.2" }
 
 [profile.release]
 opt-level = 3
