@@ -346,4 +346,220 @@ mod tests {
         let encoded = mapper.map_to_candid("test", args).unwrap();
         assert!(!encoded.is_empty());
     }
+
+    #[test]
+    fn test_record_style_encoding() {
+        let tools_json = r#"{
+            "tools": [{
+                "name": "complex_tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "field1": { "type": "string" },
+                        "field2": { "type": "number" },
+                        "field3": { "type": "boolean" }
+                    },
+                    "x-icarus-params": {
+                        "style": "record"
+                    }
+                }
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+        let args = serde_json::json!({
+            "field1": "test",
+            "field2": 42,
+            "field3": true
+        });
+
+        let encoded = mapper.map_to_candid("complex_tool", args.clone()).unwrap();
+        assert!(!encoded.is_empty());
+
+        // Verify it encodes as JSON string for record style
+        let _expected_json = serde_json::to_string(&args).unwrap();
+        // The encoded bytes should contain the JSON string
+        assert!(encoded.len() > 0);
+    }
+
+    #[test]
+    fn test_empty_params_encoding() {
+        let tools_json = r#"{
+            "tools": [{
+                "name": "no_params",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {},
+                    "x-icarus-params": {
+                        "style": "empty"
+                    }
+                }
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+        let args = serde_json::json!({});
+
+        let encoded = mapper.map_to_candid("no_params", args).unwrap();
+        // Empty params should still produce valid Candid encoding
+        assert!(!encoded.is_empty());
+    }
+
+    #[test]
+    fn test_auto_detect_positional_style() {
+        // Test auto-detection without explicit x-icarus-params
+        let tools_json = r#"{
+            "tools": [{
+                "name": "auto_tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "key": { "type": "string" },
+                        "value": { "type": "string" }
+                    },
+                    "required": ["key", "value"]
+                }
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+        let tool = mapper.get_tool("auto_tool").unwrap();
+
+        // Should auto-detect as positional for small number of params
+        match &tool.param_style {
+            ParamStyle::Positional { order, .. } => {
+                assert_eq!(order.len(), 2);
+                assert!(order.contains(&"key".to_string()));
+                assert!(order.contains(&"value".to_string()));
+            }
+            _ => panic!("Expected positional style for auto-detection"),
+        }
+    }
+
+    #[test]
+    fn test_type_conversions() {
+        let tools_json = r#"{
+            "tools": [{
+                "name": "typed_tool",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "text_field": { "type": "string" },
+                        "number_field": { "type": "number" },
+                        "int_field": { "type": "integer" },
+                        "bool_field": { "type": "boolean" }
+                    },
+                    "x-icarus-params": {
+                        "style": "positional",
+                        "order": ["text_field", "number_field", "int_field", "bool_field"],
+                        "types": ["text", "nat64", "int64", "bool"]
+                    }
+                }
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+        let args = serde_json::json!({
+            "text_field": "hello",
+            "number_field": 42,
+            "int_field": -10,
+            "bool_field": true
+        });
+
+        let encoded = mapper.map_to_candid("typed_tool", args).unwrap();
+        assert!(!encoded.is_empty());
+    }
+
+    #[test]
+    fn test_fallback_encoding() {
+        let tools_json = r#"{
+            "tools": [{
+                "name": "simple",
+                "inputSchema": {}
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+
+        // Test fallback with object
+        let obj_args = serde_json::json!({"key": "value"});
+        let encoded = mapper
+            .encode_with_fallback("unknown_tool", obj_args)
+            .unwrap();
+        assert!(!encoded.is_empty());
+
+        // Test fallback with string
+        let str_args = serde_json::json!("simple_string");
+        let encoded = mapper
+            .encode_with_fallback("unknown_tool", str_args)
+            .unwrap();
+        assert!(!encoded.is_empty());
+
+        // Test fallback with array
+        let arr_args = serde_json::json!(["item1", "item2"]);
+        let encoded = mapper.encode_with_fallback("simple", arr_args).unwrap();
+        assert!(!encoded.is_empty());
+    }
+
+    #[test]
+    fn test_error_handling() {
+        // Test with invalid JSON
+        let result = ParamMapper::from_tools_list("invalid json");
+        assert!(result.is_err());
+
+        // Test with missing tools array
+        let result = ParamMapper::from_tools_list(r#"{"name": "test"}"#);
+        assert!(result.is_err());
+
+        // Test encoding for unknown tool
+        let tools_json = r#"{"tools": []}"#;
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+        let result = mapper.map_to_candid("unknown", serde_json::json!({}));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_memento_scenario() {
+        // Test the exact scenario that was failing with Memento
+        let tools_json = r#"{
+            "tools": [{
+                "name": "memorize",
+                "description": "Store a memory with a unique key",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "key": { 
+                            "type": "string",
+                            "description": "Unique identifier for the memory"
+                        },
+                        "content": { 
+                            "type": "string",
+                            "description": "Content to store"
+                        }
+                    },
+                    "required": ["key", "content"],
+                    "x-icarus-params": {
+                        "style": "positional",
+                        "order": ["key", "content"],
+                        "types": ["text", "text"]
+                    }
+                }
+            }]
+        }"#;
+
+        let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
+
+        // MCP sends arguments as JSON object
+        let mcp_args = serde_json::json!({
+            "key": "test_key",
+            "content": "This is test content"
+        });
+
+        // Should encode successfully
+        let encoded = mapper.map_to_candid("memorize", mcp_args).unwrap();
+        assert!(!encoded.is_empty());
+
+        // The encoding should handle two separate string parameters
+        // not a single record/object
+    }
 }

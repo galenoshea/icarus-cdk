@@ -143,6 +143,7 @@ icarus/
 ### 🔧 Developer Experience
 
 - **Zero Boilerplate** - Macros generate all the MCP metadata
+- **Intelligent Parameter Translation** - Seamless JSON to Candid conversion for any parameter style
 - **Type Safety** - Full Rust type checking and IDE support
 - **Hot Reload** - Local development with instant feedback
 - **Rich CLI** - Project scaffolding, deployment, and management
@@ -220,6 +221,7 @@ The bridge will automatically use the new `list_tools()` endpoint. No code chang
 ## 📖 Documentation
 
 - **[Getting Started Guide](docs/getting-started.md)** - Step-by-step tutorial
+- **[Parameter Translation](docs/parameter-translation.md)** - How MCP JSON maps to ICP Candid
 - **[API Documentation](https://docs.rs/icarus)** - Complete API reference
 - **[Architecture Overview](docs/architecture.md)** - How Icarus works
 - **[Migration Guide](docs/migration-guide.md)** - Migrate existing MCP servers
