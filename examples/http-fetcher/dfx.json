@@ -1,0 +1,21 @@
+{
+  "canisters": {
+    "http_fetcher": {
+      "type": "rust",
+      "package": "http-fetcher",
+      "candid": "http_fetcher.did"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}

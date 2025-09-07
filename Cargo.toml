@@ -33,6 +33,7 @@ members = [
     "crates/icarus-derive",
     "crates/icarus-canister",
     "cli",
+    "examples/http-fetcher",
 ]
 resolver = "2"
 

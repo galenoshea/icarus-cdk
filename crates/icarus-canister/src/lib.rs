@@ -13,6 +13,7 @@ pub mod auth;
 pub mod auth_tools;
 pub mod easy_storage;
 pub mod endpoints;
+pub mod http;
 pub mod lifecycle;
 pub mod macros;
 pub mod memory;
@@ -82,6 +83,9 @@ pub mod prelude {
             get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest,
             HttpResponse,
         },
+
+        // HTTP outcalls for external data
+        http,
 
         icarus_module,
         icarus_storage,

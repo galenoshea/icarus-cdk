@@ -113,6 +113,29 @@ enum Commands {
         #[arg(short, long, help = "Show detailed validation output")]
         verbose: bool,
     },
+
+    #[command(about = "Test HTTP outcalls functionality")]
+    TestHttp {
+        #[arg(long, help = "Canister ID to test")]
+        canister_id: String,
+
+        #[arg(long, default_value = "local", help = "Network to use")]
+        network: String,
+
+        #[arg(
+            long,
+            default_value = "https://api.github.com/meta",
+            help = "URL to fetch"
+        )]
+        url: String,
+
+        #[arg(
+            long,
+            default_value = "get",
+            help = "Test type: get, post, json, weather, crypto"
+        )]
+        test_type: String,
+    },
 }
 
 #[derive(Subcommand)]
@@ -318,6 +341,21 @@ async fn main() -> Result<()> {
         } => {
             info!("Validating WASM for marketplace");
             commands::validate::execute(wasm_path, network, verbose).await?;
+        }
+        Commands::TestHttp {
+            canister_id,
+            network,
+            url,
+            test_type,
+        } => {
+            info!("Testing HTTP outcalls");
+            let cmd = commands::test_http::TestHttpCmd {
+                canister_id,
+                network,
+                url,
+                test_type,
+            };
+            cmd.execute().await?;
         }
     }
 

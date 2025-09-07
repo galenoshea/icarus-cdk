@@ -1465,6 +1465,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "http-fetcher"
+version = "0.1.0"
+dependencies = [
+ "candid",
+ "ic-cdk 0.16.1",
+ "ic-cdk-macros 0.16.0",
+ "icarus",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
