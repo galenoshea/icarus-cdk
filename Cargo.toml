@@ -18,9 +18,9 @@ canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
 core = ["dep:icarus-core"]
 
 [dependencies]
-icarus-core = { version = "0.5.0", path = "crates/icarus-core", optional = true }
-icarus-derive = { version = "0.5.0", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.5.0", path = "crates/icarus-canister", optional = true }
+icarus-core = { version = "0.5.1", path = "crates/icarus-core", optional = true }
+icarus-derive = { version = "0.5.1", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.5.1", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
