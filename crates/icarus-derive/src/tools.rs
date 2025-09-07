@@ -537,10 +537,14 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             let mut properties = quote! {};
             let mut required = Vec::new();
 
+            let mut param_order = Vec::new();
+            let mut param_types = Vec::new();
+
             for (param_name, param_type) in params {
                 let param_name_str = param_name.to_string();
                 let is_optional = quote!(#param_type).to_string().starts_with("Option <");
                 let json_type = type_to_json_schema(&quote!(#param_type).to_string());
+                let candid_type = type_to_candid_type(&quote!(#param_type).to_string());
 
                 properties = quote! {
                     #properties
@@ -551,8 +555,11 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
                 };
 
                 if !is_optional {
-                    required.push(param_name_str);
+                    required.push(param_name_str.clone());
                 }
+
+                param_order.push(param_name_str);
+                param_types.push(candid_type);
             }
 
             let required_array = if required.is_empty() {
@@ -566,15 +573,31 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
                     let mut properties = ::serde_json::Map::new();
                     #properties
 
-                    ::serde_json::json!({
-                        "name": stringify!(#fn_name),
-                        "description": #desc,
-                        "inputSchema": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": #required_array
-                        }
-                    })
+                    {
+                        let param_style = if #required_array.is_empty() {
+                            "empty"
+                        } else {
+                            "positional"
+                        };
+
+                        let order_array = vec![#(#param_order),*];
+                        let types_array = vec![#(#param_types),*];
+
+                        ::serde_json::json!({
+                            "name": stringify!(#fn_name),
+                            "description": #desc,
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": properties,
+                                "required": #required_array,
+                                "x-icarus-params": {
+                                    "style": param_style,
+                                    "order": order_array,
+                                    "types": types_array
+                                }
+                            }
+                        })
+                    }
                 }
             }
         })
@@ -767,6 +790,31 @@ fn type_to_json_schema(rust_type: &str) -> &'static str {
     }
 }
 
+/// Map Rust types to Candid type names
+fn type_to_candid_type(rust_type: &str) -> &'static str {
+    match rust_type {
+        s if s.contains("String") || s.contains("& str") => "text",
+        s if s.contains("i8") => "int8",
+        s if s.contains("i16") => "int16",
+        s if s.contains("i32") => "int32",
+        s if s.contains("i64") => "int64",
+        s if s.contains("i128") => "int",
+        s if s.contains("isize") => "int",
+        s if s.contains("u8") => "nat8",
+        s if s.contains("u16") => "nat16",
+        s if s.contains("u32") => "nat32",
+        s if s.contains("u64") => "nat64",
+        s if s.contains("u128") => "nat",
+        s if s.contains("usize") => "nat",
+        s if s.contains("f32") => "float32",
+        s if s.contains("f64") => "float64",
+        s if s.contains("bool") => "bool",
+        s if s.contains("Principal") => "principal",
+        s if s.contains("Vec") => "vec",
+        _ => "text", // Default to text for unknown types
+    }
+}
+
 /// Expand a crate marked with #[icarus_canister] to automatically generate metadata
 pub fn expand_icarus_canister(mut input: File) -> TokenStream {
     // Collect all functions marked with #[icarus_tool]
@@ -831,10 +879,14 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
             let mut properties = quote! {};
             let mut required = Vec::new();
 
+            let mut param_order = Vec::new();
+            let mut param_types = Vec::new();
+
             for (param_name, param_type) in params {
                 let param_name_str = param_name.to_string();
                 let is_optional = quote!(#param_type).to_string().starts_with("Option <");
                 let json_type = type_to_json_schema(&quote!(#param_type).to_string());
+                let candid_type = type_to_candid_type(&quote!(#param_type).to_string());
 
                 properties = quote! {
                     #properties
@@ -845,8 +897,11 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
                 };
 
                 if !is_optional {
-                    required.push(param_name_str);
+                    required.push(param_name_str.clone());
                 }
+
+                param_order.push(param_name_str);
+                param_types.push(candid_type);
             }
 
             let required_array = if required.is_empty() {
@@ -860,15 +915,31 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
                     let mut properties = ::serde_json::Map::new();
                     #properties
 
-                    ::serde_json::json!({
-                        "name": stringify!(#fn_name),
-                        "description": #desc,
-                        "inputSchema": {
-                            "type": "object",
-                            "properties": properties,
-                            "required": #required_array
-                        }
-                    })
+                    {
+                        let param_style = if #required_array.is_empty() {
+                            "empty"
+                        } else {
+                            "positional"
+                        };
+
+                        let order_array = vec![#(#param_order),*];
+                        let types_array = vec![#(#param_types),*];
+
+                        ::serde_json::json!({
+                            "name": stringify!(#fn_name),
+                            "description": #desc,
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": properties,
+                                "required": #required_array,
+                                "x-icarus-params": {
+                                    "style": param_style,
+                                    "order": order_array,
+                                    "types": types_array
+                                }
+                            }
+                        })
+                    }
                 }
             }
         })

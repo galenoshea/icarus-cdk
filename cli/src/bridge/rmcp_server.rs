@@ -42,7 +42,7 @@ pub struct CanisterTool {
 pub struct IcpBridge {
     canister_id: Principal,
     canister_client: Arc<CanisterClient>,
-    discovered_tools: Arc<tokio::sync::RwLock<Vec<CanisterTool>>>,
+    tools: Arc<tokio::sync::RwLock<Vec<CanisterTool>>>,
 }
 
 // Implementation for ICP bridge
@@ -180,7 +180,7 @@ impl IcpBridge {
         Ok(Self {
             canister_id,
             canister_client,
-            discovered_tools: Arc::new(tokio::sync::RwLock::new(Vec::new())),
+            tools: Arc::new(tokio::sync::RwLock::new(Vec::new())),
         })
     }
 
@@ -210,7 +210,7 @@ impl IcpBridge {
                         // Parse the metadata JSON
                         match serde_json::from_str::<CanisterMetadata>(&metadata_str) {
                             Ok(metadata) => {
-                                let mut tools_lock = self.discovered_tools.write().await;
+                                let mut tools_lock = self.tools.write().await;
                                 *tools_lock = metadata.tools;
 
                                 if debug {
@@ -274,7 +274,7 @@ impl IcpBridge {
         }
 
         // Check if this tool exists in discovered tools
-        let tools = self.discovered_tools.read().await;
+        let tools = self.tools.read().await;
         let tool_exists = tools.iter().any(|t| t.name == tool_name);
         drop(tools);
 
@@ -392,7 +392,7 @@ impl ServerHandler for IcpBridge {
         _context: RequestContext<RoleServer>,
     ) -> std::result::Result<ListToolsResult, ErrorData> {
         // Return dynamically discovered tools instead of the single execute_tool
-        let tools = self.discovered_tools.read().await;
+        let tools = self.tools.read().await;
 
         let tool_infos: Vec<Tool> = tools
             .iter()

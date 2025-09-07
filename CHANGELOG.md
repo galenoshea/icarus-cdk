@@ -5,6 +5,22 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2025-09-07
+
+### Added
+- **Intelligent Parameter Translation**: Bridge now automatically translates between MCP JSON and ICP Candid parameter formats
+- **x-icarus-params Metadata**: Tool definitions now include parameter style hints for optimal translation
+- **ParamMapper Module**: New parameter mapping system with fallback strategies for robust operation
+- **Enhanced Tool Discovery**: Improved tool metadata with parameter type information
+
+### Fixed
+- **Memento Tool Error**: Fixed "failed to decode call arguments" error when calling tools with multiple parameters
+- **Parameter Encoding**: Bridge now correctly handles positional, record, and empty parameter styles
+- **JSON to Candid Translation**: Seamless conversion regardless of how developers design tool parameters
+
+### Changed
+- **Terminology Alignment**: Renamed internal `discovered_tools` to `tools` for better MCP specification compliance
+
 ## [0.4.0] - 2025-09-06
 
 ### ⚠️ BREAKING CHANGES

@@ -8,6 +8,10 @@ use anyhow::Result;
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
 use ic_agent::Agent;
 use serde::Serialize;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+use crate::bridge::param_mapper::ParamMapper;
 
 /// A memory entry stored in the canister
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
@@ -23,6 +27,7 @@ pub struct MemoryEntry {
 pub struct CanisterClient {
     canister_id: Principal,
     agent: Agent,
+    param_mapper: Arc<RwLock<Option<ParamMapper>>>,
 }
 
 impl CanisterClient {
@@ -33,7 +38,11 @@ impl CanisterClient {
         // For local development, fetch root key
         agent.fetch_root_key().await?;
 
-        Ok(Self { canister_id, agent })
+        Ok(Self {
+            canister_id,
+            agent,
+            param_mapper: Arc::new(RwLock::new(None)),
+        })
     }
 
     /// Create a new canister client with authentication from session (removed for now)
@@ -44,7 +53,11 @@ impl CanisterClient {
 
     /// Create a new canister client with an authenticated agent
     pub fn new_with_agent(canister_id: Principal, agent: Agent) -> Self {
-        Self { canister_id, agent }
+        Self {
+            canister_id,
+            agent,
+            param_mapper: Arc::new(RwLock::new(None)),
+        }
     }
 
     /// Check if current principal is authorized to use this canister
@@ -62,6 +75,16 @@ impl CanisterClient {
 
         let authorized = Decode!(&result, bool)?;
         Ok(authorized)
+    }
+
+    /// Refresh tool definitions from canister
+    pub async fn refresh_tools(&self) -> Result<()> {
+        let tools_json = self
+            .generic_call("list_tools", serde_json::json!({}), true)
+            .await?;
+        let mapper = ParamMapper::from_tools_list(&tools_json)?;
+        *self.param_mapper.write().await = Some(mapper);
+        Ok(())
     }
 
     /// Get canister metadata including owner information
@@ -232,44 +255,60 @@ impl CanisterClient {
             );
         }
 
-        // Convert JSON args to Candid format
-        let candid_args =
-            if args.is_null() || (args.is_object() && args.as_object().unwrap().is_empty()) {
-                // No arguments - still need proper Candid encoding for empty tuple
-                Encode!(&())?
-            } else if args.is_array() {
-                // Arguments as array - encode each element
-                let array = args.as_array().unwrap();
-                let mut encoded_args = Vec::new();
-                for arg in array {
-                    // For now, assume string arguments - can be enhanced later
-                    if let Some(s) = arg.as_str() {
-                        encoded_args.extend(Encode!(&s)?);
-                    } else if let Some(n) = arg.as_u64() {
-                        encoded_args.extend(Encode!(&n)?);
-                    } else if let Some(b) = arg.as_bool() {
-                        encoded_args.extend(Encode!(&b)?);
-                    } else {
-                        // Fallback to string representation
-                        let s = arg.to_string();
-                        encoded_args.extend(Encode!(&s)?);
+        // Ensure we have tool definitions (skip if we're calling list_tools to avoid recursion)
+        if method_name != "list_tools" && self.param_mapper.read().await.is_none() {
+            if debug {
+                eprintln!("[DEBUG] Refreshing tool definitions...");
+            }
+            // Directly call list_tools without using generic_call to avoid recursion
+            if let Ok(response) = self
+                .agent
+                .query(&self.canister_id, "list_tools")
+                .with_arg(Encode!(&())?)
+                .call()
+                .await
+            {
+                if let Ok(tools_json) = self.decode_response(response) {
+                    if let Ok(mapper) = ParamMapper::from_tools_list(&tools_json) {
+                        *self.param_mapper.write().await = Some(mapper);
                     }
                 }
-                encoded_args
-            } else {
-                // Single argument or object - convert to appropriate Candid type
-                if let Some(s) = args.as_str() {
-                    Encode!(&s)?
-                } else if let Some(n) = args.as_u64() {
-                    Encode!(&n)?
-                } else if let Some(b) = args.as_bool() {
-                    Encode!(&b)?
-                } else {
-                    // Fallback to string representation
-                    let s = args.to_string();
-                    Encode!(&s)?
-                }
-            };
+            }
+            if debug && self.param_mapper.read().await.is_none() {
+                eprintln!("[DEBUG] Failed to refresh tools. Using fallback encoding.");
+            }
+        }
+
+        // Convert JSON args to Candid format using ParamMapper
+        let candid_args = if let Some(mapper) = self.param_mapper.read().await.as_ref() {
+            // Use intelligent parameter mapping
+            if debug {
+                eprintln!(
+                    "[DEBUG] Using ParamMapper for '{}' with args: {}",
+                    method_name, args
+                );
+            }
+
+            mapper
+                .encode_with_fallback(method_name, args.clone())
+                .unwrap_or_else(|e| {
+                    if debug {
+                        eprintln!(
+                            "[DEBUG] ParamMapper failed: {}. Using fallback encoding.",
+                            e
+                        );
+                    }
+                    // Fallback to old behavior
+                    self.fallback_encode(args.clone())
+                        .unwrap_or_else(|_| vec![])
+                })
+        } else {
+            // No mapper available, use fallback encoding
+            if debug {
+                eprintln!("[DEBUG] No ParamMapper available, using fallback encoding");
+            }
+            self.fallback_encode(args)?
+        };
 
         if debug {
             eprintln!(
@@ -277,18 +316,15 @@ impl CanisterClient {
                 candid_args,
                 candid_args.len()
             );
-            eprintln!("[DEBUG] Args is_empty: {}", candid_args.is_empty());
         }
 
         let response = if is_query {
-            // Always use with_arg since we now always have proper Candid encoding
             self.agent
                 .query(&self.canister_id, method_name)
                 .with_arg(&candid_args[..])
                 .call()
                 .await?
         } else {
-            // Always use with_arg since we now always have proper Candid encoding
             self.agent
                 .update(&self.canister_id, method_name)
                 .with_arg(&candid_args[..])
@@ -296,6 +332,52 @@ impl CanisterClient {
                 .await?
         };
 
+        // Try to decode response
+        self.decode_response(response)
+    }
+
+    /// Fallback encoding when ParamMapper is not available
+    fn fallback_encode(&self, args: serde_json::Value) -> Result<Vec<u8>> {
+        if args.is_null() || (args.is_object() && args.as_object().unwrap().is_empty()) {
+            // No arguments - still need proper Candid encoding for empty tuple
+            Ok(Encode!(&())?)
+        } else if args.is_array() {
+            // Arguments as array - encode each element
+            let array = args.as_array().unwrap();
+            let mut encoded_args = Vec::new();
+            for arg in array {
+                // For now, assume string arguments - can be enhanced later
+                if let Some(s) = arg.as_str() {
+                    encoded_args.extend(Encode!(&s)?);
+                } else if let Some(n) = arg.as_u64() {
+                    encoded_args.extend(Encode!(&n)?);
+                } else if let Some(b) = arg.as_bool() {
+                    encoded_args.extend(Encode!(&b)?);
+                } else {
+                    // Fallback to string representation
+                    let s = arg.to_string();
+                    encoded_args.extend(Encode!(&s)?);
+                }
+            }
+            Ok(encoded_args)
+        } else {
+            // Single argument or object - convert to appropriate Candid type
+            if let Some(s) = args.as_str() {
+                Ok(Encode!(&s)?)
+            } else if let Some(n) = args.as_u64() {
+                Ok(Encode!(&n)?)
+            } else if let Some(b) = args.as_bool() {
+                Ok(Encode!(&b)?)
+            } else {
+                // Fallback to string representation
+                let s = args.to_string();
+                Ok(Encode!(&s)?)
+            }
+        }
+    }
+
+    /// Decode response from canister
+    fn decode_response(&self, response: Vec<u8>) -> Result<String> {
         // Try to decode as Result<String, String> first (common pattern)
         if let Ok(result) = Decode!(&response, Result<String, String>) {
             match result {
