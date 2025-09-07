@@ -25,8 +25,6 @@ pub enum ParamStyle {
 /// Tool definition with parameter information
 #[derive(Debug, Clone)]
 pub struct ToolDefinition {
-    pub name: String,
-    pub input_schema: Value,
     pub param_style: ParamStyle,
 }
 
@@ -61,17 +59,10 @@ impl ParamMapper {
                 Self::parse_explicit_style(icarus_params)?
             } else {
                 // Auto-detect from schema structure
-                Self::detect_param_style(&input_schema, &name)
+                Self::detect_param_style(&input_schema)
             };
 
-            tools.insert(
-                name.clone(),
-                ToolDefinition {
-                    name: name.clone(),
-                    input_schema,
-                    param_style,
-                },
-            );
+            tools.insert(name, ToolDefinition { param_style });
         }
 
         Ok(Self { tools })
@@ -104,7 +95,7 @@ impl ParamMapper {
     }
 
     /// Auto-detect parameter style from schema structure
-    fn detect_param_style(schema: &Value, _tool_name: &str) -> ParamStyle {
+    fn detect_param_style(schema: &Value) -> ParamStyle {
         // Check if schema has properties
         if let Some(properties) = schema.get("properties").and_then(|p| p.as_object()) {
             if properties.is_empty() {
@@ -275,16 +266,6 @@ impl ParamMapper {
         let json_str = serde_json::to_string(&args)?;
         Ok(Encode!(&json_str)?)
     }
-
-    /// Get tool definition by name
-    pub fn get_tool(&self, name: &str) -> Option<&ToolDefinition> {
-        self.tools.get(name)
-    }
-
-    /// Check if a tool exists
-    pub fn has_tool(&self, name: &str) -> bool {
-        self.tools.contains_key(name)
-    }
 }
 
 #[cfg(test)]
@@ -313,7 +294,8 @@ mod tests {
         }"#;
 
         let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
-        assert!(mapper.has_tool("memorize"));
+        // Check that the tool was parsed and stored
+        assert!(mapper.tools.contains_key("memorize"));
     }
 
     #[test]
@@ -423,7 +405,7 @@ mod tests {
         }"#;
 
         let mapper = ParamMapper::from_tools_list(tools_json).unwrap();
-        let tool = mapper.get_tool("auto_tool").unwrap();
+        let tool = mapper.tools.get("auto_tool").unwrap();
 
         // Should auto-detect as positional for small number of params
         match &tool.param_style {
