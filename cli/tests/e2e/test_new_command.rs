@@ -28,9 +28,9 @@ fn test_new_creates_project_structure() {
     assert!(cargo_toml.contains("icarus = "));
     assert!(cargo_toml.contains("crate-type = [\"cdylib\"]"));
 
-    // Verify src/lib.rs contains the Memento template
+    // Verify src/lib.rs contains the basic memory template
     let lib_rs = test_project.read_file("src/lib.rs");
-    assert!(lib_rs.contains("//! Memento - A simple key-value memory storage tool"));
+    assert!(lib_rs.contains("//! Basic Memory Server"));
     assert!(lib_rs.contains("use icarus::prelude::*"));
     assert!(lib_rs.contains("stable_storage!"));
     assert!(lib_rs.contains("MEMORIES: StableBTreeMap<String, MemoryEntry, Memory>"));
@@ -38,7 +38,9 @@ fn test_new_creates_project_structure() {
     assert!(lib_rs.contains("pub fn memorize"));
     assert!(lib_rs.contains("pub fn recall"));
     assert!(lib_rs.contains("pub fn list"));
+    assert!(lib_rs.contains("pub fn search_by_tag"));
     assert!(lib_rs.contains("pub fn forget"));
+    assert!(lib_rs.contains("pub fn count"));
 }
 
 #[test]

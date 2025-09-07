@@ -1,15 +1,15 @@
 //! Basic Memory Server Example
-//! 
+//!
 //! This example demonstrates a simple MCP server that stores and retrieves
 //! text memories with tags. It showcases:
 //! - Using stable storage for persistence
 //! - Defining MCP tools with the icarus_module macro
 //! - Implementing CRUD operations
 
-use icarus::prelude::*;
 use candid::{CandidType, Deserialize};
-use serde::Serialize;
 use ic_cdk::api::time;
+use icarus::prelude::*;
+use serde::Serialize;
 
 /// A memory entry that persists across canister upgrades
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusStorable)]
@@ -79,48 +79,46 @@ mod tools {
     /// List all stored memories with optional limit
     #[query]
     #[icarus_tool("List all stored memories with optional limit")]
-    pub fn list(limit: Option<u64>) -> Vec<MemoryEntry> {
-        MEMORIES.with(|m| {
+    pub fn list(limit: Option<u64>) -> Result<Vec<MemoryEntry>, String> {
+        Ok(MEMORIES.with(|m| {
             let memories = m.borrow();
             let iter = memories.iter();
-            
+
             match limit {
                 Some(n) => iter.take(n as usize).map(|(_, v)| v).collect(),
                 None => iter.map(|(_, v)| v).collect(),
             }
-        })
+        }))
     }
 
     /// Search memories by tag
     #[query]
     #[icarus_tool("Search memories by tag")]
-    pub fn search_by_tag(tag: String) -> Vec<MemoryEntry> {
-        MEMORIES.with(|m| {
+    pub fn search_by_tag(tag: String) -> Result<Vec<MemoryEntry>, String> {
+        Ok(MEMORIES.with(|m| {
             m.borrow()
                 .iter()
                 .filter(|(_, memory)| memory.tags.contains(&tag))
                 .map(|(_, v)| v)
                 .collect()
-        })
+        }))
     }
 
     /// Delete a memory by ID
     #[update]
     #[icarus_tool("Delete a memory by ID")]
     pub fn forget(id: String) -> Result<bool, String> {
-        MEMORIES.with(|m| {
-            match m.borrow_mut().remove(&id) {
-                Some(_) => Ok(true),
-                None => Err(format!("Memory with ID {} not found", id))
-            }
+        MEMORIES.with(|m| match m.borrow_mut().remove(&id) {
+            Some(_) => Ok(true),
+            None => Err(format!("Memory with ID {} not found", id)),
         })
     }
 
     /// Get total number of stored memories
     #[query]
     #[icarus_tool("Get total number of stored memories")]
-    pub fn count() -> u64 {
-        MEMORIES.with(|m| m.borrow().len())
+    pub fn count() -> Result<u64, String> {
+        Ok(MEMORIES.with(|m| m.borrow().len()))
     }
 
     /// Clear all memories (use with caution!)
@@ -130,13 +128,13 @@ mod tools {
         MEMORIES.with(|m| {
             let mut memories = m.borrow_mut();
             let count = memories.len();
-            
+
             // Clear all entries
             let keys: Vec<String> = memories.iter().map(|(k, _)| k).collect();
             for key in keys {
                 memories.remove(&key);
             }
-            
+
             Ok(count)
         })
     }

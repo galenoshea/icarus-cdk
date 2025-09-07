@@ -1,6 +1,7 @@
 use anyhow::Result;
 use colored::Colorize;
-use std::path::PathBuf;
+use std::fs;
+use std::path::{Path, PathBuf};
 
 use crate::utils::{ensure_directory_exists, print_info, print_success};
 
@@ -102,7 +103,261 @@ fn create_project_structure(
         ensure_directory_exists(&tests_dir)?;
     }
 
-    // Create Cargo.toml with test dependencies
+    // Determine example source path
+    // First try relative to the binary location (for installed CLI)
+    // Then try relative to the current directory (for development)
+    let example_source = find_example_source()?;
+
+    // Copy lib.rs from basic-memory example
+    let example_lib_rs = example_source.join("src/lib.rs");
+    let target_lib_rs = src_dir.join("lib.rs");
+
+    if example_lib_rs.exists() {
+        // Copy the example file
+        fs::copy(&example_lib_rs, &target_lib_rs)?;
+    } else {
+        // Fallback to embedded template if example is not found
+        // This ensures the CLI works even when distributed without examples
+        create_fallback_template(&target_lib_rs)?;
+    }
+
+    // Create Cargo.toml
+    create_cargo_toml(project_path, name, local_sdk, with_tests, &example_source)?;
+
+    // Create icarus.json
+    create_icarus_json(project_path, name)?;
+
+    // Create dfx.json
+    create_dfx_json(project_path, name)?;
+
+    // Create README.md
+    create_readme(project_path, name)?;
+
+    Ok(())
+}
+
+fn find_example_source() -> Result<PathBuf> {
+    // Try several locations to find the basic-memory example
+    let possible_paths = vec![
+        // Development path (when running from source)
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("examples/basic-memory"),
+        // Relative to current directory
+        PathBuf::from("examples/basic-memory"),
+        // Relative to parent directory
+        PathBuf::from("../examples/basic-memory"),
+        // Installation path (when CLI is installed)
+        dirs::data_dir()
+            .unwrap_or_else(|| PathBuf::from("."))
+            .join("icarus/examples/basic-memory"),
+    ];
+
+    for path in possible_paths {
+        if path.exists() && path.join("src/lib.rs").exists() {
+            return Ok(path);
+        }
+    }
+
+    // If we can't find the example, we'll use a fallback
+    Ok(PathBuf::from(""))
+}
+
+fn create_fallback_template(target: &Path) -> Result<()> {
+    // This is a simplified version that will always compile
+    // Used only as a fallback when the example directory is not available
+    let content = r#"//! Basic Memory Server
+//! 
+//! A simple MCP server that stores and retrieves text memories.
+
+use icarus::prelude::*;
+use candid::{CandidType, Deserialize};
+use serde::Serialize;
+use ic_cdk::api::time;
+
+/// A memory entry that persists across canister upgrades
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusStorable)]
+pub struct MemoryEntry {
+    pub id: String,
+    pub content: String,
+    pub created_at: u64,
+    pub tags: Vec<String>,
+}
+
+// Declare stable storage that persists across upgrades
+stable_storage! {
+    // BTree map for efficient key-value storage
+    MEMORIES: StableBTreeMap<String, MemoryEntry, Memory> = memory_id!(0);
+    // Simple counter for generating unique IDs
+    COUNTER: u64 = 0;
+}
+
+// Helper function to generate unique IDs
+fn generate_id() -> String {
+    COUNTER.with(|c| {
+        let mut counter = c.borrow_mut();
+        *counter += 1;
+        format!("mem_{}", *counter)
+    })
+}
+
+/// MCP module containing all tool functions
+#[icarus_module]
+mod tools {
+    use super::*;
+
+    /// Store a new memory with optional tags
+    #[update]
+    #[icarus_tool("Store a new memory with optional tags")]
+    pub fn memorize(content: String, tags: Option<Vec<String>>) -> Result<String, String> {
+        if content.is_empty() {
+            return Err("Content cannot be empty".to_string());
+        }
+
+        let id = generate_id();
+        let memory = MemoryEntry {
+            id: id.clone(),
+            content,
+            created_at: time(),
+            tags: tags.unwrap_or_default(),
+        };
+
+        MEMORIES.with(|m| {
+            m.borrow_mut().insert(id.clone(), memory);
+        });
+
+        Ok(id)
+    }
+
+    /// Retrieve a specific memory by ID
+    #[query]
+    #[icarus_tool("Retrieve a specific memory by ID")]
+    pub fn recall(id: String) -> Result<MemoryEntry, String> {
+        MEMORIES.with(|m| {
+            m.borrow()
+                .get(&id)
+                .ok_or_else(|| format!("Memory with ID {} not found", id))
+        })
+    }
+
+    /// List all stored memories with optional limit
+    #[query]
+    #[icarus_tool("List all stored memories with optional limit")]
+    pub fn list(limit: Option<u64>) -> Result<Vec<MemoryEntry>, String> {
+        Ok(MEMORIES.with(|m| {
+            let memories = m.borrow();
+            let iter = memories.iter();
+            
+            match limit {
+                Some(n) => iter.take(n as usize).map(|(_, v)| v).collect(),
+                None => iter.map(|(_, v)| v).collect(),
+            }
+        }))
+    }
+
+    /// Search memories by tag
+    #[query]
+    #[icarus_tool("Search memories by tag")]
+    pub fn search_by_tag(tag: String) -> Result<Vec<MemoryEntry>, String> {
+        Ok(MEMORIES.with(|m| {
+            m.borrow()
+                .iter()
+                .filter(|(_, memory)| memory.tags.contains(&tag))
+                .map(|(_, v)| v)
+                .collect()
+        }))
+    }
+
+    /// Delete a memory by ID
+    #[update]
+    #[icarus_tool("Delete a memory by ID")]
+    pub fn forget(id: String) -> Result<bool, String> {
+        MEMORIES.with(|m| {
+            match m.borrow_mut().remove(&id) {
+                Some(_) => Ok(true),
+                None => Err(format!("Memory with ID {} not found", id))
+            }
+        })
+    }
+
+    /// Get total number of stored memories
+    #[query]
+    #[icarus_tool("Get total number of stored memories")]
+    pub fn count() -> Result<u64, String> {
+        Ok(MEMORIES.with(|m| m.borrow().len()))
+    }
+}
+
+// Export the Candid interface for the canister
+ic_cdk::export_candid!();
+"#;
+
+    fs::write(target, content)?;
+    Ok(())
+}
+
+fn create_cargo_toml(
+    project_path: &Path,
+    name: &str,
+    local_sdk: Option<String>,
+    with_tests: bool,
+    example_source: &Path,
+) -> Result<()> {
+    // Try to use Cargo.toml from example as template
+    let example_cargo = example_source.join("Cargo.toml");
+
+    let content = if example_cargo.exists() {
+        // Read example Cargo.toml and modify it
+        let mut content = fs::read_to_string(&example_cargo)?;
+
+        // Replace package name
+        content = content.replace("basic-memory-example", name);
+
+        // Update icarus dependency
+        let icarus_dep = if let Some(ref sdk) = local_sdk {
+            format!("{{ path = \"{}\" }}", sdk)
+        } else {
+            let cli_version = env!("CARGO_PKG_VERSION");
+            format!(
+                "{{ version = \"{}\", features = [\"canister\"] }}",
+                cli_version
+            )
+        };
+
+        // Update the icarus dependency line
+        content = content.replace(
+            r#"icarus = { path = "../..", features = ["canister"] }"#,
+            &format!("icarus = {}", icarus_dep),
+        );
+
+        // Add test dependencies if requested
+        if with_tests && !content.contains("[dev-dependencies]") {
+            content.push_str(
+                r#"
+[dev-dependencies]
+pocket-ic = "4.0"
+candid = "0.10"
+tokio = { version = "1", features = ["full"] }
+"#,
+            );
+        }
+
+        content
+    } else {
+        // Fallback Cargo.toml
+        create_fallback_cargo_toml(name, local_sdk, with_tests)?
+    };
+
+    fs::write(project_path.join("Cargo.toml"), content)?;
+    Ok(())
+}
+
+fn create_fallback_cargo_toml(
+    name: &str,
+    local_sdk: Option<String>,
+    with_tests: bool,
+) -> Result<String> {
     let dev_dependencies_section = if with_tests {
         r#"
 
@@ -111,27 +366,21 @@ pocket-ic = "4.0"
 candid = "0.10"
 tokio = { version = "1", features = ["full"] }
 "#
-        .to_string()
     } else {
-        String::new()
+        ""
     };
 
-    // Determine the SDK paths for both icarus and icarus-canister
     let icarus_dep = if let Some(ref sdk) = local_sdk {
-        // Use provided SDK path for local development
-        let base_path = if sdk.ends_with("icarus-sdk") {
-            sdk.clone()
-        } else {
-            sdk.clone()
-        };
-        format!("{{ path = \"{}\" }}", base_path)
+        format!("{{ path = \"{}\" }}", sdk)
     } else {
-        // Use the same version as the CLI from crates.io
         let cli_version = env!("CARGO_PKG_VERSION");
-        format!("\"{}\"", cli_version)
+        format!(
+            "{{ version = \"{}\", features = [\"canister\"] }}",
+            cli_version
+        )
     };
 
-    let cargo_toml = format!(
+    Ok(format!(
         r#"[package]
 name = "{}"
 version = "0.1.0"
@@ -141,157 +390,48 @@ edition = "2021"
 icarus = {}
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"
+ic-stable-structures = "0.6"
 candid = "0.10"
 serde = {{ version = "1.0", features = ["derive"] }}
-serde_json = "1.0"
-ic-stable-structures = "0.6"{}
+serde_json = "1.0"{}
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-opt-level = 'z'       # Optimize for size
-lto = true            # Enable link-time optimization  
-codegen-units = 1     # Single codegen unit for better optimization
-strip = "debuginfo"   # Strip debug info
-panic = "abort"       # Smaller binaries, matches WASM behavior
-overflow-checks = false # Disable runtime overflow checks
 "#,
         name, icarus_dep, dev_dependencies_section
+    ))
+}
+
+fn create_icarus_json(project_path: &Path, name: &str) -> Result<()> {
+    let icarus_json = format!(
+        r#"{{
+  "canister": "{}",
+  "version": "0.1.0",
+  "dfx": "0.24.2",
+  "build": {{
+    "output": "target/wasm32-unknown-unknown/release/{}.wasm"
+  }}
+}}
+"#,
+        name, name
     );
-    std::fs::write(project_path.join("Cargo.toml"), cargo_toml)?;
-
-    // Create lib.rs with Memento - a simple key-value memory storage tool
-    let lib_rs = r#"//! Memento - A simple key-value memory storage tool for the Internet Computer
-
-use icarus::prelude::*;
-
-// Define storage using stable_storage macro
-stable_storage! {
-    MEMORIES: StableBTreeMap<String, MemoryEntry, Memory> = memory_id!(0);
+    std::fs::write(project_path.join("icarus.json"), icarus_json)?;
+    Ok(())
 }
 
-/// Simple memory entry
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType, IcarusType)]
-pub struct MemoryEntry {
-    pub key: String,
-    pub content: String,
-    pub created_by: Principal,
-    pub created_at: u64,
-}
-
-#[icarus_module]
-mod tools {
-    use super::*;
-    
-    /// Store a memory with a unique key
-    #[update]
-    #[icarus_tool("Store a memory with a unique key")]
-    pub fn memorize(key: String, content: String) -> Result<String, String> {
-        // Require User role or higher (User, Admin, Owner can write)
-        require_role_or_higher(AuthRole::User);
-        let caller = ic_cdk::caller();
-        
-        // Validate inputs
-        if key.trim().is_empty() {
-            return Err("Key cannot be empty".to_string());
-        }
-        if content.trim().is_empty() {
-            return Err("Content cannot be empty".to_string());
-        }
-        if content.len() > 50_000 {
-            return Err("Content too large (max 50KB)".to_string());
-        }
-        
-        // Check for duplicate key
-        MEMORIES.with(|m| {
-            if m.borrow().contains_key(&key) {
-                return Err(format!("Key '{}' already exists", key));
-            }
-            
-            let memory = MemoryEntry {
-                key: key.clone(),
-                content,
-                created_by: caller,
-                created_at: api::time(),
-            };
-            
-            m.borrow_mut().insert(key.clone(), memory);
-            Ok(key)
-        })
-    }
-    
-    /// Retrieve a memory by its key
-    #[query]
-    #[icarus_tool("Retrieve a memory by its key")]
-    pub fn recall(key: String) -> Option<MemoryEntry> {
-        // Anyone except ReadOnly can recall memories
-        require_none_of_roles(&[AuthRole::ReadOnly]);
-        
-        MEMORIES.with(|m| m.borrow().get(&key))
-    }
-    
-    /// List all stored memories
-    #[query]
-    #[icarus_tool("List all stored memories")]
-    pub fn list() -> Vec<MemoryEntry> {
-        // Anyone except ReadOnly can list memories
-        require_none_of_roles(&[AuthRole::ReadOnly]);
-        
-        MEMORIES.with(|m| {
-            m.borrow()
-                .iter()
-                .map(|(_, memory)| memory)
-                .collect()
-        })
-    }
-    
-    /// Remove a memory by its key
-    #[update]
-    #[icarus_tool("Remove a memory by its key")]
-    pub fn forget(key: String) -> Result<bool, String> {
-        // User or higher can forget individual memories
-        require_role_or_higher(AuthRole::User);
-        
-        MEMORIES.with(|m| {
-            Ok(m.borrow_mut().remove(&key).is_some())
-        })
-    }
-    
-    /// Clear all memories
-    #[update]
-    #[icarus_tool("Clear all memories")]
-    pub fn forget_all() -> Result<u64, String> {
-        // Only Admin or Owner can clear all memories
-        require_role_or_higher(AuthRole::Admin);
-        
-        MEMORIES.with(|m| {
-            let count = m.borrow().len();
-            m.borrow_mut().clear_new();
-            Ok(count)
-        })
-    }
-}
-
-// Export candid interface
-ic_cdk::export_candid!();
-"#;
-    std::fs::write(src_dir.join("lib.rs"), lib_rs)?;
-
-    // Create dfx.json
+fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
     let dfx_json = format!(
         r#"{{
   "canisters": {{
     "{}": {{
-      "type": "rust",
-      "package": "{}",
-      "candid": "src/{}.did",
-      "optimize": "cycles"
+      "type": "custom",
+      "candid": "target/{}.did",
+      "wasm": "target/wasm32-unknown-unknown/release/{}.wasm",
+      "build": "icarus build"
     }}
   }},
   "defaults": {{
     "build": {{
-      "args": "",
       "packtool": ""
     }}
   }},
@@ -301,532 +441,61 @@ ic_cdk::export_candid!();
         name, name, name
     );
     std::fs::write(project_path.join("dfx.json"), dfx_json)?;
+    Ok(())
+}
 
-    // Candid file will be generated during build using candid-extractor
-
-    // Create README.md
+fn create_readme(project_path: &Path, name: &str) -> Result<()> {
     let readme = format!(
         r#"# {}
 
-A memory canister for the Internet Computer with bridge registration functionality.
-
-## Features
-
-- **Memory Storage**: Store and retrieve memories with tags
-- **Bridge Registration**: Secure bridge registration with delegation tokens
-- **Access Control**: Owner and authorized bridge access validation
-- **Stable Storage**: Persistent data across canister upgrades
+An MCP (Model Context Protocol) server running on the Internet Computer.
 
 ## Development
 
 ### Prerequisites
 
-- [DFX](https://internetcomputer.org/docs/current/developer-docs/setup/install/) (Internet Computer SDK)
-- Rust with `wasm32-unknown-unknown` target
+- [Rust](https://rustup.rs/)
+- [dfx](https://internetcomputer.org/docs/current/developer-docs/setup/install)
+- [Icarus CLI](https://crates.io/crates/icarus-cli)
 
 ### Building
 
 ```bash
-# Build the canister
-dfx build
-
-# Or using cargo directly
-cargo build --target wasm32-unknown-unknown --release
+icarus build
 ```
 
-### Testing
-
-First, download the PocketIC binary:
+### Local Deployment
 
 ```bash
-# Download PocketIC binary for your platform
-# macOS Apple Silicon
-curl -L https://github.com/dfinity/pocketic/releases/download/4.0.0/pocket-ic-x86_64-darwin.gz -o pocket-ic.gz
-# macOS Intel
-curl -L https://github.com/dfinity/pocketic/releases/download/4.0.0/pocket-ic-x86_64-darwin.gz -o pocket-ic.gz
-# Linux
-curl -L https://github.com/dfinity/pocketic/releases/download/4.0.0/pocket-ic-x86_64-linux.gz -o pocket-ic.gz
-
-# Extract and make executable
-gunzip pocket-ic.gz
-chmod +x pocket-ic
-
-# Run the tests
-cargo test
-```
-
-### Deploying
-
-```bash
-# Start local replica
+# Start local Internet Computer
 dfx start --clean
 
-# Deploy to local network
-dfx deploy
-
-# Deploy to IC mainnet
-dfx deploy --network ic
+# Deploy the canister
+icarus deploy --network local
 ```
 
-## Bridge Registration
+### Using with Claude Desktop
 
-This canister supports bridge registration using delegation tokens from the Icarus marketplace:
+After deployment, register your canister with Claude Desktop:
 
-1. **Purchase Tool**: Purchase the tool from the Icarus marketplace to receive a delegation token
-2. **Register Bridge**: Use the delegation token to register your bridge with the canister
-3. **Access Tools**: Once registered, the bridge can access all tool functions on behalf of the owner
-
-### Bridge Management
-
-#### For Canister Owners
-
-```candid
-// View all authorized bridges (owner only)
-get_authorized_bridges() -> (vec BridgeRegistration)
-
-// Revoke bridge access (owner only)
-revoke_bridge(bridge_principal: principal) -> (variant {{ Ok: bool; Err: text }})
-
-// Remove bridge completely (owner only)
-remove_bridge(bridge_principal: principal) -> (variant {{ Ok: bool; Err: text }})
+```bash
+icarus bridge start --canister-id <your-canister-id>
 ```
 
-#### For Bridges
+Then add the bridge configuration to Claude Desktop's config file.
 
-```candid
-// Register using delegation token from marketplace
-register_bridge(token: DelegationToken) -> (variant {{ Ok: null; Err: text }})
-```
+## Project Structure
 
-### Security Features
-
-- **Token Validation**: Delegation tokens are cryptographically verified
-- **Expiration**: Tokens have configurable expiration times
-- **Access Control**: Only registered bridges can access tool functions
-- **Owner Override**: Canister owner can always access and manage bridges
-
-## Candid Interface
-
-### Tool Functions
-
-- `memorize(content: text, tags: opt vec text) -> (variant {{ Ok: text; Err: text }})`
-- `forget(id: text) -> (variant {{ Ok: bool; Err: text }})`
-- `forget_oldest() -> (variant {{ Ok: bool; Err: text }})`
-- `recall_latest() -> (opt MemoryEntry)`
-- `list() -> (vec MemoryEntry)`
-- `list_tools() -> (text)`
-
-### Bridge Management Functions
-
-- `register_bridge(token: DelegationToken) -> (variant {{ Ok: null; Err: text }})`
-- `get_authorized_bridges() -> (vec BridgeRegistration)` (owner only)
-- `revoke_bridge(bridge_principal: principal) -> (variant {{ Ok: bool; Err: text }})` (owner only)
-- `remove_bridge(bridge_principal: principal) -> (variant {{ Ok: bool; Err: text }})` (owner only)
-
-### Data Types
-
-```candid
-type MemoryEntry = record {{
-    id: text;
-    content: text;
-    created_at: nat64;
-    tags: vec text;
-}};
-
-type DelegationToken = record {{
-    owner: principal;
-    canister_id: principal;
-    tool_id: text;
-    expiration: nat64;
-    nonce: nat64;
-    signature: vec nat8;
-    created_at: nat64;
-}};
-
-type BridgeRegistration = record {{
-    bridge_principal: principal;
-    owner: principal;
-    token_nonce: nat64;
-    registered_at: nat64;
-    last_used: opt nat64;
-    active: bool;
-}};
-```
+- `src/lib.rs` - Main canister code with MCP tool implementations
+- `icarus.json` - Icarus configuration
+- `dfx.json` - Internet Computer configuration
 
 ## License
 
-MIT
+See LICENSE file for details.
 "#,
         name
     );
     std::fs::write(project_path.join("README.md"), readme)?;
-
-    // Create integration test file if requested
-    if with_tests {
-        let tests_dir = project_path.join("tests");
-        let integration_test = format!(
-            r#"//! Integration tests for the {} canister using PocketIC
-
-use candid::{{encode_args, decode_args, CandidType, Principal, Deserialize}};
-use pocket_ic::{{PocketIc, WasmResult}};
-
-// Define types matching the canister
-#[derive(Debug, Clone, CandidType, Deserialize)]
-pub struct MemoryEntry {{
-    pub id: String,
-    pub content: String,
-    pub created_at: u64,
-    pub tags: Vec<String>,
-}}
-
-#[derive(Debug, Clone, CandidType, Deserialize)]
-pub struct DelegationToken {{
-    pub owner: Principal,
-    pub canister_id: Principal,
-    pub tool_id: String,
-    pub expiration: u64,
-    pub nonce: u64,
-    pub signature: Vec<u8>,
-    pub created_at: u64,
-}}
-
-#[derive(Debug, Clone, CandidType, Deserialize)]
-pub struct BridgeRegistration {{
-    pub bridge_principal: Principal,
-    pub owner: Principal,
-    pub token_nonce: u64,
-    pub registered_at: u64,
-    pub last_used: Option<u64>,
-    pub active: bool,
-}}
-
-// Define the Result types for Candid decoding
-#[derive(CandidType, candid::Deserialize)]
-enum MemorizeResult {{
-    Ok(String),
-    Err(String),
-}}
-
-#[derive(CandidType, candid::Deserialize)]
-enum ForgetResult {{
-    Ok(bool),
-    Err(String),
-}}
-
-#[derive(CandidType, candid::Deserialize)]
-enum BridgeResult {{
-    Ok(()),
-    Err(String),
-}}
-
-#[derive(CandidType, candid::Deserialize)]
-enum BridgeRemovalResult {{
-    Ok(bool),
-    Err(String),
-}}
-
-#[test]
-fn test_memorize_and_recall() {{
-    let pic = PocketIc::new();
-    
-    let canister_id = pic.create_canister();
-    let wasm_module = include_bytes!("../target/wasm32-unknown-unknown/release/{}.wasm");
-    
-    // Install canister with owner
-    let owner = Principal::from_text("rdmx6-jaaaa-aaaah-qcaiq-cai").unwrap();
-    let init_args = encode_args((owner,)).unwrap();
-    pic.install_canister(canister_id, wasm_module.to_vec(), init_args, None);
-    
-    // Test memorizing a fact as owner
-    let args = encode_args(("The sky is blue".to_string(), Some(vec!["color".to_string(), "nature".to_string()]))).unwrap();
-    let result = pic.update_call(
-        canister_id,
-        owner,
-        "memorize",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let memory_id: (MemorizeResult,) = decode_args(&bytes).unwrap();
-            match memory_id.0 {{
-                MemorizeResult::Ok(id) => {{
-                    // Test recalling the latest memory
-                    let args = encode_args(()).unwrap();
-                    let result = pic.query_call(
-                        canister_id,
-                        owner,
-                        "recall_latest",
-                        args
-                    ).unwrap();
-                    
-                    match result {{
-                        WasmResult::Reply(bytes) => {{
-                            let memory: (Option<MemoryEntry>,) = decode_args(&bytes).unwrap();
-                            assert!(memory.0.is_some());
-                            assert_eq!(memory.0.unwrap().content, "The sky is blue");
-                        }}
-                        WasmResult::Reject(msg) => panic!("Query rejected: {{}}", msg),
-                    }}
-                }}
-                MemorizeResult::Err(e) => panic!("Memorize failed: {{}}", e),
-            }}
-        }}
-        WasmResult::Reject(msg) => panic!("Update rejected: {{}}", msg),
-    }}
-}}
-
-#[test]
-fn test_unauthorized_access() {{
-    let pic = PocketIc::new();
-    
-    let canister_id = pic.create_canister();
-    let wasm_module = include_bytes!("../target/wasm32-unknown-unknown/release/{}.wasm");
-    
-    let owner = Principal::from_text("rdmx6-jaaaa-aaaah-qcaiq-cai").unwrap();
-    let unauthorized_user = Principal::from_text("rrkah-fqaaa-aaaah-qcaiq-cai").unwrap();
-    
-    let init_args = encode_args((owner,)).unwrap();
-    pic.install_canister(canister_id, wasm_module.to_vec(), init_args, None);
-    
-    // Test that unauthorized user cannot memorize
-    let args = encode_args(("Unauthorized content".to_string(), None::<Vec<String>>)).unwrap();
-    let result = pic.update_call(
-        canister_id,
-        unauthorized_user,
-        "memorize",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let memory_result: (MemorizeResult,) = decode_args(&bytes).unwrap();
-            match memory_result.0 {{
-                MemorizeResult::Ok(_) => panic!("Should have failed authorization"),
-                MemorizeResult::Err(err) => assert!(err.contains("Unauthorized")),
-            }}
-        }}
-        WasmResult::Reject(_) => {{
-            // This is also acceptable for authorization failures
-        }}
-    }}
-}}
-
-#[test]
-fn test_bridge_registration() {{
-    let pic = PocketIc::new();
-    
-    let canister_id = pic.create_canister();
-    let wasm_module = include_bytes!("../target/wasm32-unknown-unknown/release/{}.wasm");
-    
-    let owner = Principal::from_text("rdmx6-jaaaa-aaaah-qcaiq-cai").unwrap();
-    let bridge_principal = Principal::from_text("rrkah-fqaaa-aaaah-qcaiq-cai").unwrap();
-    
-    let init_args = encode_args((owner,)).unwrap();
-    pic.install_canister(canister_id, wasm_module.to_vec(), init_args, None);
-    
-    // Create a delegation token
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64;
-    
-    let delegation_token = DelegationToken {{
-        owner,
-        canister_id,
-        tool_id: "test_tool".to_string(),
-        expiration: now + 365 * 24 * 60 * 60 * 1_000_000_000, // 1 year
-        nonce: 12345,
-        signature: vec![1, 2, 3, 4], // Simple non-empty signature
-        created_at: now,
-    }};
-    
-    // Register bridge
-    let args = encode_args((delegation_token,)).unwrap();
-    let result = pic.update_call(
-        canister_id,
-        bridge_principal,
-        "register_bridge",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let bridge_result: (BridgeResult,) = decode_args(&bytes).unwrap();
-            match bridge_result.0 {{
-                BridgeResult::Ok(()) => {{
-                    // Success - now test that bridge can access tools
-                    let args = encode_args(("Bridge memory".to_string(), None::<Vec<String>>)).unwrap();
-                    let result = pic.update_call(
-                        canister_id,
-                        bridge_principal,
-                        "memorize",
-                        args
-                    ).unwrap();
-                    
-                    match result {{
-                        WasmResult::Reply(bytes) => {{
-                            let memory_result: (MemorizeResult,) = decode_args(&bytes).unwrap();
-                            match memory_result.0 {{
-                                MemorizeResult::Ok(_) => {{
-                                    // Success - bridge can now access tools
-                                }},
-                                MemorizeResult::Err(e) => panic!("Bridge should be authorized: {{}}", e),
-                            }}
-                        }}
-                        WasmResult::Reject(msg) => panic!("Bridge call rejected: {{}}", msg),
-                    }}
-                }},
-                BridgeResult::Err(e) => panic!("Bridge registration failed: {{}}", e),
-            }}
-        }}
-        WasmResult::Reject(msg) => panic!("Bridge registration rejected: {{}}", msg),
-    }}
-}}
-
-#[test]
-fn test_bridge_management() {{
-    let pic = PocketIc::new();
-    
-    let canister_id = pic.create_canister();
-    let wasm_module = include_bytes!("../target/wasm32-unknown-unknown/release/{}.wasm");
-    
-    let owner = Principal::from_text("rdmx6-jaaaa-aaaah-qcaiq-cai").unwrap();
-    let bridge_principal = Principal::from_text("rrkah-fqaaa-aaaah-qcaiq-cai").unwrap();
-    
-    let init_args = encode_args((owner,)).unwrap();
-    pic.install_canister(canister_id, wasm_module.to_vec(), init_args, None);
-    
-    // Register bridge first
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos() as u64;
-    
-    let delegation_token = DelegationToken {{
-        owner,
-        canister_id,
-        tool_id: "test_tool".to_string(),
-        expiration: now + 365 * 24 * 60 * 60 * 1_000_000_000,
-        nonce: 12345,
-        signature: vec![1, 2, 3, 4],
-        created_at: now,
-    }};
-    
-    let args = encode_args((delegation_token,)).unwrap();
-    pic.update_call(canister_id, bridge_principal, "register_bridge", args).unwrap();
-    
-    // Test getting authorized bridges (only owner should see them)
-    let args = encode_args(()).unwrap();
-    let result = pic.query_call(
-        canister_id,
-        owner,
-        "get_authorized_bridges",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let bridges: (Vec<BridgeRegistration>,) = decode_args(&bytes).unwrap();
-            assert_eq!(bridges.0.len(), 1);
-            assert_eq!(bridges.0[0].bridge_principal, bridge_principal);
-            assert!(bridges.0[0].active);
-        }}
-        WasmResult::Reject(msg) => panic!("Query rejected: {{}}", msg),
-    }}
-    
-    // Test revoking bridge access
-    let args = encode_args((bridge_principal,)).unwrap();
-    let result = pic.update_call(
-        canister_id,
-        owner,
-        "revoke_bridge",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let revoke_result: (BridgeRemovalResult,) = decode_args(&bytes).unwrap();
-            match revoke_result.0 {{
-                BridgeRemovalResult::Ok(success) => assert!(success),
-                BridgeRemovalResult::Err(e) => panic!("Revoke failed: {{}}", e),
-            }}
-        }}
-        WasmResult::Reject(msg) => panic!("Revoke rejected: {{}}", msg),
-    }}
-    
-    // Verify bridge can no longer access tools
-    let args = encode_args(("Should fail".to_string(), None::<Vec<String>>)).unwrap();
-    let result = pic.update_call(
-        canister_id,
-        bridge_principal,
-        "memorize",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let memory_result: (MemorizeResult,) = decode_args(&bytes).unwrap();
-            match memory_result.0 {{
-                MemorizeResult::Ok(_) => panic!("Bridge should no longer be authorized"),
-                MemorizeResult::Err(err) => assert!(err.contains("Unauthorized")),
-            }}
-        }}
-        WasmResult::Reject(_) => {{
-            // This is also acceptable for authorization failures
-        }}
-    }}
-}}
-
-#[test]
-fn test_list_all_memories() {{
-    let pic = PocketIc::new();
-    
-    let canister_id = pic.create_canister();
-    let wasm_module = include_bytes!("../target/wasm32-unknown-unknown/release/{}.wasm");
-    
-    let owner = Principal::from_text("rdmx6-jaaaa-aaaah-qcaiq-cai").unwrap();
-    let init_args = encode_args((owner,)).unwrap();
-    pic.install_canister(canister_id, wasm_module.to_vec(), init_args, None);
-    
-    // Add multiple memories as owner
-    for i in 0..5 {{
-        let args = encode_args((format!("Memory {{}}", i), None::<Vec<String>>)).unwrap();
-        pic.update_call(
-            canister_id,
-            owner,
-            "memorize",
-            args
-        ).unwrap();
-    }}
-    
-    // List all memories
-    let args = encode_args(()).unwrap();
-    let result = pic.query_call(
-        canister_id,
-        owner,
-        "list",
-        args
-    ).unwrap();
-    
-    match result {{
-        WasmResult::Reply(bytes) => {{
-            let memories: (Vec<MemoryEntry>,) = decode_args(&bytes).unwrap();
-            assert_eq!(memories.0.len(), 5);
-        }}
-        WasmResult::Reject(msg) => panic!("Query rejected: {{}}", msg),
-    }}
-}}
-"#,
-            name,
-            name.replace('-', "_"),
-            name.replace('-', "_"),
-            name.replace('-', "_"),
-            name.replace('-', "_"),
-            name.replace('-', "_")
-        );
-        std::fs::write(tests_dir.join("integration_test.rs"), integration_test)?;
-    }
-
     Ok(())
 }
