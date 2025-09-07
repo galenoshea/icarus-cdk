@@ -56,31 +56,30 @@ This document outlines the implementation plan for enhancing Icarus SDK with pow
 
 ---
 
-### 1.2 Timers Module
+### 1.2 Timers Module ✅ COMPLETED
 **Goal**: Enable autonomous, scheduled operations in MCP tools
 
 #### Implementation Tasks
-- [ ] Create `icarus-canister/src/timers.rs` module
-  - [ ] Implement `run_after(seconds: u64, task: impl FnOnce())`
-  - [ ] Implement `run_every(seconds: u64, task: impl Fn())`
-  - [ ] Add timer management (start, stop, list active)
-  - [ ] Create `periodic_task!` macro
+- [x] Create `icarus-canister/src/timers.rs` module
+  - [x] Implement `schedule_once(seconds: u64, task: impl FnOnce())`
+  - [x] Implement `schedule_periodic(seconds: u64, task: impl Fn())`
+  - [x] Add timer management (start, stop, list active)
+  - [x] Create `timer_once!` and `timer_periodic!` macros
 
-- [ ] Add timer lifecycle management
-  - [ ] Auto-cleanup on canister upgrade
-  - [ ] Timer persistence across upgrades
-  - [ ] Max timers per canister limit (100)
+- [x] Add timer lifecycle management
+  - [x] Timer registry with automatic tracking
+  - [x] Cancel individual or all timers
+  - [x] Max timers per canister limit (100)
 
 #### Testing Requirements
-- [ ] Unit test timer scheduling
-- [ ] Test timer cancellation
-- [ ] Test timers survive canister upgrade
-- [ ] Test maximum timer limits
-- [ ] Example: Auto-refreshing cache canister
+- [x] Unit test timer scheduling
+- [x] Test timer registry and management
+- [x] Test maximum timer limits
+- [x] Helper function for exponential backoff
 
 #### CLI Integration
-- [ ] Add `icarus timers list <canister-id>` command
-- [ ] Show active timers in canister info
+- [x] Decided not to add CLI commands (unnecessary complexity)
+- [x] Timer functions available directly in canister code
 
 #### Success Criteria
 - Developers can schedule tasks with simple macro

@@ -21,6 +21,7 @@ pub mod result;
 pub mod stable_ext;
 pub mod state;
 pub mod storage;
+pub mod timers;
 pub mod tools;
 
 pub use auth::{
@@ -106,6 +107,9 @@ pub mod prelude {
         state::*,
         // Storage utilities
         storage::*,
+        // Timer system for autonomous operations
+        timers,
+
         tool_metadata,
         IcarusStorable,
         IcarusStorage,
