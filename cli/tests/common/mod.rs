@@ -129,6 +129,11 @@ impl TestProject {
         fs::write(file_path, content).unwrap_or_else(|_| panic!("Failed to write file: {}", path));
     }
 
+    /// Create Cargo config override for testing with local workspace dependencies
+    pub fn create_cargo_config_override(&self) {
+        create_cargo_config_override(&self.project_dir());
+    }
+
     /// Run cargo build in the project
     #[allow(dead_code)]
     pub fn cargo_build(&self) -> Output {
@@ -205,6 +210,42 @@ pub fn assert_success(output: &Output) {
     );
 }
 
+/// Create a .cargo/config.toml to use local workspace dependencies instead of crates.io
+fn create_cargo_config_override(project_dir: &Path) {
+    // Get the SDK root directory (parent of cli directory)
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let sdk_root = manifest_dir
+        .parent()
+        .expect("Failed to get SDK root directory")
+        .to_path_buf();
+
+    // Create .cargo directory
+    let cargo_dir = project_dir.join(".cargo");
+    fs::create_dir_all(&cargo_dir).expect("Failed to create .cargo directory");
+
+    // Write config.toml with path overrides for all icarus crates
+    let config_content = format!(
+        r#"[patch.crates-io]
+icarus = {{ path = "{}" }}
+icarus-core = {{ path = "{}/crates/icarus-core" }}
+icarus-derive = {{ path = "{}/crates/icarus-derive" }}
+icarus-canister = {{ path = "{}/crates/icarus-canister" }}
+"#,
+        sdk_root.display(),
+        sdk_root.display(),
+        sdk_root.display(),
+        sdk_root.display()
+    );
+
+    let config_path = cargo_dir.join("config.toml");
+    fs::write(&config_path, config_content).expect("Failed to write .cargo/config.toml");
+
+    println!(
+        "Created Cargo config override at: {}",
+        config_path.display()
+    );
+}
+
 // Global shared project instance
 static SHARED_PROJECT: OnceCell<SharedTestProject> = OnceCell::new();
 
@@ -257,6 +298,9 @@ impl SharedTestProject {
             assert_success(&output);
 
             let project_dir = temp_dir_path.join(project_name);
+
+            // Create Cargo config to use local workspace dependencies
+            create_cargo_config_override(&project_dir);
 
             // Build the project once
             println!("Building shared test project (this may take a minute)...");
