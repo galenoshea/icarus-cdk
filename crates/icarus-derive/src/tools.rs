@@ -580,8 +580,8 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
                             "positional"
                         };
 
-                        let order_array = vec![#(#param_order),*];
-                        let types_array = vec![#(#param_types),*];
+                        let order_array: Vec<&str> = vec![#(#param_order),*];
+                        let types_array: Vec<&str> = vec![#(#param_types),*];
 
                         ::serde_json::json!({
                             "name": stringify!(#fn_name),
@@ -608,7 +608,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
         pub fn list_tools() -> String {
-            let tools = vec![#(#tool_entries),*];
+            let tools: Vec<::serde_json::Value> = vec![#(#tool_entries),*];
 
             ::serde_json::json!({
                 "name": env!("CARGO_PKG_NAME"),
@@ -922,8 +922,8 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
                             "positional"
                         };
 
-                        let order_array = vec![#(#param_order),*];
-                        let types_array = vec![#(#param_types),*];
+                        let order_array: Vec<&str> = vec![#(#param_order),*];
+                        let types_array: Vec<&str> = vec![#(#param_types),*];
 
                         ::serde_json::json!({
                             "name": stringify!(#fn_name),
@@ -950,7 +950,7 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
         /// List available MCP tools for discovery
         #[::ic_cdk_macros::query]
         pub fn list_tools() -> String {
-            let tools = vec![#(#tool_entries),*];
+            let tools: Vec<::serde_json::Value> = vec![#(#tool_entries),*];
 
             ::serde_json::json!({
                 "name": env!("CARGO_PKG_NAME"),
