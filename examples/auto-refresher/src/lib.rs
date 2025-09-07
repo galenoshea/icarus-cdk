@@ -26,7 +26,7 @@ mod tools {
 
     #[update]
     #[icarus_tool("Fetch cryptocurrency prices")]
-    pub async fn fetch_prices() -> Vec<PriceData> {
+    pub async fn fetch_prices() -> Result<Vec<PriceData>, String> {
         let symbols = vec!["BTC", "ETH", "ICP"];
         let mut results = Vec::new();
 
@@ -50,30 +50,30 @@ mod tools {
             });
         }
 
-        results
+        Ok(results)
     }
 
     #[query]
     #[icarus_tool("Get cached prices")]
-    pub fn get_cached_prices() -> Vec<PriceData> {
-        PRICE_CACHE.with(|cache| cache.borrow().clone())
+    pub fn get_cached_prices() -> Result<Vec<PriceData>, String> {
+        Ok(PRICE_CACHE.with(|cache| cache.borrow().clone()))
     }
 
     #[update]
     #[icarus_tool("Clear price cache")]
-    pub fn clear_cache() -> String {
+    pub fn clear_cache() -> Result<String, String> {
         PRICE_CACHE.with(|cache| {
             let count = cache.borrow().len();
             cache.borrow_mut().clear();
-            format!("Cleared {} cached prices", count)
+            Ok(format!("Cleared {} cached prices", count))
         })
     }
 
     #[update]
     #[icarus_tool("Schedule a price refresh")]
-    pub fn schedule_refresh(seconds: u64) -> String {
+    pub fn schedule_refresh(seconds: u64) -> Result<String, String> {
         // In a real app, would use timers::schedule_once
-        format!("Would schedule refresh in {} seconds", seconds)
+        Ok(format!("Would schedule refresh in {} seconds", seconds))
     }
 }
 

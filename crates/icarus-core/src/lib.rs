@@ -9,6 +9,7 @@
 //! This crate provides the fundamental traits and types for creating
 //! Model Context Protocol servers that run as Internet Computer canisters.
 
+pub mod compatibility;
 pub mod error;
 pub mod lifecycle;
 pub mod persistent;
@@ -20,6 +21,9 @@ pub mod session;
 pub mod state;
 pub mod tool;
 
+pub use compatibility::{
+    IcarusParam, IcarusReturn, IcarusTool as IcarusToolCompatible, ToolResult,
+};
 pub use error::{IcarusError, Result, ToolError};
 pub use response::{tool_ok, tool_success, ToolStatus, ToolSuccess};
 pub use server::IcarusServer;

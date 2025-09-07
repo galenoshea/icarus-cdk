@@ -464,6 +464,15 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             let has_query = func.attrs.iter().any(|attr| attr.path().is_ident("query"));
 
             if has_update || has_query {
+                // Validate the tool function signature
+                let validation =
+                    crate::validation::validate_tool_function(func, has_query, has_update);
+                if !validation.is_valid {
+                    let error_msg = validation.errors.join("; ");
+                    return quote! {
+                        compile_error!(#error_msg);
+                    };
+                }
                 // Check for skip_auth attribute (rarely used, only for special cases)
                 let skip_auth = func
                     .attrs

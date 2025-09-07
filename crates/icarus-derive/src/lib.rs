@@ -16,6 +16,7 @@ use syn::{parse_macro_input, DeriveInput};
 
 mod server;
 mod tools;
+mod validation;
 
 /// Derive macro for creating MCP tools
 #[proc_macro_derive(IcarusTool, attributes(icarus_tool))]
