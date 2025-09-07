@@ -252,12 +252,12 @@ icarus logs <id>          # View canister logs
 
 ---
 
-## 🔄 Migration from 0.3.x to 0.4.0
+## 🔄 Migration from 0.4.x to 0.5.0
 
-**Breaking Change**: The canister tool discovery endpoint has been renamed from `get_metadata()` to `list_tools()`.
+**New Features**: HTTP outcalls and timers are now built-in! No breaking changes.
 
 To upgrade:
-1. Update your dependency: `icarus = "0.4.0"`
+1. Update your dependency: `icarus = "0.5.0"`
 2. Rebuild your canister: `icarus build`
 3. Redeploy: `icarus deploy`
 

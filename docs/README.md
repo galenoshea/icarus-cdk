@@ -23,7 +23,8 @@ Welcome to the Icarus SDK documentation! This guide will help you build MCP (Mod
 
 ### Examples
 - **[Basic Memory Server](../examples/basic-memory/)** - Simple storage example
-- More examples coming soon!
+- **[HTTP Fetcher](../examples/http-fetcher/)** - External API integration
+- **[Auto-Refresher](../examples/auto-refresher/)** - Timers + HTTP outcalls
 
 ## 🚀 Quick Start
 
@@ -109,4 +110,4 @@ The Icarus SDK is licensed under the Business Source License (BSL-1.1). See [LIC
 
 ---
 
-*Last updated: September 2025 | Version 0.4.0*
+*Last updated: September 2025 | Version 0.5.0*

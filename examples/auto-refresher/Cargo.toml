@@ -8,8 +8,11 @@ crate-type = ["cdylib"]
 
 [dependencies]
 icarus = { path = "../..", features = ["canister"] }
+icarus-canister = { path = "../../crates/icarus-canister" }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
+ic-cdk-timers = { workspace = true }
+ic-stable-structures = { workspace = true }
 candid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

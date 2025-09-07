@@ -34,6 +34,7 @@ members = [
     "crates/icarus-canister",
     "cli",
     "examples/http-fetcher",
+    "examples/auto-refresher",
 ]
 resolver = "2"
 
@@ -67,6 +68,7 @@ chrono = { version = "0.4.41", default-features = false, features = [
 web-time = { version = "1.1.0", default-features = false }
 ic-cdk = "0.16"
 ic-cdk-macros = "0.16"
+ic-cdk-timers = "0.10"
 ic-stable-structures = "0.6"
 candid = "0.10"
 serde = { version = "1.0", features = ["derive"] }
