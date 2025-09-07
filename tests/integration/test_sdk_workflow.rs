@@ -2,44 +2,22 @@
 
 use icarus_canister::tools::{ToolRegistration, ToolRegistry};
 use icarus_core::error::ToolError;
-use icarus_core::prompts::{PromptBuilder, PromptRegistry};
 use serde_json::json;
-use std::collections::HashMap;
 
-/// Test the complete workflow of creating a tool with prompts
+/// Test the complete workflow of creating and executing tools
 #[tokio::test]
 async fn test_complete_tool_workflow() {
-    // Step 1: Set up prompts
-    let mut prompt_registry = PromptRegistry::new();
-
-    let system_prompt = PromptBuilder::new("system")
-        .description("System prompt for the tool")
-        .template("You are {{role}} helping with {{task}}")
-        .arg_with_default("role", "The role of the assistant", "an assistant")
-        .arg("task", "The task to help with", true)
-        .build();
-
-    prompt_registry.register(system_prompt);
-
-    // Step 2: Set up tools
+    // Set up tools
     let mut tool_registry = ToolRegistry::new();
 
     let tool = ToolRegistration {
-        name: "prompt_tool".to_string(),
-        description: "A tool that uses prompts".to_string(),
-        function: Box::new(move |args| {
-            let prompt_registry_clone = prompt_registry.clone();
+        name: "echo_tool".to_string(),
+        description: "A tool that echoes input".to_string(),
+        function: Box::new(|args| {
             Box::pin(async move {
-                let mut prompt_args = HashMap::new();
-                prompt_args.insert("task".to_string(), "testing".to_string());
-
-                let rendered = prompt_registry_clone
-                    .render("system", &prompt_args)
-                    .map_err(ToolError::operation_failed)?;
-
                 Ok(json!({
-                    "prompt": rendered,
-                    "input": args
+                    "echoed": args,
+                    "processed": true
                 }))
             })
         }),
@@ -47,14 +25,13 @@ async fn test_complete_tool_workflow() {
 
     tool_registry.register(tool);
 
-    // Step 3: Execute the tool
+    // Execute the tool
     let input = json!({"message": "test message"});
-    let result = tool_registry.execute("prompt_tool", input).await.unwrap();
+    let result = tool_registry.execute("echo_tool", input).await.unwrap();
 
-    // Step 4: Verify the results
-    assert!(result["prompt"].as_str().unwrap().contains("an assistant"));
-    assert!(result["prompt"].as_str().unwrap().contains("testing"));
-    assert_eq!(result["input"]["message"], "test message");
+    // Verify the results
+    assert_eq!(result["echoed"]["message"], "test message");
+    assert_eq!(result["processed"], true);
 }
 
 /// Test error handling across the SDK

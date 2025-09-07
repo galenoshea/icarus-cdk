@@ -37,10 +37,6 @@ members = [
 resolver = "2"
 
 [[test]]
-name = "unit_prompts"
-path = "tests/unit/test_prompts.rs"
-
-[[test]]
 name = "unit_session"
 path = "tests/unit/test_session.rs"
 

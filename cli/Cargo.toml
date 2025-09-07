@@ -32,7 +32,7 @@ toml = "0.8"
 ciborium = "0.2"
 
 # MCP Protocol
-rmcp = { version = "0.6.1", features = ["server"] }
+rmcp = { version = "0.6.3", features = ["server"] }
 schemars = "1.0"
 
 # Security and credentials

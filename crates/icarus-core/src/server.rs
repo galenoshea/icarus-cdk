@@ -1,7 +1,6 @@
 //! Server trait and implementation for Icarus MCP servers
 
 use crate::error::Result;
-use crate::resource::IcarusResource;
 use crate::tool::IcarusTool;
 use async_trait::async_trait;
 use candid::Principal;
@@ -55,7 +54,4 @@ pub trait IcarusServer: ServerHandler + Send + Sync {
 
     /// Register a tool with the server
     fn register_tool(&mut self, tool: Box<dyn IcarusTool>) -> Result<()>;
-
-    /// Register a resource with the server
-    fn register_resource(&mut self, resource: Box<dyn IcarusResource>) -> Result<()>;
 }

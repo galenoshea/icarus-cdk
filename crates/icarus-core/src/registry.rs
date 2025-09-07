@@ -1,12 +1,11 @@
-//! Tool and resource registry for dynamic registration
+//! Tool registry for dynamic registration
 
 use crate::error::Result;
-use crate::resource::IcarusResource;
 use crate::tool::IcarusTool;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-/// Registry for dynamically managing tools and resources
+/// Registry for dynamically managing tools
 #[async_trait]
 pub trait IcarusToolRegistry: Send + Sync {
     /// Register a new tool
@@ -20,24 +19,11 @@ pub trait IcarusToolRegistry: Send + Sync {
 
     /// List all registered tools
     async fn list_tools(&self) -> Result<Vec<String>>;
-
-    /// Register a new resource
-    async fn register_resource(&mut self, resource: Box<dyn IcarusResource>) -> Result<()>;
-
-    /// Unregister a resource by URI
-    async fn unregister_resource(&mut self, uri: &str) -> Result<()>;
-
-    /// Get a resource by URI
-    async fn get_resource(&self, uri: &str) -> Result<Option<&dyn IcarusResource>>;
-
-    /// List all registered resources
-    async fn list_resources(&self) -> Result<Vec<String>>;
 }
 
 /// Default implementation of tool registry
 pub struct DefaultToolRegistry {
     tools: HashMap<String, Box<dyn IcarusTool>>,
-    resources: HashMap<String, Box<dyn IcarusResource>>,
 }
 
 impl DefaultToolRegistry {
@@ -45,7 +31,6 @@ impl DefaultToolRegistry {
     pub fn new() -> Self {
         Self {
             tools: HashMap::new(),
-            resources: HashMap::new(),
         }
     }
 }
@@ -76,25 +61,6 @@ impl IcarusToolRegistry for DefaultToolRegistry {
     async fn list_tools(&self) -> Result<Vec<String>> {
         Ok(self.tools.keys().cloned().collect())
     }
-
-    async fn register_resource(&mut self, resource: Box<dyn IcarusResource>) -> Result<()> {
-        let info = resource.info();
-        self.resources.insert(info.uri.clone(), resource);
-        Ok(())
-    }
-
-    async fn unregister_resource(&mut self, uri: &str) -> Result<()> {
-        self.resources.remove(uri);
-        Ok(())
-    }
-
-    async fn get_resource(&self, uri: &str) -> Result<Option<&dyn IcarusResource>> {
-        Ok(self.resources.get(uri).map(|r| r.as_ref()))
-    }
-
-    async fn list_resources(&self) -> Result<Vec<String>> {
-        Ok(self.resources.keys().cloned().collect())
-    }
 }
 
 #[cfg(test)]
@@ -105,14 +71,12 @@ mod tests {
     fn test_default_registry() {
         let registry = DefaultToolRegistry::default();
         assert_eq!(registry.tools.len(), 0);
-        assert_eq!(registry.resources.len(), 0);
     }
 
     #[test]
     fn test_new_registry() {
         let registry = DefaultToolRegistry::new();
         assert_eq!(registry.tools.len(), 0);
-        assert_eq!(registry.resources.len(), 0);
     }
 
     // Note: Full async tests with mock implementations would require
