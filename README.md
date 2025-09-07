@@ -74,10 +74,10 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.4.0"
+icarus = "0.5.0"
 
 # Or specify features explicitly
-icarus = { version = "0.4.0", features = ["canister"] }
+icarus = { version = "0.5.0", features = ["canister"] }
 
 # Other required dependencies for canister development
 ic-cdk = "0.16"
