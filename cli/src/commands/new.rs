@@ -420,12 +420,15 @@ fn create_icarus_json(project_path: &Path, name: &str) -> Result<()> {
 }
 
 fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
+    // Convert hyphens to underscores for the WASM filename
+    let wasm_name = name.replace("-", "_");
+
     let dfx_json = format!(
         r#"{{
   "canisters": {{
     "{}": {{
       "type": "custom",
-      "candid": "target/{}.did",
+      "candid": "src/{}.did",
       "wasm": "target/wasm32-unknown-unknown/release/{}.wasm",
       "build": "icarus build"
     }}
@@ -435,10 +438,16 @@ fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
       "packtool": ""
     }}
   }},
+  "networks": {{
+    "local": {{
+      "bind": "127.0.0.1:4943",
+      "type": "ephemeral"
+    }}
+  }},
   "version": 1
 }}
 "#,
-        name, name, name
+        name, name, wasm_name
     );
     std::fs::write(project_path.join("dfx.json"), dfx_json)?;
     Ok(())
