@@ -1,0 +1,18 @@
+[package]
+name = "auto-refresher"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+icarus = { path = "../..", features = ["canister"] }
+ic-cdk = { workspace = true }
+ic-cdk-macros = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[package.metadata.candid]
+did_path = "auto_refresher.did"

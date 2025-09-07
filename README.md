@@ -28,6 +28,8 @@ By combining the **Model Context Protocol** (MCP) with the **Internet Computer P
 - 🔒 **Stay Secure** - Built-in blockchain security and authentication
 - 💰 **Cost Pennies** - ICP's reverse gas model means predictable, low costs
 - ⚡ **Scale Instantly** - Automatic scaling with canister architecture
+- 🌍 **HTTP Outcalls** - Fetch external data from any API
+- ⏰ **Autonomous Operations** - Schedule tasks with built-in timers
 
 ### 📊 Comparison
 
@@ -147,6 +149,51 @@ icarus/
 - **Type Safety** - Full Rust type checking and IDE support
 - **Hot Reload** - Local development with instant feedback
 - **Rich CLI** - Project scaffolding, deployment, and management
+
+### 🌍 HTTP Outcalls
+
+```rust
+use icarus::prelude::*;
+
+// Fetch any external API with one line
+let data = http::get("https://api.example.com/data").await?;
+
+// POST JSON with automatic serialization
+let response = http::post_json(url, json!({
+    "user": "alice",
+    "action": "subscribe"
+})).await?;
+
+// Built-in retry logic and error handling
+let config = HttpConfig {
+    max_retries: 5,
+    timeout_seconds: 30,
+    ..Default::default()
+};
+let result = http::get_with_config(url, config).await?;
+```
+
+### ⏰ Autonomous Timers
+
+```rust
+use icarus::prelude::*;
+
+// Schedule one-time tasks
+let cleanup = timers::schedule_once(3600, "hourly-cleanup", || {
+    // This runs after 1 hour
+    cleanup_old_data();
+})?;
+
+// Create recurring tasks
+let heartbeat = timers::schedule_periodic(300, "health-check", || {
+    // This runs every 5 minutes forever
+    check_system_health();
+})?;
+
+// Manage timers dynamically
+timers::cancel_timer(cleanup)?;
+let active = timers::list_active_timers();
+```
 
 ### 💾 Stable Storage
 

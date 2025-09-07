@@ -5,6 +5,27 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2025-09-07
+
+### Added
+- **HTTP Outcalls Module**: Simple, idiomatic HTTP client for ICP canisters
+  - `http::get()` and `http::post_json()` for easy external API access
+  - Built-in retry logic with exponential backoff
+  - Configurable timeouts and response size limits
+  - Automatic cycle cost management
+  - ~420 lines of boilerplate eliminated per project
+- **Timers Module**: Autonomous task scheduling for canisters
+  - `timers::schedule_once()` for one-time delayed tasks
+  - `timers::schedule_periodic()` for recurring operations
+  - Timer registry with 100 timer limit for resource management
+  - Helper macros `timer_once!` and `timer_periodic!`
+  - ~420 lines of boilerplate eliminated per project
+- **Auto-Refresher Example**: Demonstrates combining HTTP outcalls with timers
+- **Enhanced Documentation**: Added HTTP and timers sections to README
+
+### Removed
+- **test-http CLI command**: Removed unnecessary testing command (use dfx canister call instead)
+
 ## [0.4.1] - 2025-09-07
 
 ### Added

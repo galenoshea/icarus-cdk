@@ -1,0 +1,21 @@
+{
+  "canisters": {
+    "auto_refresher": {
+      "type": "rust",
+      "package": "auto-refresher",
+      "candid": "auto_refresher.did"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": ""
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    }
+  },
+  "version": 1
+}
