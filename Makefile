@@ -29,14 +29,17 @@ help:
 install-hooks:
 	@./scripts/install-hooks.sh
 
-# Run unit and integration tests
+# Run unit and integration tests (only packages with actual tests)
 test:
-	@cargo test --all --lib --bins
+	@echo "🧪 Running unit tests..."
+	@cargo test --package icarus-core --package icarus-canister --lib
+	@echo "🔧 Running CLI bin tests..."
+	@cargo test --package icarus-cli --bins
 
 # Quick test - unit tests only (fastest feedback)
 test-quick:
 	@echo "🚀 Running quick unit tests..."
-	@cargo test --lib --release --quiet
+	@cargo test --package icarus-core --package icarus-canister --lib --release --quiet
 
 # Run E2E tests for CLI (now parallel by default)
 test-e2e:
