@@ -5,6 +5,21 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.7] - 2025-09-08
+
+### Fixed
+- **Universal Candid Decoding**: The MCP-ICP bridge can now decode ANY Rust function return type
+  - Added dynamic `IDLArgs` decoding to handle complex nested types
+  - Fixed parameter encoding for multiple arguments (no longer encoded as tuples)
+  - Supports `Result<Vec<T>, E>`, custom structs, enums, and all Candid types
+  - Converts any `IDLValue` to JSON representation for Claude Desktop compatibility
+
+### Changed
+- **Enhanced `icarus deploy`**: Now builds WASM, extracts Candid interface, and optimizes with ic-wasm
+  - Automatically runs candid-extractor to update .did file with all tool functions
+  - Applies ic-wasm optimizations to reduce binary size
+  - Shows build output for transparency
+
 ## [0.5.6] - 2025-09-08
 
 ### Removed

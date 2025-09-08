@@ -240,9 +240,9 @@ If you're having issues with WASM optimization:
 ### Candid Interface Changes
 If your Candid interface needs updating:
 
-1. Rebuild to regenerate the interface:
+1. Rebuild to regenerate the interface by deploying:
    ```bash
-   icarus build
+   icarus deploy --network local
    ```
 
 2. The new interface will be in `src/<project-name>.did`

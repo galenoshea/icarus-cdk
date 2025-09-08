@@ -39,9 +39,8 @@ Welcome to the Icarus SDK documentation! This guide will help you build MCP (Mod
    cd my-mcp-server
    ```
 
-3. **Build and deploy:**
+3. **Deploy (automatically builds):**
    ```bash
-   icarus build
    icarus deploy --network local
    ```
 

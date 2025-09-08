@@ -23,23 +23,17 @@ The CLI handles this automatically, but you can also start manually:
 dfx start --clean
 ```
 
-### 2. Build Your Project
-
-```bash
-icarus build
-```
-
-This:
-- Compiles Rust to WASM
-- Generates Candid interface
-- Optimizes WASM size
-- Prepares deployment artifacts
-
-### 3. Deploy Locally
+### 2. Deploy Locally
 
 ```bash
 icarus deploy --network local
 ```
+
+This will:
+- Compile Rust to WASM automatically
+- Generate Candid interface
+- Optimize WASM size with ic-wasm
+- Deploy to local network
 
 Output:
 ```
@@ -323,15 +317,11 @@ jobs:
 #!/bin/bash
 set -e
 
-# Build
-echo "Building project..."
-icarus build --release
-
 # Run tests
 echo "Running tests..."
-icarus test --all
+cargo test --all
 
-# Deploy
+# Deploy (builds automatically with optimizations)
 echo "Deploying to mainnet..."
 icarus deploy --network ic --cycles 5000000000000
 

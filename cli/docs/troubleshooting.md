@@ -89,8 +89,8 @@ rustup target add wasm32-unknown-unknown
 # Increase memory for build
 export CARGO_BUILD_JOBS=2  # Reduce parallel jobs
 
-# Or use release mode
-icarus build --release
+# Deploy will build automatically with optimizations
+icarus deploy --network local
 ```
 
 ### Dependency Conflicts
@@ -178,9 +178,7 @@ Error: Failed to install canister code
 # Check WASM size
 ls -lh .dfx/local/canisters/*/**.wasm
 
-# If too large, optimize
-icarus build --release
-
+# If too large, deploy will optimize automatically
 # Clear cache and retry
 rm -rf .dfx
 icarus deploy --network local
@@ -373,7 +371,7 @@ cargo clean
 
 ```bash
 # CLI logging
-RUST_LOG=debug icarus build
+RUST_LOG=debug icarus deploy --network local
 
 # Bridge logging
 RUST_LOG=icarus_bridge=debug icarus bridge start --canister-id <id>
@@ -447,6 +445,5 @@ curl -L https://icarus.dev/install.sh | sh
 # Start fresh
 icarus new test-project
 cd test-project
-icarus build
 icarus deploy --network local
 ```

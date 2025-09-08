@@ -71,17 +71,14 @@ mod tools {
 - Use `#[icarus_storable(unbounded)]` for large data
 - All types must implement `CandidType`
 
-### 4. Building and Testing
-
-Build your project:
-```bash
-icarus build
-```
+### 4. Testing Your Code
 
 Run tests:
 ```bash
 cargo test
 ```
+
+Note: The project is automatically built when you deploy, so there's no separate build step needed.
 
 ### 5. Local Deployment
 
@@ -92,9 +89,10 @@ icarus deploy --network local
 
 This will:
 1. Start local dfx network if needed
-2. Deploy your canister
-3. Return the canister ID
-4. Show bridge configuration
+2. Build your project automatically
+3. Deploy your canister
+4. Return the canister ID
+5. Show bridge configuration
 
 ### 6. Testing with Claude Desktop
 
