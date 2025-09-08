@@ -5,9 +5,11 @@
 #![allow(dead_code)]
 
 use anyhow::Result;
+use candid::types::value::{IDLArgs, IDLValue};
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
 use ic_agent::Agent;
 use serde::Serialize;
+use serde_json::{json, Value as JsonValue};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -376,22 +378,153 @@ impl CanisterClient {
         }
     }
 
-    /// Decode response from canister
-    fn decode_response(&self, response: Vec<u8>) -> Result<String> {
-        // Try to decode as Result<String, String> first (common pattern)
-        if let Ok(result) = Decode!(&response, Result<String, String>) {
-            match result {
-                Ok(success) => Ok(success),
-                Err(e) => Err(anyhow::anyhow!("Canister error: {}", e)),
+    /// Convert an IDLValue to JSON
+    fn idl_to_json(&self, value: &IDLValue) -> JsonValue {
+        match value {
+            IDLValue::Null => json!(null),
+            IDLValue::Bool(b) => json!(b),
+            IDLValue::Number(s) => {
+                // Try to parse as various number types
+                if let Ok(n) = s.parse::<i64>() {
+                    json!(n)
+                } else if let Ok(n) = s.parse::<u64>() {
+                    json!(n)
+                } else if let Ok(n) = s.parse::<f64>() {
+                    json!(n)
+                } else {
+                    // Fallback to string for very large numbers
+                    json!(s)
+                }
             }
-        } else if let Ok(string_result) = Decode!(&response, String) {
-            // Direct string response
-            Ok(string_result)
-        } else {
-            // Fallback: try to decode as bytes or return error
-            Err(anyhow::anyhow!(
-                "Unable to decode canister response. The response format is not supported."
-            ))
+            IDLValue::Int(i) => json!(i.to_string()),
+            IDLValue::Nat(n) => json!(n.to_string()),
+            IDLValue::Nat8(n) => json!(n),
+            IDLValue::Nat16(n) => json!(n),
+            IDLValue::Nat32(n) => json!(n),
+            IDLValue::Nat64(n) => json!(n),
+            IDLValue::Int8(i) => json!(i),
+            IDLValue::Int16(i) => json!(i),
+            IDLValue::Int32(i) => json!(i),
+            IDLValue::Int64(i) => json!(i),
+            IDLValue::Float32(f) => json!(f),
+            IDLValue::Float64(f) => json!(f),
+            IDLValue::Text(s) => json!(s),
+            IDLValue::None => json!(null),
+            IDLValue::Opt(boxed_value) => {
+                // Opt contains a Box<IDLValue>, not an Option
+                self.idl_to_json(boxed_value)
+            }
+            IDLValue::Vec(values) => {
+                let array: Vec<JsonValue> = values.iter().map(|v| self.idl_to_json(v)).collect();
+                json!(array)
+            }
+            IDLValue::Record(fields) => {
+                let mut object = serde_json::Map::new();
+                for field in fields {
+                    // Field structure: id (Id(u32) or Name(String)) and val (IDLValue)
+                    let key = field.id.to_string();
+                    object.insert(key, self.idl_to_json(&field.val));
+                }
+                json!(object)
+            }
+            IDLValue::Variant(variant) => {
+                // Variant is a Box containing a field (with id and val) and a u64 code
+                let mut object = serde_json::Map::new();
+                let key = variant.0.id.to_string();
+                object.insert(key, self.idl_to_json(&variant.0.val));
+                json!(object)
+            }
+            IDLValue::Principal(p) => json!(p.to_text()),
+            IDLValue::Service(p) => json!(p.to_text()),
+            IDLValue::Func(p, m) => json!(format!("{}::{}", p.to_text(), m)),
+            IDLValue::Reserved => json!("reserved"),
+            _ => json!(format!("{:?}", value)), // Fallback for any unhandled types
+        }
+    }
+
+    /// Decode response from canister using dynamic Candid decoding
+    fn decode_response(&self, response: Vec<u8>) -> Result<String> {
+        let debug = std::env::var("ICARUS_DEBUG").is_ok();
+
+        if debug {
+            eprintln!(
+                "[DEBUG] Attempting to decode response of {} bytes",
+                response.len()
+            );
+        }
+
+        // Try to decode as IDLArgs for universal handling
+        match IDLArgs::from_bytes(&response) {
+            Ok(idl_args) => {
+                if debug {
+                    eprintln!(
+                        "[DEBUG] Successfully decoded as IDLArgs with {} values",
+                        idl_args.args.len()
+                    );
+                }
+
+                // Convert the first argument to JSON (most responses have a single value)
+                if let Some(first_arg) = idl_args.args.first() {
+                    let json_value = self.idl_to_json(first_arg);
+
+                    // Special handling for Result variants
+                    if let Some(obj) = json_value.as_object() {
+                        if obj.contains_key("Ok") {
+                            // This is a Result::Ok, extract the inner value
+                            if let Some(ok_value) = obj.get("Ok") {
+                                // If the Ok value is a string, return it directly
+                                if let Some(s) = ok_value.as_str() {
+                                    return Ok(s.to_string());
+                                } else {
+                                    // Otherwise return the JSON representation
+                                    return Ok(serde_json::to_string_pretty(ok_value)?);
+                                }
+                            }
+                        } else if obj.contains_key("Err") {
+                            // This is a Result::Err, return as error
+                            if let Some(err_value) = obj.get("Err") {
+                                if let Some(s) = err_value.as_str() {
+                                    return Err(anyhow::anyhow!("Canister error: {}", s));
+                                } else {
+                                    return Err(anyhow::anyhow!("Canister error: {}", err_value));
+                                }
+                            }
+                        }
+                    }
+
+                    // For non-Result types, return the JSON representation
+                    if let Some(s) = json_value.as_str() {
+                        // If it's already a string, return it directly
+                        Ok(s.to_string())
+                    } else {
+                        // Otherwise return the JSON representation
+                        Ok(serde_json::to_string_pretty(&json_value)?)
+                    }
+                } else {
+                    // No arguments in response
+                    Ok("null".to_string())
+                }
+            }
+            Err(e) => {
+                if debug {
+                    eprintln!("[DEBUG] Failed to decode as IDLArgs: {}", e);
+                }
+
+                // Fallback: Try the old approach for backward compatibility
+                if let Ok(result) = Decode!(&response, Result<String, String>) {
+                    match result {
+                        Ok(success) => Ok(success),
+                        Err(e) => Err(anyhow::anyhow!("Canister error: {}", e)),
+                    }
+                } else if let Ok(string_result) = Decode!(&response, String) {
+                    Ok(string_result)
+                } else {
+                    Err(anyhow::anyhow!(
+                        "Unable to decode canister response. The response format is not supported. Error: {}",
+                        e
+                    ))
+                }
+            }
         }
     }
 }

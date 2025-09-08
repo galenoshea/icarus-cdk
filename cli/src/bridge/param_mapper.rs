@@ -177,51 +177,146 @@ impl ParamMapper {
         types: &[String],
         args: Value,
     ) -> Result<Vec<u8>> {
+        let debug = std::env::var("ICARUS_DEBUG").is_ok();
+
+        if debug {
+            eprintln!(
+                "[DEBUG] encode_positional: order={:?}, types={:?}, args={}",
+                order, types, args
+            );
+        }
+
         if !args.is_object() {
             return Err(anyhow!("Expected object for positional parameters"));
         }
 
         let obj = args.as_object().unwrap();
-        let mut encoded = Vec::new();
 
-        for (i, param_name) in order.iter().enumerate() {
+        // Collect all parameter values in order
+        let mut values: Vec<String> = Vec::new();
+
+        for param_name in order.iter() {
             let value = obj.get(param_name);
-            let param_type = types.get(i).map(|s| s.as_str()).unwrap_or("text");
-
-            // Encode based on type
-            let param_bytes = match param_type {
-                "text" => {
-                    let s = value.and_then(|v| v.as_str()).unwrap_or("");
-                    Encode!(&s)?
+            let param_value = if let Some(v) = value {
+                match v {
+                    Value::String(s) => s.clone(),
+                    Value::Number(n) => n.to_string(),
+                    Value::Bool(b) => b.to_string(),
+                    _ => v.to_string(),
                 }
-                "nat64" | "nat" => {
-                    let n = value.and_then(|v| v.as_u64()).unwrap_or(0);
-                    Encode!(&n)?
-                }
-                "int64" | "int" => {
-                    let n = value.and_then(|v| v.as_i64()).unwrap_or(0);
-                    Encode!(&n)?
-                }
-                "bool" => {
-                    let b = value.and_then(|v| v.as_bool()).unwrap_or(false);
-                    Encode!(&b)?
-                }
-                _ => {
-                    // Default to string representation
-                    let s = value.map(|v| v.to_string()).unwrap_or_default();
-                    Encode!(&s)?
-                }
-            };
-
-            // For multiple parameters, we need to encode them as a tuple
-            // This is a simplified approach - may need refinement
-            if i == 0 {
-                encoded = param_bytes;
             } else {
-                // This is tricky - Candid tuple encoding needs special handling
-                // For now, we'll append, but this needs proper tuple encoding
-                encoded.extend(param_bytes);
+                // Parameter not provided, use empty string as default
+                String::new()
+            };
+            values.push(param_value);
+        }
+
+        if debug {
+            eprintln!("[DEBUG] Collected values: {:?}", values);
+        }
+
+        // Encode all parameters together
+        // IMPORTANT: Multiple parameters must be encoded in a single Encode! call,
+        // not as a tuple but as separate arguments to match Candid function signatures
+        let encoded = match values.len() {
+            0 => Encode!(&())?,
+            1 => {
+                // Single parameter
+                let param_type = types.get(0).map(|s| s.as_str()).unwrap_or("text");
+                match param_type {
+                    "nat64" | "nat" => {
+                        let n = values[0].parse::<u64>().unwrap_or(0);
+                        Encode!(&n)?
+                    }
+                    "int64" | "int" => {
+                        let n = values[0].parse::<i64>().unwrap_or(0);
+                        Encode!(&n)?
+                    }
+                    "bool" => {
+                        let b = values[0].parse::<bool>().unwrap_or(false);
+                        Encode!(&b)?
+                    }
+                    _ => Encode!(&values[0])?,
+                }
             }
+            2 => {
+                // Two parameters - encode as separate arguments, not as a tuple
+                let v1 = &values[0];
+                let v2 = &values[1];
+                Encode!(&v1, &v2)?
+            }
+            3 => {
+                // Three parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                Encode!(&v1, &v2, &v3)?
+            }
+            4 => {
+                // Four parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                let v4 = &values[3];
+                Encode!(&v1, &v2, &v3, &v4)?
+            }
+            5 => {
+                // Five parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                let v4 = &values[3];
+                let v5 = &values[4];
+                Encode!(&v1, &v2, &v3, &v4, &v5)?
+            }
+            6 => {
+                // Six parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                let v4 = &values[3];
+                let v5 = &values[4];
+                let v6 = &values[5];
+                Encode!(&v1, &v2, &v3, &v4, &v5, &v6)?
+            }
+            7 => {
+                // Seven parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                let v4 = &values[3];
+                let v5 = &values[4];
+                let v6 = &values[5];
+                let v7 = &values[6];
+                Encode!(&v1, &v2, &v3, &v4, &v5, &v6, &v7)?
+            }
+            8 => {
+                // Eight parameters
+                let v1 = &values[0];
+                let v2 = &values[1];
+                let v3 = &values[2];
+                let v4 = &values[3];
+                let v5 = &values[4];
+                let v6 = &values[5];
+                let v7 = &values[6];
+                let v8 = &values[7];
+                Encode!(&v1, &v2, &v3, &v4, &v5, &v6, &v7, &v8)?
+            }
+            _ => {
+                // For more than 8 parameters, we'd need a different approach
+                // This is a very rare case - most functions don't have >8 params
+                return Err(anyhow!(
+                    "Functions with more than 8 parameters are not yet supported"
+                ));
+            }
+        };
+
+        if debug {
+            eprintln!(
+                "[DEBUG] Encoded bytes: {:?} (length: {})",
+                encoded,
+                encoded.len()
+            );
         }
 
         Ok(encoded)
