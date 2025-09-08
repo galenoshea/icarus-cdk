@@ -5,6 +5,30 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.3] - 2025-09-08
+
+### Added
+- **Enhanced Project Templates**: `icarus new` command now generates projects with:
+  - `[package.metadata.icarus]` section for Claude Desktop integration
+  - `[profile.release]` optimizations for smaller WASM binaries (60% size reduction)
+  - Proper Cargo.toml metadata for all examples
+
+### Fixed
+- **dfx.json Generation**: Fixed incorrect paths and filenames:
+  - Candid path now correctly points to `src/{name}.did`
+  - WASM filename properly handles project names with hyphens (converts to underscores)
+  - Added local network configuration with ephemeral type
+
+### Changed
+- **Release Workflow**: GitHub release now created before crates.io publish for safer releases
+  - Binary artifacts available immediately even if crates.io fails
+  - Added verification step and final status notification
+  - Better aligns with Rust community best practices
+
+### Removed
+- **icarus.json**: Removed unused configuration file from `icarus new` command
+  - All configuration now in Cargo.toml using standard Rust patterns
+
 ## [0.5.0] - 2025-09-07
 
 ### Added
