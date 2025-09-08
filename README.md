@@ -294,6 +294,24 @@ cargo test
 cargo build --all
 ```
 
+### Updating Candid Interfaces
+
+When you modify your tool functions in an Icarus project, you need to update the Candid interface (.did file) to reflect the changes:
+
+```bash
+# Install the generate-did tool (one-time setup)
+cargo install candid-extractor
+cargo install generate-did
+
+# After modifying your tools, rebuild and update the .did file
+cargo build --target wasm32-unknown-unknown --release
+generate-did .
+
+# The .did file is automatically updated with all your tool functions
+```
+
+The `#[icarus_module]` macro automatically generates all the necessary endpoints, and `ic_cdk::export_candid!()` embeds the interface in your WASM for extraction.
+
 ---
 
 ## 💬 Community & Support

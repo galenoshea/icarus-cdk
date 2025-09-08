@@ -118,26 +118,12 @@ fn create_project_structure(
         ensure_directory_exists(&tests_dir)?;
     }
 
-    // Determine example source path
-    // First try relative to the binary location (for installed CLI)
-    // Then try relative to the current directory (for development)
-    let example_source = find_example_source()?;
-
-    // Copy lib.rs from basic-memory example
-    let example_lib_rs = example_source.join("src/lib.rs");
+    // Create lib.rs from embedded template
     let target_lib_rs = src_dir.join("lib.rs");
-
-    if example_lib_rs.exists() {
-        // Copy the example file
-        fs::copy(&example_lib_rs, &target_lib_rs)?;
-    } else {
-        // Fallback to embedded template if example is not found
-        // This ensures the CLI works even when distributed without examples
-        create_fallback_template(&target_lib_rs)?;
-    }
+    create_lib_template(&target_lib_rs)?;
 
     // Create Cargo.toml
-    create_cargo_toml(project_path, name, local_sdk, with_tests, &example_source)?;
+    create_cargo_toml(project_path, name, local_sdk, with_tests)?;
 
     // Create dfx.json
     create_dfx_json(project_path, name)?;
@@ -151,37 +137,8 @@ fn create_project_structure(
     Ok(())
 }
 
-fn find_example_source() -> Result<PathBuf> {
-    // Try several locations to find the basic-memory example
-    let possible_paths = vec![
-        // Development path (when running from source)
-        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .parent()
-            .unwrap()
-            .join("examples/basic-memory"),
-        // Relative to current directory
-        PathBuf::from("examples/basic-memory"),
-        // Relative to parent directory
-        PathBuf::from("../examples/basic-memory"),
-        // Installation path (when CLI is installed)
-        dirs::data_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join("icarus/examples/basic-memory"),
-    ];
-
-    for path in possible_paths {
-        if path.exists() && path.join("src/lib.rs").exists() {
-            return Ok(path);
-        }
-    }
-
-    // If we can't find the example, we'll use a fallback
-    Ok(PathBuf::from(""))
-}
-
-fn create_fallback_template(target: &Path) -> Result<()> {
-    // This is a simplified version that will always compile
-    // Used only as a fallback when the example directory is not available
+fn create_lib_template(target: &Path) -> Result<()> {
+    // Create the default lib.rs template for new projects
     let content = r#"//! Basic Memory Server
 //! 
 //! A simple MCP server that stores and retrieves text memories.
@@ -303,6 +260,10 @@ mod tools {
         Ok(MEMORIES.with(|m| m.borrow().len()))
     }
 }
+
+// Export the Candid interface for the canister
+// This embeds the interface in the WASM for extraction with generate-did
+ic_cdk::export_candid!();
 "#;
 
     fs::write(target, content)?;
@@ -314,58 +275,15 @@ fn create_cargo_toml(
     name: &str,
     local_sdk: Option<String>,
     with_tests: bool,
-    example_source: &Path,
 ) -> Result<()> {
-    // Try to use Cargo.toml from example as template
-    let example_cargo = example_source.join("Cargo.toml");
-
-    let content = if example_cargo.exists() {
-        // Read example Cargo.toml and modify it
-        let mut content = fs::read_to_string(&example_cargo)?;
-
-        // Replace package name
-        content = content.replace("basic-memory-example", name);
-
-        // Update icarus dependency
-        let icarus_dep = if let Some(ref sdk) = local_sdk {
-            format!("{{ path = \"{}\" }}", sdk)
-        } else {
-            let cli_version = env!("CARGO_PKG_VERSION");
-            format!(
-                "{{ version = \"{}\", features = [\"canister\"] }}",
-                cli_version
-            )
-        };
-
-        // Update the icarus dependency line
-        content = content.replace(
-            r#"icarus = { path = "../..", features = ["canister"] }"#,
-            &format!("icarus = {}", icarus_dep),
-        );
-
-        // Add test dependencies if requested
-        if with_tests && !content.contains("[dev-dependencies]") {
-            content.push_str(
-                r#"
-[dev-dependencies]
-pocket-ic = "4.0"
-candid = "0.10"
-tokio = { version = "1", features = ["full"] }
-"#,
-            );
-        }
-
-        content
-    } else {
-        // Fallback Cargo.toml
-        create_fallback_cargo_toml(name, local_sdk, with_tests)?
-    };
+    // Create Cargo.toml from template
+    let content = create_cargo_toml_content(name, local_sdk, with_tests)?;
 
     fs::write(project_path.join("Cargo.toml"), content)?;
     Ok(())
 }
 
-fn create_fallback_cargo_toml(
+fn create_cargo_toml_content(
     name: &str,
     local_sdk: Option<String>,
     with_tests: bool,
@@ -492,6 +410,24 @@ An MCP (Model Context Protocol) server running on the Internet Computer.
 - [Rust](https://rustup.rs/)
 - [dfx](https://internetcomputer.org/docs/current/developer-docs/setup/install)
 - [Icarus CLI](https://crates.io/crates/icarus-cli)
+
+For updating Candid interfaces after modifying tools:
+- `cargo install candid-extractor`
+- `cargo install generate-did`
+
+### Updating the Candid Interface
+
+After modifying your tool functions in `src/lib.rs`:
+
+```bash
+# Build the WASM
+cargo build --target wasm32-unknown-unknown --release
+
+# Update the .did file
+generate-did .
+```
+
+This extracts the Candid interface from your WASM and updates the .did file.
 
 ### Local Deployment
 
