@@ -46,7 +46,7 @@ fn test_complete_workflow_new_validate() {
 
 #[test]
 fn test_modify_and_rebuild_workflow() {
-    let cli = CliRunner::new();
+    let _cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
 
     // Create a copy since we need to modify it

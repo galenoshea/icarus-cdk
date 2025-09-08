@@ -4,6 +4,7 @@
 mod common;
 
 use candid::{decode_args, encode_args, encode_one, CandidType, Deserialize, Principal};
+use common::*;
 use common::identity_utils::*;
 use common::pocket_ic_utils::*;
 use pocket_ic::{PocketIc, WasmResult};
@@ -865,9 +866,33 @@ fn test_complete_auth_workflow() {
 /// =============================================================================
 
 fn build_test_memento_canister() -> std::path::PathBuf {
-    // Build the memento test canister
-    let memento_path = "/Users/goshea/projects/icarus/tools/memento";
-    build_test_canister(memento_path)
+    // Create a new test project using the CLI
+    let test_project = TestProject::new("auth-test-canister");
+    let cli = CliRunner::new();
+    
+    // Create new project with icarus new
+    let output = cli.run_with_dir(
+        &["new", "auth-test", "--path", test_project.dir.path().to_str().unwrap()],
+        test_project.dir.path(),
+    );
+    assert_success(&output);
+    
+    // Build the project
+    let project_dir = test_project.dir.path().join("auth-test");
+    use std::process::Command;
+    let build_output = Command::new("cargo")
+        .args(&["build", "--target", "wasm32-unknown-unknown", "--release"])
+        .current_dir(&project_dir)
+        .output()
+        .expect("Failed to run cargo build");
+    assert!(build_output.status.success(), "Cargo build should succeed");
+    
+    // Return the built WASM path
+    project_dir
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release")
+        .join("auth_test.wasm")
 }
 
 fn deploy_canister_with_owner(pic: &PocketIc, wasm_path: &std::path::Path, owner: Principal) -> Principal {

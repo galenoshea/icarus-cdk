@@ -1,5 +1,7 @@
 //! PocketIC test utilities for Icarus authentication testing
 
+#![allow(dead_code)]
+
 use candid::{decode_args, encode_args, CandidType, Deserialize, Principal};
 use pocket_ic::{PocketIc, PocketIcBuilder, WasmResult};
 use std::path::PathBuf;
@@ -87,6 +89,7 @@ pub enum AuthRole {
 }
 
 /// Helper to decode authentication responses
+#[allow(dead_code)]
 pub fn decode_auth_response(response: Vec<u8>) -> Result<AuthInfo, String> {
     decode_args(&response)
         .map(|(info,)| info)

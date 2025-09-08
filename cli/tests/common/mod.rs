@@ -1,5 +1,8 @@
 //! E2E test helper utilities
 
+// Allow dead code in test utilities - these are helper functions that may not all be used yet
+#![allow(dead_code)]
+
 pub mod identity_utils;
 pub mod parallel;
 pub mod pocket_ic_utils;
@@ -246,6 +249,7 @@ static SHARED_PROJECT: OnceCell<SharedTestProject> = OnceCell::new();
 static SHARED_PROJECT_LOCK: OnceCell<Mutex<()>> = OnceCell::new();
 
 /// Shared test project that's created once and reused across all tests
+#[allow(dead_code)]
 pub struct SharedTestProject {
     project_dir: PathBuf,
     _temp_dir: TempDir,

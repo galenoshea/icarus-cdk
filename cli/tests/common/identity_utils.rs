@@ -1,5 +1,7 @@
 //! Identity management utilities for testing
 
+#![allow(dead_code)]
+
 use candid::Principal;
 use ic_agent::identity::{BasicIdentity, Identity};
 use ring::rand::SystemRandom;
@@ -8,6 +10,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 /// Identity manager for tests
+#[allow(dead_code)]
 pub struct IdentityManager {
     identities: Arc<Mutex<HashMap<String, Box<dyn Identity>>>>,
     principals: Arc<Mutex<HashMap<String, Principal>>>,
@@ -28,7 +31,7 @@ impl IdentityManager {
         let rng = SystemRandom::new();
         let pkcs8_bytes =
             Ed25519KeyPair::generate_pkcs8(&rng).expect("Failed to generate key pair");
-        let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
+        let _key_pair = Ed25519KeyPair::from_pkcs8(pkcs8_bytes.as_ref())
             .expect("Failed to create key pair from PKCS8");
 
         // Extract the raw private key (seed) from the key pair
@@ -76,6 +79,7 @@ impl IdentityManager {
 
 /// Standard test identities
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TestIdentities {
     pub owner: Principal,
     pub alice_admin: Principal,
@@ -103,6 +107,7 @@ impl TestIdentities {
 }
 
 /// Helper to generate a random principal for testing
+#[allow(dead_code)]
 pub fn generate_random_principal() -> Principal {
     let rng = SystemRandom::new();
     let pkcs8_bytes = Ed25519KeyPair::generate_pkcs8(&rng).expect("Failed to generate key pair");
@@ -119,11 +124,13 @@ pub fn generate_random_principal() -> Principal {
 }
 
 /// Create a batch of random principals
+#[allow(dead_code)]
 pub fn generate_principals(count: usize) -> Vec<Principal> {
     (0..count).map(|_| generate_random_principal()).collect()
 }
 
 /// Mock dfx identity switching for testing
+#[allow(dead_code)]
 pub struct MockDfxIdentity {
     current: Arc<Mutex<String>>,
     identities: Arc<Mutex<HashMap<String, Principal>>>,
