@@ -5,6 +5,40 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-09-08
+
+### Removed
+- **BREAKING**: Removed `icarus build` command - use `dfx build` directly instead
+  - Icarus now focuses solely on MCP bridge functionality
+  - Eliminates duplicate build logic and potential inconsistencies
+  - Removed 900+ lines of unnecessary code
+
+### Changed  
+- **Simplified `icarus deploy`**: Now directly calls `dfx deploy` and handles Claude Desktop configuration
+  - Fixed race condition where wrong canister IDs were displayed after upgrade
+  - Local deployments now always use current principal as init argument
+- **Simplified dfx.json template**: Changed from `type: "custom"` to `type: "rust"`
+  - dfx automatically handles Rust build configuration
+  - Removed manual build command and WASM path specifications
+
+### Fixed
+- Fixed race condition in deploy command showing incorrect canister IDs
+- Fixed deprecation warnings by adding Candid metadata to dfx.json
+- Fixed init argument issues for local canister upgrades
+- Removed all build warnings from unused functions
+
+## [0.5.5] - 2025-09-08
+
+### Changed
+- Optimized E2E test execution for faster CI/CD pipeline
+- Various internal improvements
+
+## [0.5.4] - 2025-09-08
+
+### Fixed
+- Version consistency across workspace
+- Various bug fixes and improvements
+
 ## [0.5.3] - 2025-09-08
 
 ### Added
