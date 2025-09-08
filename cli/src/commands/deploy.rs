@@ -40,6 +40,9 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
     )
     .await?;
 
+    // Optimize WASM with ic-wasm if available
+    optimize_wasm(&current_dir, &project_name).await?;
+
     // Extract and update the Candid interface from the built WASM
     print_info("Updating Candid interface from WASM...");
     update_candid_from_wasm(&current_dir, &project_name).await?;
@@ -222,6 +225,86 @@ fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Res
     Ok(())
 }
 
+async fn optimize_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
+    use std::fs;
+
+    // Check if ic-wasm is available
+    if which::which("ic-wasm").is_err() {
+        print_info(
+            "ic-wasm not found. Skipping optimization (install with: cargo install ic-wasm)",
+        );
+        return Ok(());
+    }
+
+    // Construct WASM path
+    let wasm_name = project_name.replace('-', "_");
+    let wasm_path = project_dir
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release")
+        .join(format!("{}.wasm", wasm_name));
+
+    if !wasm_path.exists() {
+        // WASM doesn't exist yet, skip optimization
+        return Ok(());
+    }
+
+    // Get original size
+    let original_size = fs::metadata(&wasm_path)?.len();
+
+    print_info("Optimizing WASM with ic-wasm...");
+
+    // Run ic-wasm shrink
+    let result = tokio::process::Command::new("ic-wasm")
+        .arg(&wasm_path)
+        .arg("-o")
+        .arg(&wasm_path)
+        .arg("shrink")
+        .output()
+        .await;
+
+    match result {
+        Ok(output) if output.status.success() => {
+            // Get new size
+            let new_size = fs::metadata(&wasm_path)?.len();
+            let reduction = ((original_size - new_size) as f64 / original_size as f64) * 100.0;
+
+            print_success(&format!(
+                "WASM optimized: {} → {} (reduced by {:.1}%)",
+                format_size(original_size),
+                format_size(new_size),
+                reduction
+            ));
+        }
+        Ok(output) => {
+            let error = String::from_utf8_lossy(&output.stderr);
+            print_warning(&format!("WASM optimization failed: {}", error));
+        }
+        Err(e) => {
+            print_warning(&format!("Could not run ic-wasm: {}", e));
+        }
+    }
+
+    Ok(())
+}
+
+fn format_size(bytes: u64) -> String {
+    const UNITS: &[&str] = &["B", "KB", "MB", "GB"];
+    let mut size = bytes as f64;
+    let mut unit_index = 0;
+
+    while size >= 1024.0 && unit_index < UNITS.len() - 1 {
+        size /= 1024.0;
+        unit_index += 1;
+    }
+
+    if unit_index == 0 {
+        format!("{} {}", size as u64, UNITS[unit_index])
+    } else {
+        format!("{:.2} {}", size, UNITS[unit_index])
+    }
+}
+
 async fn update_candid_from_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
     use std::fs;
 
@@ -321,7 +404,13 @@ async fn handle_claude_desktop_config(
 
             match update_claude_config(&claude_config_path, project_name, server_config) {
                 Ok(_) => {
-                    print_success("Claude Desktop configuration updated automatically!");
+                    println!();
+                    print_success(&format!(
+                        "✨ Canister '{}' automatically connected to Claude Desktop!",
+                        project_name
+                    ));
+                    print_info(&format!("Canister ID: {}", canister_id));
+                    print_info("Restart Claude Desktop to load the new MCP server");
                     claude_auto_updated = true;
                 }
                 Err(e) => {

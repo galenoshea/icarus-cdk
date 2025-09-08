@@ -4,7 +4,7 @@ use anyhow::Result;
 use serde_json::{json, Value};
 use std::path::PathBuf;
 
-use crate::utils::{print_info, print_success};
+use crate::utils::print_info;
 
 /// Find the Claude Desktop configuration file
 pub fn find_claude_config_path() -> Result<PathBuf> {
@@ -79,7 +79,7 @@ pub fn generate_claude_server_config(name: &str, canister_id: &str) -> Value {
 /// Update Claude Desktop configuration with new MCP server
 pub fn update_claude_config(
     config_path: &PathBuf,
-    server_name: &str,
+    _server_name: &str,
     server_config: Value,
 ) -> Result<()> {
     print_info(&format!(
@@ -123,12 +123,6 @@ pub fn update_claude_config(
     // Write the updated config
     let pretty_json = serde_json::to_string_pretty(&config)?;
     std::fs::write(config_path, pretty_json)?;
-
-    print_success(&format!(
-        "Added '{}' to Claude Desktop configuration",
-        server_name
-    ));
-    print_info("Restart Claude Desktop to load the new MCP server");
 
     Ok(())
 }
