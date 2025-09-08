@@ -92,6 +92,10 @@ pub async fn deploy_canister(
     }
 
     run_command("dfx", &args, None).await?;
+
+    // Small delay to ensure dfx has synced the canister registry
+    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+
     get_canister_id(canister_name, network).await
 }
 
@@ -100,8 +104,8 @@ pub async fn install_canister(
     mode: &str, // "install" or "upgrade"
     network: &str,
 ) -> Result<()> {
-    // Only add init argument for install mode, not upgrade
-    if mode == "install" {
+    // For local deployments, always pass the principal argument
+    if network == "local" {
         // Get the current principal to use as the owner
         let principal_output = tokio::process::Command::new("dfx")
             .args(&["identity", "get-principal"])
@@ -130,21 +134,52 @@ pub async fn install_canister(
         )
         .await?;
     } else {
-        // For upgrade mode, don't pass init argument
-        run_command(
-            "dfx",
-            &[
-                "canister",
-                "install",
-                canister_name,
-                "--mode",
-                mode,
-                "--network",
-                network,
-            ],
-            None,
-        )
-        .await?;
+        // For non-local networks, only pass init argument for install mode
+        if mode == "install" {
+            // Get the current principal to use as the owner
+            let principal_output = tokio::process::Command::new("dfx")
+                .args(&["identity", "get-principal"])
+                .output()
+                .await?;
+
+            let principal = String::from_utf8_lossy(&principal_output.stdout)
+                .trim()
+                .to_string();
+            let init_arg = format!("(principal \"{}\")", principal);
+
+            run_command(
+                "dfx",
+                &[
+                    "canister",
+                    "install",
+                    canister_name,
+                    "--mode",
+                    mode,
+                    "--network",
+                    network,
+                    "--argument",
+                    &init_arg,
+                ],
+                None,
+            )
+            .await?;
+        } else {
+            // For upgrade mode on non-local networks, don't pass init argument
+            run_command(
+                "dfx",
+                &[
+                    "canister",
+                    "install",
+                    canister_name,
+                    "--mode",
+                    mode,
+                    "--network",
+                    network,
+                ],
+                None,
+            )
+            .await?;
+        }
     }
     Ok(())
 }

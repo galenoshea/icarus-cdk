@@ -397,6 +397,22 @@ fn print_build_summary(project_dir: &Path, show_compressed: bool) -> Result<()> 
 }
 
 fn check_candid_metadata(wasm_file: &Path, project_name: &str, project_dir: &Path) {
+    // First check if dfx.json has metadata configuration
+    let dfx_json_path = project_dir.join("dfx.json");
+    if dfx_json_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(&dfx_json_path) {
+            if !content.contains("\"metadata\"") || !content.contains("candid:service") {
+                println!("  ⚠️  dfx.json missing metadata section. Add this to avoid deprecation warnings:");
+                println!("      \"metadata\": [");
+                println!("        {{");
+                println!("          \"name\": \"candid:service\",");
+                println!("          \"path\": \"src/{}.did\"", project_name);
+                println!("        }}");
+                println!("      ]");
+            }
+        }
+    }
+
     // Check if ic-wasm is available
     if let Ok(ic_wasm) = which::which("ic-wasm") {
         // Check for candid:service metadata

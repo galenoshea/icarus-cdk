@@ -422,7 +422,13 @@ fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
       "type": "custom",
       "candid": "src/{}.did",
       "wasm": "target/wasm32-unknown-unknown/release/{}.wasm",
-      "build": "icarus build"
+      "build": "icarus build",
+      "metadata": [
+        {{
+          "name": "candid:service",
+          "path": "src/{}.did"
+        }}
+      ]
     }}
   }},
   "defaults": {{
@@ -439,7 +445,7 @@ fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
   "version": 1
 }}
 "#,
-        name, name, wasm_name
+        name, name, wasm_name, name
     );
     std::fs::write(project_path.join("dfx.json"), dfx_json)?;
     Ok(())

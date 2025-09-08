@@ -102,3 +102,7 @@ path = "tests/e2e/test_validate_command.rs"
 [[test]]
 name = "test_workflow"
 path = "tests/e2e/test_workflow.rs"
+
+[[test]]
+name = "test_deploy_command"
+path = "tests/e2e/test_deploy_command.rs"

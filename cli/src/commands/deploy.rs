@@ -110,8 +110,11 @@ pub async fn execute(
                     ));
 
                     install_canister(&project_name, "upgrade", &network).await?;
+
+                    // Re-fetch canister ID after upgrade to ensure we have the current one
+                    let updated_id = get_canister_id(&project_name, &network).await?;
                     print_success("Canister upgraded successfully! 🎉");
-                    (id, true)
+                    (updated_id, true)
                 }
             }
             Err(_) => {
