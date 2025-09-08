@@ -7,6 +7,5 @@
 pub mod auth;
 pub mod canister_client;
 // pub mod mcp_stdio;   // Not used with RMCP
-pub mod oauth2;
 pub mod param_mapper;
 pub mod rmcp_server;
