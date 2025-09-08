@@ -210,13 +210,17 @@ jobs:
             ;;
         esac
 
-  # E2E tests run sequentially to match real user workflow
+  # E2E tests run in parallel matrix for speed
   test-e2e:
-    name: E2E Tests (Sequential)
+    name: E2E ${{ matrix.test }}
     runs-on: ubuntu-latest
     needs: [changes, build-artifacts]
     if: needs.changes.outputs.cli == 'true' || needs.changes.outputs.workflows == 'true'
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        test: [new, build, validate, workflow]
     steps:
     - uses: actions/checkout@v4
     
@@ -243,45 +247,37 @@ jobs:
         mv icarus target/release/
         chmod +x target/release/icarus
     
-    # Cache the shared test project directory
+    # Cache the shared test project directory (per test for isolation)
     - name: Cache E2E test project
       uses: actions/cache@v4
       with:
-        path: /tmp/icarus-e2e-project
-        key: ${{ runner.os }}-e2e-sequential-${{ hashFiles('cli/templates/**') }}-v1
+        path: /tmp/icarus-e2e-${{ matrix.test }}
+        key: ${{ runner.os }}-e2e-${{ matrix.test }}-${{ hashFiles('cli/templates/**') }}-v2
         restore-keys: |
-          ${{ runner.os }}-e2e-sequential-
+          ${{ runner.os }}-e2e-${{ matrix.test }}-
     
-    # Run tests sequentially in logical order
-    - name: Test 'new' command
+    # Restore cargo cache for test compilation
+    - name: Restore cargo dependencies cache
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+        key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-cargo-deps-
+    
+    # Run the specific E2E test in parallel
+    - name: Run E2E test - ${{ matrix.test }}
       run: |
         cd cli
-        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-project"
-        cargo test --test test_new_command --release
-      env:
-        RUST_LOG: warn
-    
-    - name: Test 'build' command
-      run: |
-        cd cli
-        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-project"
-        cargo test --test test_build_command --release
-      env:
-        RUST_LOG: warn
-    
-    - name: Test 'validate' command
-      run: |
-        cd cli
-        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-project"
-        cargo test --test test_validate_command --release
-      env:
-        RUST_LOG: warn
-    
-    - name: Test complete workflow
-      run: |
-        cd cli
-        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-project"
-        cargo test --test test_workflow --release
+        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-${{ matrix.test }}"
+        # Create shared project upfront if needed
+        if [ "${{ matrix.test }}" != "new" ]; then
+          mkdir -p /tmp/icarus-e2e-shared-project
+        fi
+        cargo test --test test_${{ matrix.test }}_command --release
       env:
         RUST_LOG: warn
 

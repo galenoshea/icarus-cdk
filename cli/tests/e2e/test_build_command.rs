@@ -43,7 +43,7 @@ fn test_build_shows_size_reduction() {
     let cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
 
-    // Acquire lock before building on shared project
+    // Acquire lock as this test runs build which modifies files
     let _lock = SharedTestProject::lock();
 
     // Run build on the shared project
