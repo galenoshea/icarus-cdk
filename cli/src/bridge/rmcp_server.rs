@@ -59,12 +59,6 @@ impl IcpBridge {
         Self::new_with_dfx_fallback(canister_id, is_mcp_mode).await
     }
 
-    /// Create a new authenticated bridge service (currently same as new)
-    pub async fn new_authenticated(canister_id: Principal, _use_local: bool) -> Result<Self> {
-        // For now, just use the same as new() since we're removing auth
-        Self::new(canister_id).await
-    }
-
     /// Fallback to dfx-based authentication
     async fn new_with_dfx_fallback(canister_id: Principal, is_mcp_mode: bool) -> Result<Self> {
         // Try to find dfx in common locations
@@ -453,63 +447,6 @@ impl IcpBridge {
             }
         }
     }
-
-    /// Helper to check authentication before tool execution (simplified)
-    async fn ensure_authenticated(&self) -> Result<Principal, String> {
-        // For now, return anonymous principal
-        Ok(Principal::anonymous())
-    }
-
-    /// Verify that the authenticated user has access to the canister
-    async fn ensure_canister_access(&self) -> Result<Principal, String> {
-        // Ensure we're using the current identity
-        if let Err(e) = self.ensure_current_identity().await {
-            return Err(format!("Failed to verify identity: {}", e));
-        }
-
-        let principal = self.ensure_authenticated().await?;
-
-        // Check if the current principal is authorized to use this canister
-        let client = self.canister_client.read().await;
-        match client.check_authorization().await {
-            Ok(true) => Ok(principal),
-            Ok(false) => {
-                // Get canister metadata to provide helpful error message
-                match client.get_canister_metadata().await {
-                    Ok(metadata_json) => {
-                        if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&metadata_json) {
-                            let primary_owner = metadata.get("primary_owner")
-                                .and_then(|v| v.as_str())
-                                .unwrap_or("unknown");
-                            let additional_owners = metadata.get("additional_owners")
-                                .and_then(|v| v.as_array())
-                                .map(|arr| arr.len())
-                                .unwrap_or(0);
-                            Err(format!(
-                                "Access denied: Principal {} is not authorized to use canister {}. Current owners: primary={}, additional={}. Use 'icarus auth add-owner' if you need access.",
-                                principal.to_text(),
-                                self.canister_id.to_text(),
-                                primary_owner,
-                                additional_owners
-                            ))
-                        } else {
-                            Err(format!(
-                                "Access denied: Principal {} is not authorized to use canister {}",
-                                principal.to_text(),
-                                self.canister_id.to_text()
-                            ))
-                        }
-                    }
-                    Err(_) => Err(format!(
-                        "Access denied: Principal {} is not authorized to use canister {} (metadata unavailable)",
-                        principal.to_text(),
-                        self.canister_id.to_text()
-                    ))
-                }
-            }
-            Err(e) => Err(format!("Failed to check canister authorization: {}", e)),
-        }
-    }
 }
 
 // Implement the ServerHandler trait manually for custom tool listing
@@ -601,11 +538,6 @@ impl ServerHandler for IcpBridge {
             }
         }
     }
-}
-
-/// Run the RMCP server with stdio transport
-pub async fn run(canister_id_str: String) -> Result<()> {
-    run_with_auth(canister_id_str, false, false).await
 }
 
 /// Run the RMCP server with optional authentication

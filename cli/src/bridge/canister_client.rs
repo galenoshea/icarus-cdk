@@ -30,6 +30,13 @@ pub struct CanisterClient {
     param_mapper: Arc<RwLock<Option<ParamMapper>>>,
 }
 
+/// Client for interacting with ICP canisters.
+///
+/// This includes methods for interacting with template canisters created by `icarus new`.
+/// The memory-related methods (memorize, recall, list, forget) correspond to the
+/// default functions generated in the canister template and allow testing the
+/// MCP bridge with a standard canister interface.
+#[allow(dead_code)] // These methods are part of the SDK's public API for template interaction
 impl CanisterClient {
     /// Create a new canister client for local development
     pub async fn new(canister_id: Principal) -> Result<Self> {
