@@ -16,7 +16,7 @@ No migration required for existing code.
 ## Migrating from 0.3.0 to 0.3.1
 
 ### Overview
-Version 0.5.2 is a patch release that fixes critical issues with the v0.3.0 release.
+Version 0.5.3 is a patch release that fixes critical issues with the v0.3.0 release.
 
 ### Bug Fixes
 - **Fixed**: Coverage workflow failures - cleared LLVM_PROFILE environment variables in subprocess cargo commands
@@ -101,19 +101,19 @@ icarus = "0.3.0"  # Includes everything via feature flags
 ## Migrating from 0.2.5 to 0.3.0
 
 ### Overview
-Version 0.5.2 is primarily a maintenance release with improved documentation and synchronized versioning across all workspace crates.
+Version 0.5.3 is primarily a maintenance release with improved documentation and synchronized versioning across all workspace crates.
 
 ### Changes
 
 #### Version Synchronization
-All crates in the workspace now use the same version number (0.5.2):
+All crates in the workspace now use the same version number (0.5.3):
 - `icarus`
 - `icarus-core`
 - `icarus-derive`
 - `icarus-canister`
 - `icarus-cli`
 
-**Action Required**: Update your `Cargo.toml` dependencies to use version 0.5.2:
+**Action Required**: Update your `Cargo.toml` dependencies to use version 0.5.3:
 ```toml
 [dependencies]
 icarus = "0.3.0"
@@ -257,7 +257,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.5.2)**: Full support
+- **Current Version (0.5.3)**: Full support
 - **Previous Minor (0.3.0)**: Critical fixes only
 - **Previous Minor (0.2.5)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
