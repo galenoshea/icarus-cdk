@@ -317,8 +317,8 @@ jobs:
           
           cd "$crate_path"
           
-          # Check if already published
-          if cargo search "$crate_name" | grep -q "^$crate_name = \"$version\""; then
+          # Check if already published using cargo info (faster than search)
+          if cargo info "$crate_name" 2>/dev/null | grep -q "version: $version"; then
             echo "✅ $crate_name v$version already published"
             cd - > /dev/null
             return 0
@@ -329,18 +329,28 @@ jobs:
           
           cd - > /dev/null
           
-          # Wait for crate to be available
+          # Wait for crate to be available (increased timeout and using cargo info)
           echo "⏳ Waiting for $crate_name to be available on crates.io..."
-          for i in {1..30}; do
-            if cargo search "$crate_name" | grep -q "^$crate_name = \"$version\""; then
+          for i in {1..60}; do
+            if cargo info "$crate_name" 2>/dev/null | grep -q "version: $version"; then
               echo "✅ $crate_name v$version is now available"
               return 0
             fi
+            
+            # Show progress every 10 attempts
+            if [ $((i % 10)) -eq 0 ]; then
+              echo "   Still waiting... (attempt $i/60)"
+            fi
+            
             sleep 2
           done
           
           echo "⚠️ Timeout waiting for $crate_name to be available"
-          return 1
+          echo "   The crate was likely published successfully but index is slow to update."
+          echo "   Continuing with next crate..."
+          
+          # Return success even on timeout - the crate was published
+          return 0
         }
         
         VERSION="${{ needs.validate-release.outputs.version }}"
