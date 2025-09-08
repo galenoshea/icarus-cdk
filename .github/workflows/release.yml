@@ -184,13 +184,93 @@ jobs:
         path: ${{ matrix.artifact_name }}.*
         retention-days: 7
 
-  # Publish to crates.io
+  # Create GitHub release FIRST (before crates.io)
+  github-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [validate-release, build-artifacts]
+    if: github.event.inputs.dry_run != 'true'
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+    
+    - name: Extract CHANGELOG entry
+      run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        
+        # Extract changelog for this version
+        awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release-notes.md
+        
+        # Add installation instructions
+        cat >> release-notes.md << 'EOF'
+        
+        ## Installation
+        
+        ### Using Cargo
+        ```bash
+        cargo install icarus-cli
+        ```
+        
+        ### Add to Project
+        ```toml
+        [dependencies]
+        icarus = "VERSION"
+        ```
+        
+        ### Binary Downloads
+        Pre-built binaries are available below for:
+        - Linux (x86_64)
+        - macOS (x86_64, ARM64)
+        - Windows (x86_64)
+        
+        ## Crates Published
+        EOF
+        
+        # Add crate links (will be published after this release)
+        echo "The following crates will be published to crates.io shortly:" >> release-notes.md
+        echo "- [icarus](https://crates.io/crates/icarus/$VERSION)" >> release-notes.md
+        echo "- [icarus-cli](https://crates.io/crates/icarus-cli/$VERSION)" >> release-notes.md
+        echo "- [icarus-core](https://crates.io/crates/icarus-core/$VERSION)" >> release-notes.md
+        echo "- [icarus-derive](https://crates.io/crates/icarus-derive/$VERSION)" >> release-notes.md
+        echo "- [icarus-canister](https://crates.io/crates/icarus-canister/$VERSION)" >> release-notes.md
+        
+        # Replace VERSION placeholder
+        sed -i "s/VERSION/$VERSION/g" release-notes.md
+    
+    - name: Create GitHub Release
+      id: create_release
+      uses: softprops/action-gh-release@v2
+      with:
+        name: v${{ needs.validate-release.outputs.version }}
+        body_path: release-notes.md
+        prerelease: ${{ needs.validate-release.outputs.prerelease }}
+        draft: false  # Set to true if you want to review before publishing to crates.io
+        files: |
+          artifacts/**/*.tar.gz
+          artifacts/**/*.zip
+        fail_on_unmatched_files: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Release created notification
+      if: success()
+      run: |
+        echo "✅ GitHub Release v${{ needs.validate-release.outputs.version }} created successfully!"
+        echo "🔗 View on GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate-release.outputs.version }}"
+        echo "📦 Next step: Publishing to crates.io..."
+
+  # Publish to crates.io AFTER GitHub release exists
   publish-crates:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [validate-release, build-artifacts]
-    if: github.event.inputs.dry_run != 'true'
+    needs: [validate-release, github-release]
+    if: needs.github-release.result == 'success'
     steps:
     - uses: actions/checkout@v4
     
@@ -204,6 +284,22 @@ jobs:
           ~/.cargo/registry
           ~/.cargo/git
         key: ${{ runner.os }}-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Verify GitHub release exists
+      run: |
+        VERSION="${{ needs.validate-release.outputs.version }}"
+        echo "🔍 Verifying GitHub release v${VERSION} exists..."
+        
+        # Check if release exists using GitHub API
+        if gh release view "v${VERSION}" --repo "${{ github.repository }}" > /dev/null 2>&1; then
+          echo "✅ GitHub release v${VERSION} confirmed"
+        else
+          echo "❌ GitHub release v${VERSION} not found!"
+          echo "This should not happen - the previous job should have created it."
+          exit 1
+        fi
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Publish crates in order
       env:
@@ -258,80 +354,42 @@ jobs:
         
         echo "🎉 All crates published successfully!"
 
-  # Create GitHub release
-  github-release:
-    name: Create GitHub Release
+  # Final status notification
+  release-notification:
+    name: Release Status Notification
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [validate-release, build-artifacts, publish-crates]
-    if: needs.publish-crates.result == 'success'
+    timeout-minutes: 5
+    needs: [validate-release, github-release, publish-crates]
+    if: always()
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Download all artifacts
-      uses: actions/download-artifact@v4
-      with:
-        path: artifacts
-    
-    - name: Extract CHANGELOG entry
+    - name: Report final status
       run: |
         VERSION="${{ needs.validate-release.outputs.version }}"
+        echo "📊 Release v${VERSION} Status Report:"
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         
-        # Extract changelog for this version
-        awk "/## \[$VERSION\]/{flag=1; next} /## \[/{flag=0} flag" CHANGELOG.md > release-notes.md
+        if [[ "${{ needs.github-release.result }}" == "success" ]]; then
+          echo "✅ GitHub Release: SUCCESS"
+          echo "   🔗 https://github.com/${{ github.repository }}/releases/tag/v${VERSION}"
+        else
+          echo "❌ GitHub Release: FAILED"
+        fi
         
-        # Add installation instructions
-        cat >> release-notes.md << 'EOF'
+        if [[ "${{ needs.publish-crates.result }}" == "success" ]]; then
+          echo "✅ Crates.io: SUCCESS"
+          echo "   📦 https://crates.io/crates/icarus/${VERSION}"
+        elif [[ "${{ needs.publish-crates.result }}" == "skipped" ]]; then
+          echo "⏭️  Crates.io: SKIPPED (GitHub release failed)"
+        else
+          echo "❌ Crates.io: FAILED"
+          echo "   ⚠️  Manual intervention may be required"
+          echo "   Run: cargo publish --no-verify"
+        fi
         
-        ## Installation
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         
-        ### Using Cargo
-        ```bash
-        cargo install icarus-cli
-        ```
-        
-        ### Add to Project
-        ```toml
-        [dependencies]
-        icarus = "VERSION"
-        ```
-        
-        ### Binary Downloads
-        Pre-built binaries are available below for:
-        - Linux (x86_64)
-        - macOS (x86_64, ARM64)
-        - Windows (x86_64)
-        
-        ## Crates Published
-        EOF
-        
-        # Add crate links
-        echo "- [icarus](https://crates.io/crates/icarus/$VERSION)" >> release-notes.md
-        echo "- [icarus-cli](https://crates.io/crates/icarus-cli/$VERSION)" >> release-notes.md
-        echo "- [icarus-core](https://crates.io/crates/icarus-core/$VERSION)" >> release-notes.md
-        echo "- [icarus-derive](https://crates.io/crates/icarus-derive/$VERSION)" >> release-notes.md
-        echo "- [icarus-canister](https://crates.io/crates/icarus-canister/$VERSION)" >> release-notes.md
-        
-        # Replace VERSION placeholder
-        sed -i "s/VERSION/$VERSION/g" release-notes.md
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        name: v${{ needs.validate-release.outputs.version }}
-        body_path: release-notes.md
-        prerelease: ${{ needs.validate-release.outputs.prerelease }}
-        draft: false
-        files: |
-          artifacts/**/*.tar.gz
-          artifacts/**/*.zip
-        fail_on_unmatched_files: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Post-release notification
-      if: success()
-      run: |
-        echo "🎉 Release v${{ needs.validate-release.outputs.version }} completed successfully!"
-        echo "📦 View on crates.io: https://crates.io/crates/icarus"
-        echo "🔗 View on GitHub: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.validate-release.outputs.version }}"
+        if [[ "${{ needs.github-release.result }}" == "success" ]] && [[ "${{ needs.publish-crates.result }}" == "success" ]]; then
+          echo "🎉 Release v${VERSION} completed successfully!"
+        else
+          echo "⚠️  Release v${VERSION} partially completed. Check the logs above."
+        fi
