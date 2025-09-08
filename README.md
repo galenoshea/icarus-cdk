@@ -74,7 +74,7 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.5.6"
+icarus = "0.5.7"
 
 # Or specify features explicitly
 icarus = { version = "0.5.0", features = ["canister"] }
@@ -256,7 +256,7 @@ icarus logs <id>          # View canister logs
 **New Features**: HTTP outcalls and timers are now built-in! No breaking changes.
 
 To upgrade:
-1. Update your dependency: `icarus = "0.5.6"`
+1. Update your dependency: `icarus = "0.5.7"`
 2. Redeploy: `icarus deploy` (builds automatically)
 
 The bridge will automatically use the new `list_tools()` endpoint. No code changes needed unless you were directly calling `get_metadata()`.
