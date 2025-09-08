@@ -412,17 +412,12 @@ overflow-checks = false # Disable runtime overflow checks
 }
 
 fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
-    // Convert hyphens to underscores for the WASM filename
-    let wasm_name = name.replace("-", "_");
-
     let dfx_json = format!(
         r#"{{
   "canisters": {{
     "{}": {{
-      "type": "custom",
+      "type": "rust",
       "candid": "src/{}.did",
-      "wasm": "target/wasm32-unknown-unknown/release/{}.wasm",
-      "build": "icarus build",
       "metadata": [
         {{
           "name": "candid:service",
@@ -445,7 +440,7 @@ fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
   "version": 1
 }}
 "#,
-        name, name, wasm_name, name
+        name, name, name
     );
     std::fs::write(project_path.join("dfx.json"), dfx_json)?;
     Ok(())

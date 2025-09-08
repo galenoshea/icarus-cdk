@@ -8,17 +8,10 @@ use crate::utils::{
     claude_desktop::{
         find_claude_config_path, generate_claude_server_config, update_claude_config,
     },
-    create_spinner,
-    dfx::{self, deploy_canister, get_canister_id, install_canister},
-    print_info, print_success, print_warning,
+    print_info, print_success, print_warning, run_command,
 };
 
-pub async fn execute(
-    network: String,
-    force: bool,
-    upgrade: Option<String>,
-    profile: Option<String>,
-) -> Result<()> {
+pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> Result<()> {
     // Validate network
     if !["local", "ic"].contains(&network.as_str()) {
         anyhow::bail!("Invalid network. Use 'local' or 'ic'");
@@ -27,129 +20,34 @@ pub async fn execute(
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
     if !is_icarus_project(&current_dir) {
-        anyhow::bail!("Not in an Icarus project directory");
+        anyhow::bail!("Not in an Icarus project directory. Run this command from a project created with 'icarus new'.");
     }
 
     // Get project name
     let project_name = get_project_name(&current_dir)?;
 
-    // Always build before deploying
-    let build_msg = match profile.as_deref() {
-        Some(p) => format!("Building project with {} profile...", p),
-        None => "Building project with default profile...".to_string(),
-    };
-    print_info(&build_msg);
+    print_info(&format!("Deploying {} to {} network...", project_name, network));
 
-    // Apply profile settings
-    let (opt_skip, opt_size, opt_perf, compress) = match profile.as_deref() {
-        Some("size") => (false, true, false, true), // Maximum size optimization
-        Some("speed") => (false, false, true, false), // Maximum performance, no compression
-        Some("debug") => (true, false, false, false), // Fast builds, no optimization
-        _ => (false, false, false, true),           // Default: balanced with compression
-    };
-
-    crate::commands::build::execute(opt_skip, opt_size, opt_perf, compress, None).await?;
-    print_success("Build completed!");
-
-    // Ensure dfx is running for local deployment
-    if network == "local" {
-        dfx::ensure_dfx_running().await?;
+    // Run dfx deploy with appropriate arguments
+    let mut args = vec!["deploy", &project_name, "--network", &network];
+    
+    if let Some(canister_id) = &upgrade {
+        args.push("--upgrade-unchanged");
+        print_info(&format!("Upgrading canister {}", canister_id));
+    }
+    
+    if force {
+        args.push("--yes");
+        print_info("Force deploying (will delete existing canister if present)");
     }
 
-    let spinner = create_spinner(&format!("Deploying to {}", network));
-
-    // Deploy or upgrade with smart behavior
-    let (canister_id, _was_deployed) = if let Some(existing_id) = upgrade {
-        // Explicit upgrade request
-        spinner.set_message(format!("Upgrading canister {}", existing_id));
-
-        install_canister(&project_name, "upgrade", &network).await?;
-        print_success("Canister upgraded successfully! 🎉");
-        (existing_id, true)
-    } else {
-        // Smart deploy: auto-upgrade if exists, create if not
-        match get_canister_id(&project_name, &network).await {
-            Ok(id) => {
-                if force {
-                    // Force new deployment - delete existing first
-                    spinner.set_message(format!(
-                        "Force deploying - deleting existing canister {}",
-                        id
-                    ));
-
-                    // Delete existing canister
-                    tokio::process::Command::new("dfx")
-                        .args(&[
-                            "canister",
-                            "delete",
-                            &project_name,
-                            "--network",
-                            &network,
-                            "--yes",
-                        ])
-                        .output()
-                        .await?;
-
-                    // Deploy new canister
-                    spinner.set_message("Creating new canister".to_string());
-                    let cycles = if network == "ic" {
-                        Some(1_000_000_000_000) // 1T cycles
-                    } else {
-                        None
-                    };
-
-                    let new_id = deploy_canister(&project_name, &network, cycles).await?;
-                    print_success("Force deployed successfully! 🎉");
-                    (new_id, true)
-                } else {
-                    // Auto-upgrade existing canister (new smart behavior)
-                    spinner.set_message(format!("Auto-upgrading existing canister {}", id));
-                    print_info(&format!(
-                        "Found existing canister {}, upgrading with latest code...",
-                        id
-                    ));
-
-                    install_canister(&project_name, "upgrade", &network).await?;
-
-                    // Re-fetch canister ID after upgrade to ensure we have the current one
-                    let updated_id = get_canister_id(&project_name, &network).await?;
-                    print_success("Canister upgraded successfully! 🎉");
-                    (updated_id, true)
-                }
-            }
-            Err(_) => {
-                // Deploy new canister
-                spinner.set_message("Creating new canister".to_string());
-
-                let cycles = if network == "ic" {
-                    Some(1_000_000_000_000) // 1T cycles
-                } else {
-                    None
-                };
-
-                let id = deploy_canister(&project_name, &network, cycles).await?;
-                print_success("Deployed successfully! 🎉");
-                (id, true)
-            }
-        }
-    };
-
-    spinner.finish_and_clear();
-
-    // Extract and save Candid interface if it doesn't exist or if forced
-    let project_name = get_project_name(&current_dir)?;
-    let candid_path = current_dir
-        .join("src")
-        .join(format!("{}.did", project_name));
-
-    if force || !candid_path.exists() {
-        // Try to update from canister, but don't fail if it doesn't work
-        // (e.g., if the canister doesn't have the __get_candid_interface_tmp_hack method)
-        if let Err(e) = update_candid_from_canister(&current_dir, &canister_id, &network).await {
-            print_warning(&format!("Could not extract Candid from canister: {}", e));
-            print_info("Using Candid file generated during build");
-        }
-    }
+    // Run dfx deploy
+    let output = run_command("dfx", &args, Some(&current_dir)).await?;
+    
+    // Parse the output to find the canister ID
+    let canister_id = extract_canister_id(&output, &project_name).await?;
+    
+    print_success(&format!("Successfully deployed! Canister ID: {}", canister_id));
 
     // Get Candid UI canister ID for local network
     let candid_ui_id = if network == "local" {
@@ -158,7 +56,7 @@ pub async fn execute(
         None
     };
 
-    // Display URLs in dfx format
+    // Display URLs
     println!("\n{}", "URLs:".bold());
     println!("  Backend canister via Candid interface:");
 
@@ -175,7 +73,6 @@ pub async fn execute(
                 .underline()
             );
         } else {
-            // Fallback to direct canister URL if Candid UI not found
             println!(
                 "    {}: {}",
                 project_name,
@@ -198,86 +95,8 @@ pub async fn execute(
     // Save canister ID for future reference
     save_canister_id(&current_dir, &network, &canister_id)?;
 
-    // Check for Cargo.toml metadata and handle Claude Desktop configuration
-    let mut claude_auto_updated = false;
-    if let Some(icarus_metadata) = cargo_config::load_from_cargo_toml(&current_dir)? {
-        if icarus_metadata.claude_desktop.auto_update {
-            println!();
-            print_info("Auto-updating Claude Desktop configuration...");
-
-            // Determine config path
-            let claude_config_path = if let Some(custom_path) =
-                cargo_config::get_claude_config_path(&icarus_metadata, &current_dir)
-            {
-                custom_path
-            } else {
-                find_claude_config_path()?
-            };
-
-            // Generate and update config
-            let mut server_config = generate_claude_server_config(&project_name, &canister_id);
-
-            // Update the command to use full path
-            if let Some(servers) = server_config.as_object_mut() {
-                if let Some(server) = servers.get_mut(&project_name) {
-                    if let Some(server_obj) = server.as_object_mut() {
-                        // Get the full path to icarus binary
-                        let icarus_path = which::which("icarus")
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_else(|_| "icarus".to_string());
-                        server_obj.insert(
-                            "command".to_string(),
-                            serde_json::Value::String(icarus_path),
-                        );
-                    }
-                }
-            }
-
-            match update_claude_config(&claude_config_path, &project_name, server_config) {
-                Ok(_) => {
-                    print_success("Claude Desktop configuration updated automatically!");
-                    claude_auto_updated = true;
-                }
-                Err(e) => {
-                    print_warning(&format!("Could not update Claude Desktop config: {}", e));
-                    print_info("Manual configuration required - see instructions below");
-                }
-            }
-        }
-    }
-
-    // Only show manual configuration if auto-update didn't happen or failed
-    if !claude_auto_updated {
-        // Claude Desktop integration section
-        println!();
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
-        );
-        println!("{}", "🔌 Claude Desktop Integration".bold().cyan());
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
-        );
-        println!();
-
-        // Generate Claude Desktop configuration
-        let claude_config = generate_claude_desktop_config(&project_name, &canister_id);
-
-        println!("Add this to your Claude Desktop configuration:");
-        println!();
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&claude_config)?.bright_blue()
-        );
-        println!();
-
-        println!("Or use the connect command for guided setup:");
-        println!(
-            "  {}",
-            format!("icarus connect --canister-id {}", canister_id).bright_yellow()
-        );
-    }
+    // Handle Claude Desktop configuration
+    handle_claude_desktop_config(&current_dir, &project_name, &canister_id).await?;
 
     if network == "ic" {
         println!();
@@ -316,21 +135,84 @@ fn get_project_name(project_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))
 }
 
-fn generate_claude_desktop_config(project_name: &str, canister_id: &str) -> serde_json::Value {
-    // Get the full path to icarus binary
-    let icarus_path = which::which("icarus")
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "icarus".to_string());
-
-    json!({
-        "mcpServers": {
-            project_name: {
-                "command": icarus_path,
-                "args": ["bridge", "start", "--canister-id", canister_id],
-                "env": {}
+async fn extract_canister_id(output: &str, project_name: &str) -> Result<String> {
+    // Look for patterns like:
+    // "Installing code for canister project_name, with canister ID xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
+    // or "Deployed canisters." followed by canister URLs
+    
+    // First try to find the canister ID from the deployment message
+    if let Some(line) = output.lines().find(|l| l.contains("with canister ID")) {
+        if let Some(id_part) = line.split("with canister ID").nth(1) {
+            let id = id_part.trim();
+            if !id.is_empty() && id.contains('-') {
+                return Ok(id.to_string());
             }
         }
-    })
+    }
+    
+    // Try to find from URLs section
+    if let Some(url_section_start) = output.lines().position(|l| l.contains("URLs:")) {
+        let lines: Vec<&str> = output.lines().collect();
+        for i in url_section_start + 1..lines.len() {
+            if lines[i].contains("http") {
+                // Extract canister ID from URL
+                if let Some(id) = extract_id_from_url(lines[i]) {
+                    return Ok(id);
+                }
+            }
+        }
+    }
+
+    // As a fallback, try to get it from dfx canister id
+    match tokio::process::Command::new("dfx")
+        .args(&["canister", "id", project_name])
+        .current_dir(std::env::current_dir()?)
+        .output()
+        .await
+    {
+        Ok(output) if output.status.success() => {
+            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+        }
+        _ => anyhow::bail!("Could not determine canister ID from deployment output"),
+    }
+}
+
+fn extract_id_from_url(url_line: &str) -> Option<String> {
+    // Extract from patterns like:
+    // http://xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.localhost:4943
+    // or from query params like &id=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
+    
+    if let Some(id_part) = url_line.split("&id=").nth(1) {
+        let id = id_part.split_whitespace().next()?;
+        if id.contains('-') {
+            return Some(id.to_string());
+        }
+    }
+    
+    if let Some(start) = url_line.find("http://") {
+        let url_part = &url_line[start + 7..];
+        if let Some(end) = url_part.find('.') {
+            let id = &url_part[..end];
+            if id.contains('-') {
+                return Some(id.to_string());
+            }
+        }
+    }
+    
+    None
+}
+
+async fn get_candid_ui_canister_id() -> Result<String> {
+    let output = tokio::process::Command::new("dfx")
+        .args(&["canister", "id", "__Candid_UI"])
+        .output()
+        .await?;
+
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        anyhow::bail!("Candid UI canister not found")
+    }
 }
 
 fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Result<()> {
@@ -363,96 +245,108 @@ fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Res
     Ok(())
 }
 
-async fn get_candid_ui_canister_id() -> Result<String> {
-    // Try to get the Candid UI canister ID
-    let output = tokio::process::Command::new("dfx")
-        .args(&["canister", "id", "__Candid_UI"])
-        .output()
-        .await?;
-
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        anyhow::bail!("Candid UI canister not found")
-    }
-}
-
-async fn update_candid_from_canister(
+async fn handle_claude_desktop_config(
     project_dir: &Path,
+    project_name: &str,
     canister_id: &str,
-    network: &str,
 ) -> Result<()> {
-    print_info("Extracting Candid interface from deployed canister...");
+    // Check for Cargo.toml metadata and handle Claude Desktop configuration
+    let mut claude_auto_updated = false;
+    if let Some(icarus_metadata) = cargo_config::load_from_cargo_toml(project_dir)? {
+        if icarus_metadata.claude_desktop.auto_update {
+            println!();
+            print_info("Auto-updating Claude Desktop configuration...");
 
-    // Call the __get_candid_interface_tmp_hack method
-    // Use Tokio's Command directly to better control stdout/stderr
-    let output = tokio::process::Command::new("dfx")
-        .args(&[
-            "canister",
-            "call",
-            canister_id,
-            "__get_candid_interface_tmp_hack",
-            "--query",
-            "--network",
-            network,
-        ])
-        .current_dir(project_dir)
-        .output()
-        .await?;
+            // Determine config path
+            let claude_config_path = if let Some(custom_path) =
+                cargo_config::get_claude_config_path(&icarus_metadata, project_dir)
+            {
+                custom_path
+            } else {
+                find_claude_config_path()?
+            };
 
-    if !output.status.success() {
-        anyhow::bail!(
-            "Failed to extract Candid interface: {}",
-            String::from_utf8_lossy(&output.stderr)
+            // Generate and update config
+            let mut server_config = generate_claude_server_config(project_name, canister_id);
+
+            // Update the command to use full path
+            if let Some(servers) = server_config.as_object_mut() {
+                if let Some(server) = servers.get_mut(project_name) {
+                    if let Some(server_obj) = server.as_object_mut() {
+                        // Get the full path to icarus binary
+                        let icarus_path = which::which("icarus")
+                            .map(|p| p.to_string_lossy().to_string())
+                            .unwrap_or_else(|_| "icarus".to_string());
+                        server_obj.insert(
+                            "command".to_string(),
+                            serde_json::Value::String(icarus_path),
+                        );
+                    }
+                }
+            }
+
+            match update_claude_config(&claude_config_path, project_name, server_config) {
+                Ok(_) => {
+                    print_success("Claude Desktop configuration updated automatically!");
+                    claude_auto_updated = true;
+                }
+                Err(e) => {
+                    print_warning(&format!("Could not update Claude Desktop config: {}", e));
+                    print_info("Manual configuration required - see instructions below");
+                }
+            }
+        }
+    }
+
+    // Only show manual configuration if auto-update didn't happen or failed
+    if !claude_auto_updated {
+        // Claude Desktop integration section
+        println!();
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
+        );
+        println!("{}", "🔌 Claude Desktop Integration".bold().cyan());
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
+        );
+        println!();
+
+        // Generate Claude Desktop configuration
+        let claude_config = generate_claude_desktop_config(project_name, canister_id);
+
+        println!("Add this to your Claude Desktop configuration:");
+        println!();
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&claude_config)?.bright_blue()
+        );
+        println!();
+
+        println!("Or use the connect command for guided setup:");
+        println!(
+            "  {}",
+            format!("icarus connect --canister-id {}", canister_id).bright_yellow()
         );
     }
 
-    let output = String::from_utf8_lossy(&output.stdout);
-
-    // Parse the output - it's wrapped in parentheses and quotes
-    let output_trimmed = output.trim();
-
-    if let Some(candid_str) = output_trimmed
-        .strip_prefix('(')
-        .and_then(|s| s.strip_suffix(')'))
-    {
-        // The content is wrapped in quotes with escape sequences
-        let candid_str = candid_str.trim();
-
-        // Parse as a quoted string - need to handle the comma at the end too
-        let candid_content = if candid_str.starts_with('"') {
-            // Find the last quote (may have trailing comma)
-            let end_quote_pos = candid_str.rfind('"').unwrap_or(candid_str.len());
-            let quoted_content = &candid_str[1..end_quote_pos];
-
-            // Replace escape sequences
-            quoted_content.replace("\\n", "\n").replace("\\\"", "\"")
-        } else {
-            candid_str.to_string()
-        };
-
-        // Save to the .did file
-        let project_name = get_project_name(project_dir)?;
-        let candid_path = project_dir
-            .join("src")
-            .join(format!("{}.did", project_name));
-        std::fs::write(&candid_path, &candid_content)?;
-
-        // Also update the .dfx directory
-        let dfx_candid_path = project_dir
-            .join(".dfx")
-            .join(network)
-            .join("canisters")
-            .join(&project_name)
-            .join("service.did");
-
-        if let Some(parent) = dfx_candid_path.parent() {
-            std::fs::create_dir_all(parent)?;
-        }
-        std::fs::write(&dfx_candid_path, &candid_content)?;
-
-        print_success("Candid interface updated successfully!");
-    }
-
     Ok(())
+}
+
+fn generate_claude_desktop_config(project_name: &str, canister_id: &str) -> serde_json::Value {
+    // Get the full path to icarus binary
+    let icarus_path = which::which("icarus")
+        .map(|p| p.to_string_lossy().to_string())
+        .unwrap_or_else(|_| "icarus".to_string());
+
+    json!({
+        "mcpServers": {
+            project_name: {
+                "command": icarus_path,
+                "args": ["bridge", "start", "--canister-id", canister_id],
+                "env": {}
+            }
+        }
+    })
 }

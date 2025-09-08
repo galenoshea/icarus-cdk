@@ -41,30 +41,6 @@ enum Commands {
         with_tests: bool,
     },
 
-    #[command(about = "Build the MCP server to WASM")]
-    Build {
-        #[arg(long, help = "Build profile: size, speed, or debug", value_parser = ["size", "speed", "debug"])]
-        profile: Option<String>,
-
-        #[arg(long, help = "Skip optimization step")]
-        no_optimize: bool,
-
-        #[arg(long, help = "Optimize for smallest size (uses wasm-opt -Oz)")]
-        optimize_size: bool,
-
-        #[arg(long, help = "Optimize for best performance (uses wasm-opt -O4)")]
-        optimize_performance: bool,
-
-        #[arg(
-            long,
-            help = "Skip gzip compression (compression is enabled by default)"
-        )]
-        no_compress: bool,
-
-        #[arg(long, help = "Output directory for build artifacts")]
-        output: Option<String>,
-    },
-
     #[command(about = "Analyze WASM binary size and optimization opportunities")]
     Analyze {
         #[arg(long, help = "Show top N size contributors", default_value = "20")]
@@ -87,9 +63,6 @@ enum Commands {
             help = "Explicitly upgrade specific canister ID (default: auto-upgrade if exists)"
         )]
         upgrade: Option<String>,
-
-        #[arg(long, help = "Build profile: size, speed, or debug", value_parser = ["size", "speed", "debug"])]
-        profile: Option<String>,
     },
 
     #[command(about = "Manage the Icarus bridge")]
@@ -235,36 +208,6 @@ async fn main() -> Result<()> {
             info!("Creating new project: {}", name);
             commands::new::execute(name, path, local_sdk, with_tests).await?;
         }
-        Commands::Build {
-            profile,
-            no_optimize,
-            optimize_size,
-            optimize_performance,
-            no_compress,
-            output,
-        } => {
-            info!("Building project");
-
-            // Apply profile settings
-            let (opt_skip, opt_size, opt_perf, compress) = match profile.as_deref() {
-                Some("size") => (false, true, false, true), // Maximum size optimization
-                Some("speed") => (false, false, true, false), // Maximum performance, no compression
-                Some("debug") => (true, false, false, false), // Fast builds, no optimization
-                _ => (
-                    no_optimize,
-                    optimize_size,
-                    optimize_performance,
-                    !no_compress,
-                ), // Use individual flags
-            };
-
-            if let Err(e) =
-                commands::build::execute(opt_skip, opt_size, opt_perf, compress, output).await
-            {
-                eprintln!("Build error: {:?}", e);
-                return Err(e);
-            }
-        }
         Commands::Analyze { top, compressed } => {
             info!("Analyzing WASM binary");
             commands::analyze::execute(top, compressed).await?;
@@ -273,10 +216,9 @@ async fn main() -> Result<()> {
             network,
             force,
             upgrade,
-            profile,
         } => {
             info!("Deploying to {}", network);
-            commands::deploy::execute(network, force, upgrade, profile).await?;
+            commands::deploy::execute(network, force, upgrade).await?;
         }
         Commands::Bridge { command } => match command {
             BridgeCommands::Add {
