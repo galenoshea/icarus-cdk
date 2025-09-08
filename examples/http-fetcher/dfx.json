@@ -3,7 +3,8 @@
     "http_fetcher": {
       "type": "rust",
       "package": "http-fetcher",
-      "candid": "http_fetcher.did"
+      "candid": "http_fetcher.did",
+      "optimize": "cycles"
     }
   },
   "defaults": {
@@ -19,3 +20,4 @@
   },
   "version": 1
 }
+

@@ -3,7 +3,8 @@
     "auto_refresher": {
       "type": "rust",
       "package": "auto-refresher",
-      "candid": "auto_refresher.did"
+      "candid": "auto_refresher.did",
+      "optimize": "cycles"
     }
   },
   "defaults": {

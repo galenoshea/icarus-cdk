@@ -124,9 +124,6 @@ fn create_project_structure(
     // Create Cargo.toml
     create_cargo_toml(project_path, name, local_sdk, with_tests, &example_source)?;
 
-    // Create icarus.json
-    create_icarus_json(project_path, name)?;
-
     // Create dfx.json
     create_dfx_json(project_path, name)?;
 
@@ -402,23 +399,6 @@ crate-type = ["cdylib"]
     ))
 }
 
-fn create_icarus_json(project_path: &Path, name: &str) -> Result<()> {
-    let icarus_json = format!(
-        r#"{{
-  "canister": "{}",
-  "version": "0.1.0",
-  "dfx": "0.24.2",
-  "build": {{
-    "output": "target/wasm32-unknown-unknown/release/{}.wasm"
-  }}
-}}
-"#,
-        name, name
-    );
-    std::fs::write(project_path.join("icarus.json"), icarus_json)?;
-    Ok(())
-}
-
 fn create_dfx_json(project_path: &Path, name: &str) -> Result<()> {
     // Convert hyphens to underscores for the WASM filename
     let wasm_name = name.replace("-", "_");
@@ -496,8 +476,8 @@ Then add the bridge configuration to Claude Desktop's config file.
 ## Project Structure
 
 - `src/lib.rs` - Main canister code with MCP tool implementations
-- `icarus.json` - Icarus configuration
 - `dfx.json` - Internet Computer configuration
+- `Cargo.toml` - Project dependencies and metadata
 
 ## License
 

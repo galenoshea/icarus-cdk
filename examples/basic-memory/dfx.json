@@ -3,7 +3,8 @@
     "basic_memory": {
       "type": "rust",
       "package": "basic-memory-example",
-      "candid": "target/wasm32-unknown-unknown/release/basic_memory_example.did"
+      "candid": "target/wasm32-unknown-unknown/release/basic_memory_example.did",
+      "optimize": "cycles"
     }
   },
   "defaults": {
