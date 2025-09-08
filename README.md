@@ -77,7 +77,7 @@ icarus deploy
 icarus = "0.5.7"
 
 # Or specify features explicitly
-icarus = { version = "0.5.0", features = ["canister"] }
+icarus = { version = "0.5.7", features = ["canister"] }
 
 # Other required dependencies for canister development
 ic-cdk = "0.16"
@@ -267,6 +267,7 @@ The bridge will automatically use the new `list_tools()` endpoint. No code chang
 
 - **[Getting Started Guide](docs/getting-started.md)** - Step-by-step tutorial
 - **[Parameter Translation](docs/parameter-translation.md)** - How MCP JSON maps to ICP Candid
+- **[Parameter Style Guide](docs/parameter-style-guide.md)** - Best practices for function parameters
 - **[API Documentation](https://docs.rs/icarus)** - Complete API reference
 - **[Architecture Overview](docs/architecture.md)** - How Icarus works
 - **[Migration Guide](docs/migration-guide.md)** - Migrate existing MCP servers

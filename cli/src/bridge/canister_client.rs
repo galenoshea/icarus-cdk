@@ -2,8 +2,6 @@
 //!
 //! Handles Candid encoding/decoding and HTTP calls to ICP
 
-#![allow(dead_code)]
-
 use anyhow::Result;
 use candid::types::value::{IDLArgs, IDLValue};
 use candid::{CandidType, Decode, Deserialize, Encode, Principal};
@@ -68,7 +66,7 @@ impl CanisterClient {
             .agent
             .get_principal()
             .map_err(|e| anyhow::anyhow!("Failed to get principal: {}", e))?;
-        let result = self
+        let result: Vec<u8> = self
             .agent
             .query(&self.canister_id, "is_authorized")
             .with_arg(Encode!(&principal)?)
@@ -91,7 +89,7 @@ impl CanisterClient {
 
     /// Get canister metadata including owner information
     pub async fn get_canister_metadata(&self) -> Result<String> {
-        let result = self
+        let result: Vec<u8> = self
             .agent
             .query(&self.canister_id, "list_tools")
             .call()
@@ -116,7 +114,7 @@ impl CanisterClient {
 
     /// Add a new owner to the canister (requires current user to be an owner)
     pub async fn add_owner(&self, new_owner: Principal) -> Result<()> {
-        let result = self
+        let result: Vec<u8> = self
             .agent
             .update(&self.canister_id, "add_owner")
             .with_arg(Encode!(&new_owner)?)
@@ -135,7 +133,7 @@ impl CanisterClient {
 
     /// List all owners of the canister
     pub async fn list_owners(&self) -> Result<(Principal, Vec<Principal>)> {
-        let result = self
+        let result: Vec<u8> = self
             .agent
             .query(&self.canister_id, "list_owners")
             .call()
@@ -152,7 +150,7 @@ impl CanisterClient {
     pub async fn memorize(&self, content: String, tags: Option<Vec<String>>) -> Result<String> {
         let args = Encode!(&content, &tags)?;
 
-        let response = self
+        let response: Vec<u8> = self
             .agent
             .update(&self.canister_id, "memorize")
             .with_arg(args)
@@ -171,7 +169,7 @@ impl CanisterClient {
     pub async fn recall(&self, tag: String) -> Result<Vec<MemoryEntry>> {
         let args = Encode!(&tag)?;
 
-        let response = self
+        let response: Vec<u8> = self
             .agent
             .query(&self.canister_id, "recall")
             .with_arg(args)
@@ -186,7 +184,7 @@ impl CanisterClient {
     pub async fn list(&self, limit: Option<u64>) -> Result<Vec<MemoryEntry>> {
         let args = Encode!(&limit)?;
 
-        let response = self
+        let response: Vec<u8> = self
             .agent
             .query(&self.canister_id, "list")
             .with_arg(args)
@@ -201,7 +199,7 @@ impl CanisterClient {
     pub async fn forget(&self, id: String) -> Result<bool> {
         let args = Encode!(&id)?;
 
-        let response = self
+        let response: Vec<u8> = self
             .agent
             .update(&self.canister_id, "forget")
             .with_arg(args)
@@ -218,7 +216,7 @@ impl CanisterClient {
 
     /// Get canister metadata
     pub async fn list_tools(&self) -> Result<String> {
-        let response = self
+        let response: Vec<u8> = self
             .agent
             .query(&self.canister_id, "list_tools")
             .with_arg(Encode!(&()).unwrap())
@@ -231,7 +229,7 @@ impl CanisterClient {
 
     /// Get the current caller's principal identity (whoami)
     pub async fn whoami(&self) -> Result<String> {
-        let response = self.agent.query(&self.canister_id, "whoami").call().await?;
+        let response: Vec<u8> = self.agent.query(&self.canister_id, "whoami").call().await?;
 
         let result: Result<String, String> = Decode!(&response, Result<String, String>)?;
 
@@ -268,7 +266,7 @@ impl CanisterClient {
                 .query(&self.canister_id, "list_tools")
                 .with_arg(Encode!(&())?)
                 .call()
-                .await
+                .await as Result<Vec<u8>, _>
             {
                 if let Ok(tools_json) = self.decode_response(response) {
                     if let Ok(mapper) = ParamMapper::from_tools_list(&tools_json) {
@@ -320,7 +318,7 @@ impl CanisterClient {
             );
         }
 
-        let response = if is_query {
+        let response: Vec<u8> = if is_query {
             self.agent
                 .query(&self.canister_id, method_name)
                 .with_arg(&candid_args[..])

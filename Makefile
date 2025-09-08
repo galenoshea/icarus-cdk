@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-e2e test-all test-parallel build clean deep-clean release install-hooks ci coverage
+.PHONY: help test test-quick test-e2e test-all test-pre-push test-parallel build clean deep-clean release install-hooks ci coverage
 
 # Default target
 help:
@@ -11,8 +11,9 @@ help:
 	@echo "Development:"
 	@echo "  make test          - Run unit and integration tests"
 	@echo "  make test-quick    - Run only unit tests (fastest)"
-	@echo "  make test-e2e      - Run end-to-end CLI tests"
+	@echo "  make test-e2e      - Run end-to-end CLI tests (local only)"
 	@echo "  make test-all      - Run all tests (unit, integration, and E2E)"
+	@echo "  make test-pre-push - Run comprehensive tests as in pre-push hook"
 	@echo "  make test-parallel - Run tests in parallel (faster execution)"
 	@echo "  make build         - Build all crates"
 	@echo "  make clean         - Clean build artifacts (cargo clean)"
@@ -50,6 +51,20 @@ test-e2e:
 
 # Run all tests
 test-all: test test-e2e
+
+# Run comprehensive tests as in pre-push hook
+test-pre-push:
+	@echo "🔍 Running format check..."
+	@cargo fmt --all -- --check
+	@echo "🔍 Running clippy..."
+	@cargo clippy --all-targets --all-features -- -D warnings
+	@echo "🧪 Running unit and integration tests..."
+	@cargo test --all --lib --bins --tests
+	@echo "🔨 Building CLI for E2E tests..."
+	@cargo build --package icarus-cli --bin icarus --release
+	@echo "🧪 Running E2E tests (this may take a few minutes)..."
+	@cd cli && cargo test --test '*' --release
+	@echo "✅ All pre-push tests passed!"
 
 # Run tests in parallel (optimized for speed)
 test-parallel:

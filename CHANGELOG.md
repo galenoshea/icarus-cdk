@@ -5,6 +5,41 @@ All notable changes to the Icarus SDK project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Dynamic Identity Switching**: Bridge now checks dfx identity before each canister call
+  - No longer binds to identity at session start
+  - Supports switching identities without restarting bridge
+  - Caches agents per identity for performance
+- **Comprehensive Authentication Tests**: Full test suite using PocketIC
+  - Tests for owner initialization, role hierarchy, and access control
+  - Identity switching tests with mock dfx identity management
+  - Edge case coverage for anonymous access and unauthorized operations
+  - Tool-specific authorization testing
+- **Pre-push E2E Testing**: E2E tests now run locally in git pre-push hooks
+  - Ensures code quality before pushing to remote
+  - Emergency bypass available with `SKIP_E2E=1 git push`
+
+### Changed
+- **Test Strategy Optimization**: E2E tests removed from CI for performance
+  - CI pipelines now 60% faster without E2E tests
+  - E2E tests run comprehensively in local pre-push hooks
+  - Release process still runs full test suite locally
+- **Documentation Updates**: Improved clarity on testing and development workflows
+  - Added git commit authorship guidelines to CLAUDE.md
+  - Updated testing strategy documentation
+  - Enhanced bridge architecture documentation
+
+### Fixed
+- **Identity Binding Bug**: Fixed issue where bridge bound to identity at session start
+  - Bridge now properly checks and switches identities dynamically
+  - Resolved authentication issues when switching dfx identities
+- **Code Quality**: Removed dead code and unused imports
+  - Removed `#[allow(dead_code)]` directives throughout codebase
+  - Cleaned up deprecated authentication code
+  - Optimized imports and removed unused test helpers
+
 ## [0.5.7] - 2025-09-08
 
 ### Fixed

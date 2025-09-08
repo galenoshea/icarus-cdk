@@ -187,11 +187,49 @@ This will show:
 
 ## Best Practices
 
-1. **Keep it simple** - Use positional parameters for functions with ≤3 parameters
-2. **Use records for complex data** - Group related parameters into structs
-3. **Document parameters** - Add descriptions to help Claude understand usage
-4. **Test with Claude Desktop** - Always test your tools with the actual MCP client
-5. **Handle errors gracefully** - Return clear error messages for invalid parameters
+### Recommended Parameter Strategy
+
+Follow this decision tree for optimal AI and human understanding:
+
+```
+Number of Parameters?
+├─ 0 → No parameters needed
+├─ 1-2 → Use positional parameters (simple and clear)
+├─ 3+ → Use args record (self-documenting)
+└─ Complex single param → Use named record type
+```
+
+### Why This Matters
+
+1. **AI Integration**: Args records maintain structure from MCP JSON to Candid, reducing confusion for Claude
+2. **Candid UI**: Field names in records provide documentation even when the UI lacks details
+3. **ICP Alignment**: Follows patterns used by major ICP projects (NNS, OpenChat)
+4. **Evolution**: Records with optional fields allow API growth without breaking changes
+
+### Implementation Guidelines
+
+1. **Simple functions (1-2 params)**: Keep positional for clarity
+   ```rust
+   pub fn get_user(id: String) -> Result<User, String>
+   pub fn transfer(to: Principal, amount: u64) -> Result<(), String>
+   ```
+
+2. **Complex functions (3+ params)**: Use records with descriptive names
+   ```rust
+   pub struct CreateUserArgs {
+       name: String,           // Self-documenting
+       email: String,          // Clear purpose
+       role: UserRole,         // Type-safe
+       metadata: Option<Map>,  // Optional fields obvious
+   }
+   ```
+
+3. **Naming convention**: Always use `{Action}{Resource}Args` pattern
+   - `CreateUserArgs`, `UpdateConfigArgs`, `QueryItemsArgs`
+
+4. **Document thoroughly**: Add doc comments to complex types
+5. **Test with Claude Desktop**: Verify the parameter translation works smoothly
+6. **Handle errors gracefully**: Return clear messages for parameter validation failures
 
 ## Migration from 0.4.0
 

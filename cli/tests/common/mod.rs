@@ -1,6 +1,8 @@
 //! E2E test helper utilities
 
+pub mod identity_utils;
 pub mod parallel;
+pub mod pocket_ic_utils;
 
 use once_cell::sync::OnceCell;
 use std::fs;
@@ -62,7 +64,6 @@ impl CliRunner {
     }
 
     /// Run a command with arguments
-    #[allow(dead_code)]
     pub fn run(&self, args: &[&str]) -> Output {
         Command::new(&self.binary_path)
             .args(args)
@@ -86,7 +87,6 @@ pub struct TestProject {
     name: String,
 }
 
-#[allow(dead_code)]
 impl TestProject {
     /// Create a new test project directory
     pub fn new(name: &str) -> Self {
@@ -108,7 +108,6 @@ impl TestProject {
     }
 
     /// Check if a file exists in the project
-    #[allow(dead_code)]
     pub fn file_exists(&self, path: &str) -> bool {
         self.project_dir().join(path).exists()
     }
@@ -120,7 +119,6 @@ impl TestProject {
     }
 
     /// Write a file to the project
-    #[allow(dead_code)]
     pub fn write_file(&self, path: &str, content: &str) {
         let file_path = self.project_dir().join(path);
         if let Some(parent) = file_path.parent() {
@@ -135,7 +133,6 @@ impl TestProject {
     }
 
     /// Run cargo build in the project
-    #[allow(dead_code)]
     pub fn cargo_build(&self) -> Output {
         let mut cmd = Command::new("cargo");
         // Clear coverage-related environment variables that break WASM builds
@@ -153,19 +150,16 @@ impl TestProject {
     }
 
     /// Check if the project builds successfully
-    #[allow(dead_code)]
     pub fn builds_successfully(&self) -> bool {
         self.cargo_build().status.success()
     }
 }
 
 /// Helper for cleaning up test artifacts
-#[allow(dead_code)]
 pub struct TestCleanup;
 
 impl TestCleanup {
     /// Run the project's clean script
-    #[allow(dead_code)]
     pub fn run_clean_script() {
         let script_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
@@ -184,7 +178,6 @@ impl TestCleanup {
 }
 
 /// Assert that command output contains a string
-#[allow(dead_code)]
 pub fn assert_contains(output: &Output, expected: &str) {
     let stdout = String::from_utf8_lossy(&output.stdout);
     let stderr = String::from_utf8_lossy(&output.stderr);
@@ -258,7 +251,6 @@ pub struct SharedTestProject {
     _temp_dir: TempDir,
 }
 
-#[allow(dead_code)]
 impl SharedTestProject {
     /// Get or create the shared test project
     pub fn get() -> &'static SharedTestProject {
@@ -356,7 +348,6 @@ impl SharedTestProject {
 }
 
 // Helper function to recursively copy directories
-#[allow(dead_code)]
 fn copy_dir_all(src: &Path, dst: &Path) -> std::io::Result<()> {
     fs::create_dir_all(dst)?;
 

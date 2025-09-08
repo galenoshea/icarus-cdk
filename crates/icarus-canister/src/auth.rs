@@ -288,19 +288,29 @@ pub fn remove_user(principal: Principal) -> String {
     let caller = ic_cdk::caller();
 
     AUTH_USERS.with(|users| {
-        if let Some(target_entry) = users.borrow().get(&principal) {
-            // Prevent removal of owners by admins
-            if matches!(target_entry.role, AuthRole::Owner)
-                && !matches!(auth_info.role, AuthRole::Owner)
-            {
-                ic_cdk::trap("Only owners can remove other owners");
-            }
+        // First, check the user and validate permissions in a separate scope
+        let should_remove = {
+            if let Some(target_entry) = users.borrow().get(&principal) {
+                // Prevent removal of owners by admins
+                if matches!(target_entry.role, AuthRole::Owner)
+                    && !matches!(auth_info.role, AuthRole::Owner)
+                {
+                    ic_cdk::trap("Only owners can remove other owners");
+                }
 
-            // Prevent self-removal
-            if principal == caller {
-                ic_cdk::trap("Cannot remove yourself");
-            }
+                // Prevent self-removal
+                if principal == caller {
+                    ic_cdk::trap("Cannot remove yourself");
+                }
 
+                true
+            } else {
+                false
+            }
+        }; // Immutable borrow is dropped here
+
+        // Now we can safely get a mutable borrow
+        if should_remove {
             users.borrow_mut().remove(&principal);
 
             log_auth_action(
@@ -318,7 +328,7 @@ pub fn remove_user(principal: Principal) -> String {
                 caller.to_text()
             )
         } else {
-            ic_cdk::trap("Principal not found");
+            ic_cdk::trap(&format!("User {} not found", principal.to_text()))
         }
     })
 }

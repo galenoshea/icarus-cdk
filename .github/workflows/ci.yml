@@ -7,12 +7,6 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
-    inputs:
-      skip_e2e:
-        description: 'Skip E2E tests (for emergency releases)'
-        required: false
-        type: boolean
-        default: false
 
 # Cancel in-progress runs when a new run is triggered
 concurrency:
@@ -216,85 +210,9 @@ jobs:
             ;;
         esac
 
-  # E2E tests run in parallel matrix for speed
-  test-e2e:
-    name: E2E ${{ matrix.test }}
-    runs-on: ubuntu-latest
-    needs: [changes, build-artifacts]
-    # Skip E2E tests if skip_e2e input is set or commit message contains [skip-e2e]
-    if: |
-      (needs.changes.outputs.cli == 'true' || needs.changes.outputs.workflows == 'true') 
-      && github.event.inputs.skip_e2e != 'true' 
-      && !contains(github.event.head_commit.message, '[skip-e2e]')
-    timeout-minutes: 10
-    strategy:
-      fail-fast: false
-      matrix:
-        test: [new, build, validate, workflow]
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Install Rust toolchain
-      uses: dtolnay/rust-toolchain@stable
-      with:
-        targets: wasm32-unknown-unknown
-    
-    - name: Cache ic-wasm binary
-      uses: actions/cache@v4
-      with:
-        path: ~/.cargo/bin/ic-wasm
-        key: ${{ runner.os }}-ic-wasm-0.7.1
-    
-    - name: Download and extract CLI binary
-      uses: actions/download-artifact@v4
-      with:
-        name: cli-binary
-    
-    - name: Extract CLI binary
-      run: |
-        tar -xzf cli-binary.tar.gz
-        mkdir -p target/release
-        mv icarus target/release/
-        chmod +x target/release/icarus
-    
-    # Cache the shared test project directory (per test for isolation)
-    - name: Cache E2E test project
-      uses: actions/cache@v4
-      with:
-        path: /tmp/icarus-e2e-${{ matrix.test }}
-        key: ${{ runner.os }}-e2e-${{ matrix.test }}-${{ hashFiles('cli/templates/**') }}-v2
-        restore-keys: |
-          ${{ runner.os }}-e2e-${{ matrix.test }}-
-    
-    # Restore cargo cache for test compilation
-    - name: Restore cargo dependencies cache
-      uses: actions/cache@v4
-      with:
-        path: |
-          ~/.cargo/registry/index
-          ~/.cargo/registry/cache
-          ~/.cargo/git/db
-        key: ${{ runner.os }}-cargo-deps-${{ hashFiles('**/Cargo.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-cargo-deps-
-    
-    # Run the specific E2E test in parallel
-    - name: Run E2E test - ${{ matrix.test }}
-      run: |
-        cd cli
-        export ICARUS_TEST_PROJECT_DIR="/tmp/icarus-e2e-${{ matrix.test }}"
-        # Create shared project upfront if needed
-        if [ "${{ matrix.test }}" != "new" ]; then
-          mkdir -p /tmp/icarus-e2e-shared-project
-        fi
-        # Handle special case for workflow test (doesn't have _command suffix)
-        if [ "${{ matrix.test }}" = "workflow" ]; then
-          cargo test --test test_workflow --release
-        else
-          cargo test --test test_${{ matrix.test }}_command --release
-        fi
-      env:
-        RUST_LOG: warn
+  # Note: E2E tests are run in local pre-push hooks to ensure quality
+  # They are excluded from CI to improve pipeline performance
+  # Developers must pass all tests locally before pushing
 
   # Documentation build (only if docs changed)
   docs:
@@ -325,7 +243,7 @@ jobs:
   ci-success:
     name: CI Success
     runs-on: ubuntu-latest
-    needs: [validation, build-artifacts, test-matrix, test-e2e, docs]
+    needs: [validation, build-artifacts, test-matrix, docs]
     if: always()
     steps:
     - name: Check CI Status
@@ -349,6 +267,6 @@ jobs:
         
         echo "Optimization Summary:"
         echo "• Path-based test filtering active"
-        echo "• E2E tests run in parallel matrix"
+        echo "• E2E tests run locally in pre-push hooks"
         echo "• Smart caching reduces build times"
         echo "• Artifacts compressed for faster transfer"

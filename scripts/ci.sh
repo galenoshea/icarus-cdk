@@ -181,7 +181,12 @@ run_tests() {
             run_check "Integration tests" cargo test --test '*' ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
             ;;
         e2e)
-            run_check "E2E tests" bash -c "cd cli && cargo test --test '*' --release"
+            # Skip E2E tests when running in CI environment
+            if [[ "${CI:-}" == "true" ]]; then
+                log_info "E2E tests are skipped in CI (run locally in pre-push hooks)"
+            else
+                run_check "E2E tests" bash -c "cd cli && cargo test --test '*' --release"
+            fi
             ;;
         doc)
             run_check "Doc tests" cargo test --doc ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"}
@@ -202,8 +207,11 @@ run_tests() {
             cargo test --doc ${CARGO_FLAGS[@]+"${CARGO_FLAGS[@]}"} &
             pids+=($!)
             
-            (cd cli && cargo test --test '*' --release) &
-            pids+=($!)
+            # Skip E2E tests when running in CI environment
+            if [[ "${CI:-}" != "true" ]]; then
+                (cd cli && cargo test --test '*' --release) &
+                pids+=($!)
+            fi
             
             # Wait for all tests to complete
             local failed=false
@@ -317,7 +325,12 @@ main() {
                 run_tests integration
                 ;;
             test-e2e)
-                run_tests e2e
+                # E2E tests should be run locally, not in CI
+                if [[ "${CI:-}" == "true" ]]; then
+                    log_info "E2E tests are skipped in CI (run locally in pre-push hooks)"
+                else
+                    run_tests e2e
+                fi
                 ;;
             doc)
                 build_docs

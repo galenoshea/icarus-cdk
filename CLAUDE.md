@@ -12,6 +12,14 @@ Icarus SDK enables developers to create MCP (Model Context Protocol) servers tha
 - Automatic conversion to Apache 2.0 on January 1, 2029
 - Version 0.1.0 is yanked - only use 0.2.0+
 
+## Git Commit Guidelines
+
+**IMPORTANT**: Claude must NEVER be listed as a commit author or co-author.
+- Always use the user's identity for all commits
+- Claude provides code changes but does not author commits
+- When creating commits, use only the user's name and email
+- Never include "Co-Authored-By: Claude" or similar attribution
+
 ## Development Commands
 
 ### Building and Testing
@@ -20,12 +28,15 @@ Icarus SDK enables developers to create MCP (Model Context Protocol) servers tha
 make test
 cargo test --all --lib --bins
 
-# Run E2E tests (builds CLI first)
+# Run E2E tests locally (not in CI)
 make test-e2e
-cd cli && cargo test --test '*' -- --test-threads=1
+cd cli && cargo test --test '*' --release
 
-# Run all tests
+# Run all tests (including E2E)
 make test-all
+
+# Run pre-push test suite (what runs before git push)
+make test-pre-push
 
 # Build all crates
 make build
@@ -117,10 +128,12 @@ icarus-sdk/
 - Supports StableBTreeMap, StableVec, StableCell
 
 #### 3. **Bridge Architecture** (`cli/src/bridge/`)
-- `rmcp_server.rs`: Translates between MCP protocol and canister calls
+- `rmcp_server.rs`: Translates between MCP protocol and canister calls with dynamic identity switching
 - `canister_client.rs`: Handles IC agent and canister communication
-- `auth.rs`: Manages IC identity and authentication
+- `auth.rs`: Simplified authentication helpers
 - Bridge runs as subprocess that Claude Desktop connects to
+- **Dynamic Identity**: Bridge checks current dfx identity before each canister call
+- **No Session Binding**: Identity can be switched without restarting bridge
 
 #### 4. **Tool Registration** (`icarus-core`)
 - Tools self-register via `linkme` crate sections
@@ -134,15 +147,23 @@ icarus-sdk/
 
 ### Testing Strategy
 
+**Local vs CI Testing**:
+- **Local (pre-push hooks)**: All tests including E2E run automatically before push
+- **CI Pipeline**: Unit, integration, and doc tests only (E2E excluded for performance)
+- **Emergency bypass**: Use `SKIP_E2E=1 git push` to skip E2E tests in emergencies
+- **Release process**: Full test suite including E2E runs locally before release
+
 **Progressive Testing Levels**:
 1. **Unit Tests**: No blockchain, test pure logic
 2. **Canister Tests**: Local dfx, test canister behavior
 3. **MCP Protocol Tests**: Test protocol compliance
-4. **Integration Tests**: Full E2E with bridge
+4. **Integration Tests**: Full E2E with bridge (local only)
 
 **E2E Test Helpers** (`cli/tests/common/`):
 - `CliRunner`: Executes CLI commands for testing
 - `TestProject`: Creates temporary test projects
+- `SharedTestProject`: Reusable test project for faster E2E tests
+- `PocketIC`: Local ICP test environment for auth testing
 - Assertion helpers for output validation
 
 ### Version Management
@@ -156,14 +177,18 @@ icarus-sdk/
 ### CI/CD Pipeline
 
 **GitHub Actions Workflows**:
-- `ci.yml`: Tests, clippy, formatting, version check on every push
-- `release.yml`: Publishes to crates.io on version tags (v0.2.6)
+- `ci.yml`: Unit/integration tests, clippy, formatting, version check (E2E tests excluded)
+- `release.yml`: Publishes to crates.io on version tags
 - `coverage.yml`: Code coverage reporting
 
-**Pre-commit Hooks** (via `scripts/install-hooks.sh`):
-- Format check
-- Clippy warnings as errors
-- Test execution
+**Git Hooks** (via `scripts/install-hooks.sh`):
+- **Pre-commit**: Format check, clippy warnings as errors
+- **Pre-push**: Full test suite including E2E tests
+  - Version consistency check
+  - Build with warnings as errors
+  - Format and clippy checks
+  - All unit, integration, and E2E tests
+  - Use `SKIP_E2E=1 git push` to bypass E2E tests in emergencies
 
 ### Important Files and Patterns
 
@@ -193,7 +218,7 @@ icarus-sdk/
 2. **Unused Imports**: Will fail CI - run clippy before committing
 3. **Direct WASM Path**: Use validate command's fallback logic for WASM discovery
 4. **Profile in Sub-crates**: Profiles must be in workspace root only
-5. **Test Isolation**: E2E tests must use `--test-threads=1`
+5. **Test Isolation**: E2E tests run with proper isolation in pre-push hooks
 
 ### MCP-ICP Bridge Protocol Flow
 
@@ -204,3 +229,44 @@ icarus-sdk/
 5. State persists in stable memory
 
 This architecture enables MCP servers to run permanently on ICP with built-in persistence, while maintaining clean separation between protocol translation (bridge) and business logic (canister).
+
+### Parameter Design Strategy
+
+**Use the hybrid approach for function parameters**:
+
+#### Simple Functions (1-2 parameters)
+Use positional parameters for straightforward operations:
+```rust
+#[icarus_tool("Get a specific item")]
+pub fn get_item(id: String) -> Result<Item, String>
+
+#[icarus_tool("Delete an item")]
+pub fn delete_item(id: String, confirm: bool) -> Result<String, String>
+```
+
+#### Complex Functions (3+ parameters)
+Use args records for better self-documentation and AI understanding:
+```rust
+#[derive(CandidType, Deserialize)]
+pub struct CreateItemArgs {
+    name: String,              // Clear field names help Claude
+    description: String,        // Self-documenting in Candid UI
+    tags: Vec<String>,         
+    metadata: Option<HashMap<String, String>>,
+    expires_at: Option<u64>,
+}
+
+#[icarus_tool("Create a new item with metadata")]
+pub fn create_item(args: CreateItemArgs) -> Result<String, String>
+```
+
+**Why this matters for Claude**:
+- Args records maintain the same structure from MCP JSON through to Candid
+- Field names provide context even when Candid UI lacks documentation
+- Claude can construct named field objects more reliably than positional parameters
+- Aligns with ICP ecosystem patterns (NNS, OpenChat, Internet Identity)
+
+**Naming Convention**:
+- Always use `Args` suffix for record types: `CreateUserArgs`, `QueryArgs`, `UpdateConfigArgs`
+- Use descriptive field names that match the MCP parameter names
+- Document complex types with doc comments for better understanding

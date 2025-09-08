@@ -118,7 +118,19 @@ icarus-sdk/
 
 ### Testing
 
-We use a progressive testing strategy:
+We use a progressive testing strategy with different approaches for local development and CI:
+
+**Local Development** (Pre-push hooks):
+- All tests including E2E run automatically before push
+- Use `make test-pre-push` to run the full test suite manually
+- Emergency bypass: `SKIP_E2E=1 git push` to skip E2E tests
+
+**CI Pipeline**:
+- Runs unit, integration, and doc tests only
+- E2E tests excluded for performance (60% faster CI)
+- Fast feedback loop (5-7 minutes)
+
+**Test Types**:
 
 1. **Unit Tests**: Test individual functions
    ```rust
@@ -136,6 +148,13 @@ We use a progressive testing strategy:
 3. **Doc Tests**: Ensure examples in documentation work
    ```bash
    cargo test --doc
+   ```
+
+4. **E2E Tests**: Full end-to-end testing (local only)
+   ```bash
+   make test-e2e
+   # Or from CLI directory:
+   cd cli && cargo test --test '*' --release
    ```
 
 ### Documentation

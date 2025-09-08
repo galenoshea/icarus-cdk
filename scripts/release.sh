@@ -38,12 +38,30 @@ else
     echo -e "${YELLOW}⚠️  Version inconsistencies detected (will be fixed during release)${NC}"
 fi
 
-# Run tests first (skip doc tests which have import issues)
-echo -e "${YELLOW}🧪 Running tests...${NC}"
+# Run all tests including E2E (releases must pass all tests)
+echo -e "${YELLOW}🧪 Running unit and integration tests...${NC}"
 if cargo test --all --lib --bins --tests --quiet; then
-    echo -e "${GREEN}✅ Tests passed${NC}"
+    echo -e "${GREEN}✅ Unit and integration tests passed${NC}"
 else
     echo -e "${RED}❌ Tests failed${NC}"
+    exit 1
+fi
+
+# Build CLI for E2E tests
+echo -e "${YELLOW}🔨 Building CLI for E2E tests...${NC}"
+if cargo build --package icarus-cli --bin icarus --release --quiet; then
+    echo -e "${GREEN}✅ CLI built successfully${NC}"
+else
+    echo -e "${RED}❌ CLI build failed${NC}"
+    exit 1
+fi
+
+# Run E2E tests (required for releases)
+echo -e "${YELLOW}🧪 Running E2E tests (this may take a few minutes)...${NC}"
+if (cd cli && cargo test --test '*' --release --quiet); then
+    echo -e "${GREEN}✅ E2E tests passed${NC}"
+else
+    echo -e "${RED}❌ E2E tests failed - cannot release with failing E2E tests${NC}"
     exit 1
 fi
 
