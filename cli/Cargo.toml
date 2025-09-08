@@ -103,7 +103,6 @@ path = "tests/e2e/test_validate_command.rs"
 name = "test_workflow"
 path = "tests/e2e/test_workflow.rs"
 
-# Authentication test requires more work to integrate with CLI workflow
-# [[test]]
-# name = "test_authentication"
-# path = "tests/e2e/test_authentication.rs"
+[[test]]
+name = "test_authentication"
+path = "tests/e2e/test_authentication.rs"
