@@ -33,9 +33,6 @@ members = [
     "crates/icarus-derive",
     "crates/icarus-canister",
     "cli",
-    "examples/basic-memory",
-    "examples/http-fetcher",
-    "examples/auto-refresher",
 ]
 resolver = "2"
 

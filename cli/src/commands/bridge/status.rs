@@ -60,7 +60,7 @@ pub async fn execute(verbose: bool) -> Result<()> {
 fn find_bridge_instances() -> Result<Vec<BridgeInstance>> {
     let mut instances = Vec::new();
     let mut system = System::new_all();
-    system.refresh_processes(ProcessesToUpdate::All);
+    system.refresh_processes(ProcessesToUpdate::All, true);
 
     // Look for icarus-bridge processes
     for (pid, process) in system.processes() {
@@ -158,7 +158,7 @@ fn parse_canister_from_cmd(cmd: &str) -> Option<String> {
 
 fn is_process_running(pid: u32) -> bool {
     let mut system = System::new();
-    system.refresh_processes(ProcessesToUpdate::All);
+    system.refresh_processes(ProcessesToUpdate::All, true);
     system.process(sysinfo::Pid::from_u32(pid)).is_some()
 }
 

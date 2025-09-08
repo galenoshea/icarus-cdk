@@ -18,7 +18,7 @@ async fn stop_all_bridges() -> Result<()> {
     print_info("Stopping all Icarus bridge instances...");
 
     let mut system = System::new_all();
-    system.refresh_processes(ProcessesToUpdate::All);
+    system.refresh_processes(ProcessesToUpdate::All, true);
 
     let mut stopped_count = 0;
 
@@ -66,7 +66,7 @@ async fn stop_bridge_on_port(port: u16) -> Result<()> {
         if let Ok(pid_str) = std::fs::read_to_string(&pid_file) {
             if let Ok(pid) = pid_str.trim().parse::<u32>() {
                 let mut system = System::new();
-                system.refresh_processes(ProcessesToUpdate::All);
+                system.refresh_processes(ProcessesToUpdate::All, true);
 
                 if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
                     if stop_process(pid, process) {
@@ -84,7 +84,7 @@ async fn stop_bridge_on_port(port: u16) -> Result<()> {
 
     // If PID file didn't work, search all processes
     let mut system = System::new_all();
-    system.refresh_processes(ProcessesToUpdate::All);
+    system.refresh_processes(ProcessesToUpdate::All, true);
 
     for (pid, process) in system.processes() {
         let name = process.name();
@@ -122,7 +122,7 @@ fn stop_process(pid: u32, process: &sysinfo::Process) -> bool {
 
         // Check if it's still running
         let mut system = System::new();
-        system.refresh_processes(ProcessesToUpdate::All);
+        system.refresh_processes(ProcessesToUpdate::All, true);
 
         if system.process(sysinfo::Pid::from_u32(pid)).is_none() {
             return true;
