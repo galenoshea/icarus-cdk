@@ -31,18 +31,37 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
         project_name, network
     ));
 
-    // Run dfx deploy with appropriate arguments
-    let mut args = vec!["deploy", &project_name, "--network", &network];
+    // Get the current principal to use as the init argument
+    let principal_output =
+        run_command("dfx", &["identity", "get-principal"], Some(&current_dir)).await?;
+    let principal = principal_output.trim().to_string();
+    print_info(&format!("Using principal: {}", principal));
+
+    // Build args with owned strings for the init argument
+    let init_arg = format!("(principal \"{}\")", principal);
+
+    // Build the command args as owned strings
+    let mut cmd_args = vec![
+        "deploy".to_string(),
+        project_name.clone(),
+        "--network".to_string(),
+        network.clone(),
+        "--argument".to_string(),
+        init_arg,
+    ];
 
     if let Some(canister_id) = &upgrade {
-        args.push("--upgrade-unchanged");
+        cmd_args.push("--upgrade-unchanged".to_string());
         print_info(&format!("Upgrading canister {}", canister_id));
     }
 
     if force {
-        args.push("--yes");
+        cmd_args.push("--yes".to_string());
         print_info("Force deploying (will delete existing canister if present)");
     }
+
+    // Convert to &str for run_command
+    let args: Vec<&str> = cmd_args.iter().map(|s| s.as_str()).collect();
 
     // Run dfx deploy
     let output = run_command("dfx", &args, Some(&current_dir)).await?;

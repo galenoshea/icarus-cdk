@@ -102,8 +102,8 @@ fn test_new_creates_valid_candid_interface() {
     let output = cli.run_in(test_project.path(), &["new", "candid-test"]);
     assert_success(&output);
 
-    // Check if candid export macro is in the source
-    // (actual candid generation is tested in build tests)
-    let lib_rs = test_project.read_file("src/lib.rs");
-    assert!(lib_rs.contains("ic_cdk::export_candid!()"));
+    // Check if .did file was created
+    // (we now create a minimal .did file directly)
+    let project_name = "candid-test";
+    assert!(test_project.file_exists(&format!("src/{}.did", project_name)));
 }

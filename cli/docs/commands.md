@@ -46,39 +46,6 @@ icarus new my-server --local-sdk ../icarus-sdk
 icarus new my-server --path ~/projects
 ```
 
-### `icarus build`
-
-Build the project to WebAssembly.
-
-**Usage:**
-```bash
-icarus build [options]
-```
-
-**Options:**
-- `--release` - Build in release mode (optimized)
-- `--profile <name>` - Build profile: debug, release, or custom
-- `--target <target>` - Override target (default: wasm32-unknown-unknown)
-- `--no-optimize` - Skip wasm optimization
-- `--features <features>` - Comma-separated list of features to enable
-
-**Examples:**
-```bash
-# Basic build
-icarus build
-
-# Optimized release build
-icarus build --release
-
-# Build with specific features
-icarus build --features "advanced,experimental"
-```
-
-**Output:**
-- WASM file in `.dfx/local/canisters/<name>/<name>.wasm`
-- Candid interface in `src/<name>.did`
-- Build artifacts in `target/`
-
 ### `icarus deploy`
 
 Deploy the project to ICP network.
@@ -380,13 +347,10 @@ icarus new memory-assistant --with-tests
 # 2. Navigate to project
 cd memory-assistant
 
-# 3. Build the project
-icarus build --release
-
-# 4. Run tests
+# 3. Run tests
 icarus test --all
 
-# 5. Deploy locally
+# 4. Deploy locally (builds automatically)
 icarus deploy --network local
 
 # 6. Start bridge (use canister ID from deploy output)
@@ -402,9 +366,6 @@ icarus connect --canister-id rrkah-fqaaa-aaaaa-aaaaq-cai
 # Use local SDK for development
 icarus new test-project --local-sdk ~/projects/icarus-sdk
 
-# Build with debug info
-icarus build --profile debug
-
 # Test specific functionality
 icarus test --filter test_memory_operations
 
@@ -415,9 +376,6 @@ icarus deploy --force --network local
 ### Production Deployment
 
 ```bash
-# Build optimized version
-icarus build --release
-
 # Run all tests
 icarus test --all
 

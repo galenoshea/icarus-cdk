@@ -236,8 +236,7 @@ Check out our [examples directory](examples/) for complete, deployable projects:
 ```bash
 # Project Management
 icarus new <name>           # Create a new project
-icarus build               # Build your canister
-icarus deploy              # Deploy to ICP
+icarus deploy              # Deploy to ICP (builds automatically)
 icarus test                # Run tests
 
 # Bridge Commands (Claude Desktop integration)
@@ -258,8 +257,7 @@ icarus logs <id>          # View canister logs
 
 To upgrade:
 1. Update your dependency: `icarus = "0.5.6"`
-2. Rebuild your canister: `icarus build`
-3. Redeploy: `icarus deploy`
+2. Redeploy: `icarus deploy` (builds automatically)
 
 The bridge will automatically use the new `list_tools()` endpoint. No code changes needed unless you were directly calling `get_metadata()`.
 

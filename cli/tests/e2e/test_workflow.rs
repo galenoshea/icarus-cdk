@@ -6,7 +6,7 @@ mod common;
 use common::*;
 
 #[test]
-fn test_complete_workflow_new_build_validate() {
+fn test_complete_workflow_new_validate() {
     let cli = CliRunner::new();
     let shared_project = SharedTestProject::get();
 
@@ -15,9 +15,14 @@ fn test_complete_workflow_new_build_validate() {
     assert!(shared_project.file_exists("Cargo.toml"));
     assert!(shared_project.file_exists("src/lib.rs"));
 
-    // Step 2: Build the project again (tests rebuild)
-    let output = cli.run_in(shared_project.project_dir(), &["build"]);
-    assert_success(&output);
+    // Step 2: Build using cargo directly (since icarus build is removed)
+    use std::process::Command;
+    let output = Command::new("cargo")
+        .args(&["build", "--target", "wasm32-unknown-unknown", "--release"])
+        .current_dir(shared_project.project_dir())
+        .output()
+        .expect("Failed to run cargo build");
+    assert!(output.status.success(), "Cargo build should succeed");
 
     // Step 3: Validate project
     let output = cli.run_in(shared_project.project_dir(), &["validate"]);
@@ -52,9 +57,14 @@ fn test_modify_and_rebuild_workflow() {
     let modified = format!("// Modified for testing\n{}", lib_content);
     test_project.write_file("src/lib.rs", &modified);
 
-    // Rebuild should succeed
-    let output = cli.run_in(&test_project.project_dir(), &["build"]);
-    assert_success(&output);
+    // Rebuild using cargo directly (since icarus build is removed)
+    use std::process::Command;
+    let output = Command::new("cargo")
+        .args(&["build", "--target", "wasm32-unknown-unknown", "--release"])
+        .current_dir(test_project.project_dir())
+        .output()
+        .expect("Failed to run cargo build");
+    assert!(output.status.success(), "Cargo rebuild should succeed");
 }
 
 #[test]

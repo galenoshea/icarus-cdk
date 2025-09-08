@@ -36,13 +36,7 @@ cargo install --path .
    cd my-mcp-server
    ```
 
-2. **Build the project**
-   ```bash
-   icarus build
-   ```
-   This compiles your Rust code to WASM and optimizes it for deployment.
-
-3. **Deploy locally**
+2. **Deploy locally**
    ```bash
    icarus deploy --network local
    ```
@@ -65,7 +59,6 @@ cargo install --path .
 ### Project Management
 
 - `icarus new <name>` - Create a new MCP server project
-- `icarus build` - Build the project to WASM
 - `icarus test` - Run tests with progressive testing strategy
 - `icarus deploy` - Deploy to ICP (local or IC mainnet)
 
