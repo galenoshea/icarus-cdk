@@ -381,7 +381,11 @@ tokio = { version = "1", features = ["full"] }
         r#"[package]
 name = "{}"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[package.metadata.icarus]
+claude_desktop.auto_update = true
+claude_desktop.config_path = ""
 
 [dependencies]
 icarus = {}
@@ -394,6 +398,14 @@ serde_json = "1.0"{}
 
 [lib]
 crate-type = ["cdylib"]
+
+[profile.release]
+opt-level = 'z'       # Optimize for size
+lto = true            # Enable link-time optimization
+codegen-units = 1     # Single codegen unit for better optimization
+strip = "debuginfo"   # Strip debug info
+panic = "abort"       # Smaller binaries, matches WASM behavior
+overflow-checks = false # Disable runtime overflow checks
 "#,
         name, icarus_dep, dev_dependencies_section
     ))

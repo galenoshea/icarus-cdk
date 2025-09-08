@@ -1,10 +1,10 @@
 {
   "canisters": {
     "basic_memory": {
-      "type": "rust",
-      "package": "basic-memory-example",
-      "candid": "target/wasm32-unknown-unknown/release/basic_memory_example.did",
-      "optimize": "cycles"
+      "type": "custom",
+      "candid": "src/basic_memory.did",
+      "wasm": "target/wasm32-unknown-unknown/release/basic_memory_example.wasm",
+      "build": "icarus build"
     }
   },
   "defaults": {
