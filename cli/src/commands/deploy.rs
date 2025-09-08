@@ -96,49 +96,6 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
         canister_id
     ));
 
-    // Get Candid UI canister ID for local network
-    let candid_ui_id = if network == "local" {
-        get_candid_ui_canister_id().await.ok()
-    } else {
-        None
-    };
-
-    // Display URLs
-    println!("\n{}", "URLs:".bold());
-    println!("  Backend canister via Candid interface:");
-
-    if network == "local" {
-        if let Some(ui_id) = candid_ui_id {
-            println!(
-                "    {}: {}",
-                project_name,
-                format!(
-                    "http://127.0.0.1:4943/?canisterId={}&id={}",
-                    ui_id, canister_id
-                )
-                .bright_blue()
-                .underline()
-            );
-        } else {
-            println!(
-                "    {}: {}",
-                project_name,
-                format!("http://{}.localhost:4943", canister_id)
-                    .bright_blue()
-                    .underline()
-            );
-        }
-    } else {
-        println!(
-            "    {}: {}",
-            project_name,
-            format!("https://{}.icp0.io", canister_id)
-                .bright_blue()
-                .underline()
-        );
-    }
-    println!();
-
     // Save canister ID for future reference
     save_canister_id(&current_dir, &network, &canister_id)?;
 
@@ -180,19 +137,6 @@ fn get_project_name(project_dir: &Path) -> Result<String> {
         .and_then(|n| n.as_str())
         .map(|s| s.to_string())
         .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))
-}
-
-async fn get_candid_ui_canister_id() -> Result<String> {
-    let output = tokio::process::Command::new("dfx")
-        .args(&["canister", "id", "__Candid_UI"])
-        .output()
-        .await?;
-
-    if output.status.success() {
-        Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        anyhow::bail!("Candid UI canister not found")
-    }
 }
 
 fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Result<()> {
