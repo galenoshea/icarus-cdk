@@ -74,7 +74,7 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.5.5"
+icarus = "0.5.6"
 
 # Or specify features explicitly
 icarus = { version = "0.5.0", features = ["canister"] }
@@ -257,7 +257,7 @@ icarus logs <id>          # View canister logs
 **New Features**: HTTP outcalls and timers are now built-in! No breaking changes.
 
 To upgrade:
-1. Update your dependency: `icarus = "0.5.5"`
+1. Update your dependency: `icarus = "0.5.6"`
 2. Rebuild your canister: `icarus build`
 3. Redeploy: `icarus deploy`
 
