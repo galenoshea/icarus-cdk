@@ -26,16 +26,19 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
     // Get project name
     let project_name = get_project_name(&current_dir)?;
 
-    print_info(&format!("Deploying {} to {} network...", project_name, network));
+    print_info(&format!(
+        "Deploying {} to {} network...",
+        project_name, network
+    ));
 
     // Run dfx deploy with appropriate arguments
     let mut args = vec!["deploy", &project_name, "--network", &network];
-    
+
     if let Some(canister_id) = &upgrade {
         args.push("--upgrade-unchanged");
         print_info(&format!("Upgrading canister {}", canister_id));
     }
-    
+
     if force {
         args.push("--yes");
         print_info("Force deploying (will delete existing canister if present)");
@@ -43,11 +46,14 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
 
     // Run dfx deploy
     let output = run_command("dfx", &args, Some(&current_dir)).await?;
-    
+
     // Parse the output to find the canister ID
     let canister_id = extract_canister_id(&output, &project_name).await?;
-    
-    print_success(&format!("Successfully deployed! Canister ID: {}", canister_id));
+
+    print_success(&format!(
+        "Successfully deployed! Canister ID: {}",
+        canister_id
+    ));
 
     // Get Candid UI canister ID for local network
     let candid_ui_id = if network == "local" {
@@ -139,7 +145,7 @@ async fn extract_canister_id(output: &str, project_name: &str) -> Result<String>
     // Look for patterns like:
     // "Installing code for canister project_name, with canister ID xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
     // or "Deployed canisters." followed by canister URLs
-    
+
     // First try to find the canister ID from the deployment message
     if let Some(line) = output.lines().find(|l| l.contains("with canister ID")) {
         if let Some(id_part) = line.split("with canister ID").nth(1) {
@@ -149,7 +155,7 @@ async fn extract_canister_id(output: &str, project_name: &str) -> Result<String>
             }
         }
     }
-    
+
     // Try to find from URLs section
     if let Some(url_section_start) = output.lines().position(|l| l.contains("URLs:")) {
         let lines: Vec<&str> = output.lines().collect();
@@ -181,14 +187,14 @@ fn extract_id_from_url(url_line: &str) -> Option<String> {
     // Extract from patterns like:
     // http://xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.localhost:4943
     // or from query params like &id=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
-    
+
     if let Some(id_part) = url_line.split("&id=").nth(1) {
         let id = id_part.split_whitespace().next()?;
         if id.contains('-') {
             return Some(id.to_string());
         }
     }
-    
+
     if let Some(start) = url_line.find("http://") {
         let url_part = &url_line[start + 7..];
         if let Some(end) = url_part.find('.') {
@@ -198,7 +204,7 @@ fn extract_id_from_url(url_line: &str) -> Option<String> {
             }
         }
     }
-    
+
     None
 }
 
