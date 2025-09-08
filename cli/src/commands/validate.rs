@@ -41,7 +41,7 @@ pub async fn execute(
             if !has_metadata {
                 print_error("❌ No Candid metadata found in WASM");
                 print_info("The WASM file doesn't contain 'candid:service' metadata section");
-                print_info("Use 'dfx build' or 'icarus build' to properly embed Candid");
+                print_info("Use 'dfx build' to properly embed Candid");
                 return Ok(());
             }
             print_success("✅ Candid metadata found in WASM");
@@ -708,7 +708,7 @@ fn find_default_wasm_path() -> Result<PathBuf> {
                 return Ok(dfx_wasm);
             }
 
-            // Also check the target directory from icarus build
+            // Also check the target directory
             let target_wasm = current_dir
                 .join("target")
                 .join("wasm32-unknown-unknown")
@@ -718,7 +718,7 @@ fn find_default_wasm_path() -> Result<PathBuf> {
                 return Ok(target_wasm);
             } else {
                 anyhow::bail!(
-                    "WASM file not found at {} or {}. Run 'dfx build' or 'icarus build' first to generate the WASM.",
+                    "WASM file not found at {} or {}. Run 'dfx build' first to generate the WASM.",
                     dfx_wasm.display(),
                     target_wasm.display()
                 );
@@ -749,7 +749,7 @@ fn find_default_wasm_path() -> Result<PathBuf> {
                 return Ok(dfx_wasm);
             }
 
-            // Also check the target directory from icarus build
+            // Also check the target directory
             let target_wasm = current_dir
                 .join("target")
                 .join("wasm32-unknown-unknown")
@@ -759,7 +759,7 @@ fn find_default_wasm_path() -> Result<PathBuf> {
                 return Ok(target_wasm);
             } else {
                 anyhow::bail!(
-                    "WASM file not found at {} or {}. Run 'dfx build' or 'icarus build' first to generate the WASM.",
+                    "WASM file not found at {} or {}. Run 'dfx build' first to generate the WASM.",
                     dfx_wasm.display(),
                     target_wasm.display()
                 );

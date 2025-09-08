@@ -38,10 +38,10 @@ mkdir -p "$SHARED_PROJECT_DIR"
 # Run 'icarus new' to create the project
 ./target/release/icarus new shared-test-project --path "$SHARED_PROJECT_DIR"
 
-# Build the shared project once
+# Build the shared project once using cargo directly
 print_step "Building shared test project..."
 cd "$SHARED_PROJECT_DIR/shared-test-project"
-../../target/release/icarus build
+cargo build --target wasm32-unknown-unknown --release
 
 print_success "Shared test project ready at: $SHARED_PROJECT_DIR"
 

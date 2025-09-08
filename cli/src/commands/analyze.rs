@@ -21,7 +21,7 @@ pub async fn execute(top: usize, check_compressed: bool) -> Result<()> {
         .join(format!("{}.wasm", project_name.replace('-', "_")));
 
     if !wasm_path.exists() {
-        anyhow::bail!("WASM file not found. Run 'icarus build' first.");
+        anyhow::bail!("WASM file not found. Run 'dfx build' first.");
     }
 
     // Show basic size info
@@ -55,7 +55,7 @@ pub async fn execute(top: usize, check_compressed: bool) -> Result<()> {
         );
     } else if check_compressed {
         println!(
-            "  Compressed:    {} (run 'icarus build' to generate)",
+            "  Compressed:    {} (run 'dfx build' to generate)",
             "not found".yellow()
         );
     }
@@ -102,7 +102,7 @@ fn show_basic_analysis(wasm_path: &Path) -> Result<()> {
     // Rough heuristics
     if wasm_size > 2_000_000 {
         println!("  ⚠️  WASM size over 2MB - optimization highly recommended");
-        println!("     Consider using 'icarus build --profile=size'");
+        println!("     Consider optimizing with ic-wasm for smaller size");
     } else if wasm_size > 1_000_000 {
         println!("  ⚠️  WASM size over 1MB - optimization recommended");
     } else if wasm_size < 500_000 {
@@ -120,7 +120,7 @@ fn show_optimization_suggestions(wasm_path: &Path) -> Result<()> {
     if wasm_size > 1_000_000 {
         println!(
             "  1. Use size profile: {}",
-            "icarus build --profile=size".bright_blue()
+            "ic-wasm optimize".bright_blue()
         );
         println!("  2. Remove unused dependencies from Cargo.toml");
         println!("  3. Use default features = false for large crates");
@@ -129,7 +129,7 @@ fn show_optimization_suggestions(wasm_path: &Path) -> Result<()> {
 
     let gz_path = wasm_path.with_extension("wasm.gz");
     if !gz_path.exists() {
-        println!("  • Enable compression: {}", "icarus build".bright_blue());
+        println!("  • Enable compression: {}", "dfx build".bright_blue());
         println!("    (Compression is now enabled by default)");
     }
 
