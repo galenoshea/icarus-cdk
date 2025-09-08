@@ -12,6 +12,11 @@ on:
         required: false
         default: false
         type: boolean
+      skip_e2e:
+        description: 'Skip E2E tests (for emergency releases)'
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: write
