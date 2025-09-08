@@ -277,7 +277,12 @@ jobs:
         if [ "${{ matrix.test }}" != "new" ]; then
           mkdir -p /tmp/icarus-e2e-shared-project
         fi
-        cargo test --test test_${{ matrix.test }}_command --release
+        # Handle special case for workflow test (doesn't have _command suffix)
+        if [ "${{ matrix.test }}" = "workflow" ]; then
+          cargo test --test test_workflow --release
+        else
+          cargo test --test test_${{ matrix.test }}_command --release
+        fi
       env:
         RUST_LOG: warn
 
