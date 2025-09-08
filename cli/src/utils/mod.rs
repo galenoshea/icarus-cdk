@@ -64,6 +64,39 @@ pub async fn run_command(
     Ok(String::from_utf8_lossy(&output.stdout).to_string())
 }
 
+/// Run a command with interactive input/output
+/// This allows the command to display output in real-time and accept user input
+pub async fn run_command_interactive(
+    program: &str,
+    args: &[&str],
+    working_dir: Option<&std::path::Path>,
+) -> Result<()> {
+    use tokio::process::Command;
+
+    let mut cmd = Command::new(program);
+    cmd.args(args)
+        .stdin(std::process::Stdio::inherit())
+        .stdout(std::process::Stdio::inherit())
+        .stderr(std::process::Stdio::inherit());
+
+    if let Some(dir) = working_dir {
+        cmd.current_dir(dir);
+    }
+
+    let status = cmd.status().await?;
+
+    if !status.success() {
+        anyhow::bail!(
+            "Command failed: {} {} (exit code: {:?})",
+            program,
+            args.join(" "),
+            status.code()
+        );
+    }
+
+    Ok(())
+}
+
 pub fn ensure_directory_exists(path: &std::path::Path) -> Result<()> {
     if !path.exists() {
         std::fs::create_dir_all(path)?;

@@ -8,7 +8,7 @@ use crate::utils::{
     claude_desktop::{
         find_claude_config_path, generate_claude_server_config, update_claude_config,
     },
-    print_info, print_success, print_warning, run_command,
+    print_info, print_success, print_warning, run_command, run_command_interactive,
 };
 
 pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> Result<()> {
@@ -30,6 +30,19 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
         "Deploying {} to {} network...",
         project_name, network
     ));
+
+    // Build the WASM first (with visible output)
+    print_info("Building WASM...");
+    run_command_interactive(
+        "cargo",
+        &["build", "--target", "wasm32-unknown-unknown", "--release"],
+        Some(&current_dir),
+    )
+    .await?;
+
+    // Extract and update the Candid interface from the built WASM
+    print_info("Updating Candid interface from WASM...");
+    update_candid_from_wasm(&current_dir, &project_name).await?;
 
     // Get the current principal to use as the init argument
     let principal_output =
@@ -63,11 +76,17 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
     // Convert to &str for run_command
     let args: Vec<&str> = cmd_args.iter().map(|s| s.as_str()).collect();
 
-    // Run dfx deploy
-    let output = run_command("dfx", &args, Some(&current_dir)).await?;
+    // Run dfx deploy with visible output and interactive prompts
+    run_command_interactive("dfx", &args, Some(&current_dir)).await?;
 
-    // Parse the output to find the canister ID
-    let canister_id = extract_canister_id(&output, &project_name).await?;
+    // Get the canister ID after deployment
+    let canister_id_output = run_command(
+        "dfx",
+        &["canister", "id", &project_name, "--network", &network],
+        Some(&current_dir),
+    )
+    .await?;
+    let canister_id = canister_id_output.trim().to_string();
 
     print_success(&format!(
         "Successfully deployed! Canister ID: {}",
@@ -160,73 +179,6 @@ fn get_project_name(project_dir: &Path) -> Result<String> {
         .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))
 }
 
-async fn extract_canister_id(output: &str, project_name: &str) -> Result<String> {
-    // Look for patterns like:
-    // "Installing code for canister project_name, with canister ID xxxxx-xxxxx-xxxxx-xxxxx-xxxxx"
-    // or "Deployed canisters." followed by canister URLs
-
-    // First try to find the canister ID from the deployment message
-    if let Some(line) = output.lines().find(|l| l.contains("with canister ID")) {
-        if let Some(id_part) = line.split("with canister ID").nth(1) {
-            let id = id_part.trim();
-            if !id.is_empty() && id.contains('-') {
-                return Ok(id.to_string());
-            }
-        }
-    }
-
-    // Try to find from URLs section
-    if let Some(url_section_start) = output.lines().position(|l| l.contains("URLs:")) {
-        let lines: Vec<&str> = output.lines().collect();
-        for i in url_section_start + 1..lines.len() {
-            if lines[i].contains("http") {
-                // Extract canister ID from URL
-                if let Some(id) = extract_id_from_url(lines[i]) {
-                    return Ok(id);
-                }
-            }
-        }
-    }
-
-    // As a fallback, try to get it from dfx canister id
-    match tokio::process::Command::new("dfx")
-        .args(&["canister", "id", project_name])
-        .current_dir(std::env::current_dir()?)
-        .output()
-        .await
-    {
-        Ok(output) if output.status.success() => {
-            Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
-        }
-        _ => anyhow::bail!("Could not determine canister ID from deployment output"),
-    }
-}
-
-fn extract_id_from_url(url_line: &str) -> Option<String> {
-    // Extract from patterns like:
-    // http://xxxxx-xxxxx-xxxxx-xxxxx-xxxxx.localhost:4943
-    // or from query params like &id=xxxxx-xxxxx-xxxxx-xxxxx-xxxxx
-
-    if let Some(id_part) = url_line.split("&id=").nth(1) {
-        let id = id_part.split_whitespace().next()?;
-        if id.contains('-') {
-            return Some(id.to_string());
-        }
-    }
-
-    if let Some(start) = url_line.find("http://") {
-        let url_part = &url_line[start + 7..];
-        if let Some(end) = url_part.find('.') {
-            let id = &url_part[..end];
-            if id.contains('-') {
-                return Some(id.to_string());
-            }
-        }
-    }
-
-    None
-}
-
 async fn get_candid_ui_canister_id() -> Result<String> {
     let output = tokio::process::Command::new("dfx")
         .args(&["canister", "id", "__Candid_UI"])
@@ -266,6 +218,63 @@ fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Res
 
     let content = serde_json::to_string_pretty(&ids)?;
     std::fs::write(&canister_ids_path, content)?;
+
+    Ok(())
+}
+
+async fn update_candid_from_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
+    use std::fs;
+
+    // Construct paths
+    let wasm_name = project_name.replace('-', "_");
+    let wasm_path = project_dir
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release")
+        .join(format!("{}.wasm", wasm_name));
+
+    let did_path = project_dir
+        .join("src")
+        .join(format!("{}.did", project_name));
+
+    // Check if WASM exists
+    if !wasm_path.exists() {
+        anyhow::bail!(
+            "WASM file not found at {:?}. Build may have failed.",
+            wasm_path
+        );
+    }
+
+    // Check if candid-extractor is available
+    if which::which("candid-extractor").is_err() {
+        print_warning("candid-extractor not found. Install with: cargo install candid-extractor");
+        print_warning("Continuing with existing .did file...");
+        return Ok(());
+    }
+
+    // Extract Candid from WASM
+    let output = tokio::process::Command::new("candid-extractor")
+        .arg(&wasm_path)
+        .output()
+        .await?;
+
+    if !output.status.success() {
+        let error = String::from_utf8_lossy(&output.stderr);
+        print_warning(&format!("Could not extract Candid: {}", error));
+        print_warning("Continuing with existing .did file...");
+        return Ok(());
+    }
+
+    // Get the extracted Candid
+    let candid_content = String::from_utf8_lossy(&output.stdout);
+
+    // Only update if we got valid content
+    if candid_content.contains("service") {
+        fs::write(&did_path, candid_content.as_ref())?;
+        print_success("Candid interface updated with actual tool functions");
+    } else {
+        print_warning("Extracted Candid seems invalid, keeping existing .did file");
+    }
 
     Ok(())
 }
