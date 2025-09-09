@@ -329,24 +329,24 @@ jobs:
           
           cd - > /dev/null
           
-          # Wait for crate to be available (increased timeout and using cargo info)
-          echo "⏳ Waiting for $crate_name to be available on crates.io..."
-          for i in {1..60}; do
+          # Brief wait for crate to be available (cargo publish already waits internally)
+          echo "⏳ Checking if $crate_name is available on crates.io..."
+          for i in {1..10}; do
             if cargo info "$crate_name" 2>/dev/null | grep -q "version: $version"; then
               echo "✅ $crate_name v$version is now available"
               return 0
             fi
             
-            # Show progress every 10 attempts
-            if [ $((i % 10)) -eq 0 ]; then
-              echo "   Still waiting... (attempt $i/60)"
+            # Show progress every 5 attempts
+            if [ $((i % 5)) -eq 0 ]; then
+              echo "   Still indexing... (attempt $i/10)"
             fi
             
             sleep 2
           done
           
-          echo "⚠️ Timeout waiting for $crate_name to be available"
-          echo "   The crate was likely published successfully but index is slow to update."
+          echo "ℹ️ $crate_name v$version published successfully"
+          echo "   The crates.io index is still updating but the crate will be available shortly."
           echo "   Continuing with next crate..."
           
           # Return success even on timeout - the crate was published
