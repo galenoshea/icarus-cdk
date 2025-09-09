@@ -354,7 +354,28 @@ fn test_anonymous_principal_security() {
         "add_authorized_user",
         (Principal::anonymous().to_text(), "User"),
     );
-    assert_access_denied(result);
+
+    // The call itself succeeds but returns an error Result
+    match result {
+        Ok(bytes) => {
+            // Decode the Result<String, String> response
+            let response: (Result<String, String>,) = decode_args(&bytes).unwrap();
+            match response.0 {
+                Ok(_) => panic!("Expected error when adding anonymous principal, but got success"),
+                Err(msg) => {
+                    assert!(
+                        msg.contains("Anonymous principal cannot be authorized"),
+                        "Expected anonymous principal error, got: {}",
+                        msg
+                    );
+                }
+            }
+        }
+        Err(_) => {
+            // This would be a trap, which is also acceptable
+            assert_access_denied(result);
+        }
+    }
 }
 
 #[test]
@@ -885,11 +906,26 @@ fn build_test_auth_canister_internal() -> (TestProject, std::path::PathBuf) {
     let test_project = TestProject::new("auth-test-canister");
     let cli = CliRunner::new();
 
-    // Create new project with icarus new
-    eprintln!("Running 'icarus new auth-test'...");
-    let output = cli.run_in(test_project.path(), &["new", "auth-test"]);
+    // Get the SDK path (the root of the workspace)
+    // We're in icarus-sdk/cli when tests run, so we need to go up one level
+    let sdk_path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap()
+        .to_path_buf();
+
+    // Create new project with icarus new using local SDK
+    eprintln!("Running 'icarus new auth-test' with local SDK...");
+    let output = cli.run_in(
+        test_project.path(),
+        &[
+            "new",
+            "auth-test",
+            "--local-sdk",
+            sdk_path.to_str().unwrap(),
+        ],
+    );
     assert_success(&output);
-    eprintln!("Project created successfully");
+    eprintln!("Project created successfully with local SDK");
 
     let project_dir = test_project.path().join("auth-test");
 
@@ -1066,7 +1102,9 @@ pub struct TestProject {
 }
 
 impl TestProject {
-    pub fn new(name: &str) -> Self {
+    pub fn new(_name: &str) -> Self {
+        // Name parameter is kept for API compatibility but not currently used
+        // Could be used in future for named temp directories for better debugging
         let dir = TempDir::new().expect("Failed to create temp dir");
         Self { dir }
     }

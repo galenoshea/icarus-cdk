@@ -112,6 +112,11 @@ pub fn init_auth(owner: Principal) {
 pub fn authenticate() -> AuthInfo {
     let caller = ic_cdk::caller();
 
+    // Security check: anonymous principal is never authenticated
+    if caller == Principal::anonymous() {
+        ic_cdk::trap("Access denied: Anonymous principal cannot be authenticated");
+    }
+
     AUTH_USERS.with(|users| {
         // Get and clone the entry to avoid borrow conflicts
         let mut auth_entry = if let Some(entry) = users.borrow().get(&caller) {
@@ -344,7 +349,10 @@ pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
     let caller = ic_cdk::caller();
 
     AUTH_USERS.with(|users| {
-        if let Some(mut auth_entry) = users.borrow().get(&principal) {
+        // Clone the entry to avoid holding a borrow across mutable operations
+        let auth_entry_opt = users.borrow().get(&principal);
+
+        if let Some(mut auth_entry) = auth_entry_opt {
             let old_role = auth_entry.role.clone();
             auth_entry.role = new_role.clone();
             users.borrow_mut().insert(principal, auth_entry);
