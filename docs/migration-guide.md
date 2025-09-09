@@ -257,7 +257,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.5.7)**: Full support
+- **Current Version (0.5.8)**: Full support
 - **Previous Minor (0.3.0)**: Critical fixes only
 - **Previous Minor (0.2.5)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
