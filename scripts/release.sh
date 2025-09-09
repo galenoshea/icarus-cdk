@@ -38,6 +38,16 @@ else
     echo -e "${YELLOW}⚠️  Version inconsistencies detected (will be fixed during release)${NC}"
 fi
 
+# Validate release readiness (includes CHANGELOG check)
+echo -e "${YELLOW}🔍 Validating release readiness...${NC}"
+if ./scripts/validate-release.sh > /dev/null 2>&1; then
+    echo -e "${GREEN}✅ Release validation passed${NC}"
+else
+    echo -e "${RED}❌ Release validation failed${NC}"
+    echo "Run './scripts/validate-release.sh' for details"
+    exit 1
+fi
+
 # Run all tests including E2E (releases must pass all tests)
 echo -e "${YELLOW}🧪 Running unit and integration tests...${NC}"
 if cargo test --all --lib --bins --tests --quiet; then

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2025-09-09
+
 ### Added
 - **Dynamic Identity Switching**: Bridge now checks dfx identity before each canister call
   - No longer binds to identity at session start
@@ -32,9 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Enhanced bridge architecture documentation
 
 ### Fixed
+- **RefCell Borrowing Bug**: Fixed double-borrowing issue in auth module's `update_user_role`
+  - Resolved panic when updating user roles due to improper borrow management
+  - Cloned data before mutable operations to avoid borrow conflicts
+- **Anonymous Principal Security**: Added explicit denial for anonymous principals
+  - Anonymous principals now properly rejected in authentication
+  - Fixed test assertion logic for Result<String, String> responses
 - **Identity Binding Bug**: Fixed issue where bridge bound to identity at session start
   - Bridge now properly checks and switches identities dynamically
   - Resolved authentication issues when switching dfx identities
+- **E2E Test Configuration**: Updated tests to use local SDK with --local-sdk flag
+  - Tests now use fixed local version instead of buggy published version
 - **Code Quality**: Removed dead code and unused imports
   - Removed `#[allow(dead_code)]` directives throughout codebase
   - Cleaned up deprecated authentication code

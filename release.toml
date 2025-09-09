@@ -12,6 +12,10 @@ shared-version = true
 # Consolidate all version bumps into a single commit
 consolidate-commits = true
 
+# Pre-release validation hook
+# This ensures CHANGELOG and version consistency before creating release
+pre-release-hook = ["./scripts/validate-release.sh"]
+
 # Commit settings
 pre-release-commit-message = "chore: release version {{version}}"
 tag-message = "Release version {{version}}"
