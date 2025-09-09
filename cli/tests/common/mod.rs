@@ -68,19 +68,28 @@ impl CliRunner {
 
     /// Run a command with arguments
     pub fn run(&self, args: &[&str]) -> Output {
-        Command::new(&self.binary_path)
+        eprintln!("Running command: {:?} {:?}", self.binary_path, args);
+        let output = Command::new(&self.binary_path)
             .args(args)
             .output()
-            .expect("Failed to execute CLI command")
+            .expect("Failed to execute CLI command");
+        eprintln!("Command completed with status: {}", output.status);
+        output
     }
 
     /// Run a command in a specific directory
     pub fn run_in(&self, dir: &Path, args: &[&str]) -> Output {
-        Command::new(&self.binary_path)
+        eprintln!(
+            "Running command in {:?}: {:?} {:?}",
+            dir, self.binary_path, args
+        );
+        let output = Command::new(&self.binary_path)
             .current_dir(dir)
             .args(args)
             .output()
-            .expect("Failed to execute CLI command")
+            .expect("Failed to execute CLI command");
+        eprintln!("Command completed with status: {}", output.status);
+        output
     }
 }
 

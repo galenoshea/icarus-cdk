@@ -2,25 +2,19 @@
 
 #![allow(dead_code)]
 
+use candid::utils::ArgumentEncoder;
 use candid::{decode_args, encode_args, CandidType, Deserialize, Principal};
-use pocket_ic::{PocketIc, PocketIcBuilder, WasmResult};
+use pocket_ic::PocketIc;
 use std::path::PathBuf;
 use std::process::Command;
 
 /// Create and setup a PocketIC instance
 pub fn setup_pocket_ic() -> PocketIc {
-    PocketIcBuilder::new()
-        .with_nns_subnet()
-        .with_application_subnet()
-        .build()
+    PocketIc::new()
 }
 
 /// Deploy a test canister with the specified owner
-pub async fn deploy_test_canister(
-    pic: &PocketIc,
-    wasm_path: PathBuf,
-    owner: Principal,
-) -> Principal {
+pub fn deploy_test_canister(pic: &PocketIc, wasm_path: PathBuf, owner: Principal) -> Principal {
     // Create canister
     let canister_id = pic.create_canister();
     pic.add_cycles(canister_id, 100_000_000_000_000); // 100T cycles
@@ -36,35 +30,35 @@ pub async fn deploy_test_canister(
 }
 
 /// Call a canister method with specific principal
-pub fn call_with_principal<T: CandidType>(
+/// Note: args should already be a tuple of the arguments, e.g., (arg1, arg2) or () for no args
+pub fn call_with_principal<T: ArgumentEncoder>(
     pic: &PocketIc,
     sender: Principal,
     canister_id: Principal,
     method: &str,
     args: T,
 ) -> Result<Vec<u8>, String> {
-    let encoded_args = encode_args((args,)).expect("Failed to encode args");
+    let encoded_args = encode_args(args).expect("Failed to encode args");
 
     match pic.update_call(canister_id, sender, method, encoded_args) {
-        Ok(WasmResult::Reply(bytes)) => Ok(bytes),
-        Ok(WasmResult::Reject(msg)) => Err(msg),
+        Ok(bytes) => Ok(bytes),
         Err(e) => Err(format!("Call failed: {:?}", e)),
     }
 }
 
 /// Query a canister method with specific principal
-pub fn query_with_principal<T: CandidType>(
+/// Note: args should already be a tuple of the arguments, e.g., (arg1,) or () for no args
+pub fn query_with_principal<T: ArgumentEncoder>(
     pic: &PocketIc,
     sender: Principal,
     canister_id: Principal,
     method: &str,
     args: T,
 ) -> Result<Vec<u8>, String> {
-    let encoded_args = encode_args((args,)).expect("Failed to encode args");
+    let encoded_args = encode_args(args).expect("Failed to encode args");
 
     match pic.query_call(canister_id, sender, method, encoded_args) {
-        Ok(WasmResult::Reply(bytes)) => Ok(bytes),
-        Ok(WasmResult::Reject(msg)) => Err(msg),
+        Ok(bytes) => Ok(bytes),
         Err(e) => Err(format!("Query failed: {:?}", e)),
     }
 }
