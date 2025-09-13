@@ -8,7 +8,7 @@ pub fn init(owner: Principal) {
     let config = ServerConfig {
         name: "Icarus MCP Server".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
-        canister_id: ic_cdk::id(),
+        canister_id: ic_cdk::api::canister_self(),
         owner,
     };
 
@@ -17,7 +17,7 @@ pub fn init(owner: Principal) {
 
 /// Initialize the canister with the caller as owner (for backward compatibility)
 pub fn init_with_caller() {
-    init(ic_cdk::caller());
+    init(ic_cdk::api::msg_caller());
 }
 
 /// Pre-upgrade hook

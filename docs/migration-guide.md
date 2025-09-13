@@ -2,6 +2,62 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
+## Migrating from 0.5.x to 0.6.0
+
+### Overview
+Version 0.6.0 is a **breaking change** release that updates all dependencies to their latest stable versions and removes all deprecated code for production readiness.
+
+### Breaking Changes
+
+#### Major Dependency Updates
+- **ic-cdk**: 0.13 → 0.18 (latest stable)
+- **ic-stable-structures**: 0.6 → 0.7 (breaking API changes)
+- **ic-cdk-timers**: 0.9 → 0.12
+- All other dependencies updated to latest major.minor versions
+
+#### Deprecated Code Removal
+All deprecated functions have been removed and replaced with modern equivalents:
+- `ic_cdk::api::caller()` → `ic_cdk::api::msg_caller()`
+- `ic_cdk::api::id()` → `ic_cdk::api::canister_self()`
+- `ic_cdk::api::print()` → `ic_cdk::api::debug_print()`
+
+#### HTTP API Modernization
+The HTTP module has been completely refactored:
+- New import path: `ic_cdk::management_canister`
+- New types: `HttpRequestArgs`, `HttpRequestResult`
+- Manual cycles calculation removed (now automatic)
+
+### Migration Steps
+
+#### 1. Update Dependencies
+Update your `Cargo.toml`:
+
+```toml
+[dependencies]
+icarus = "0.6.0"
+ic-cdk = "0.18"
+candid = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+```
+
+#### 2. Rebuild and Redeploy
+```bash
+# Clean build to ensure all dependencies are updated
+cargo clean
+icarus build
+icarus deploy
+```
+
+#### 3. No Source Code Changes Required
+All breaking changes are internal to the SDK. Your existing code should continue to work without modifications.
+
+### Verification
+After migration, verify everything works:
+1. Build completes without warnings: `cargo build`
+2. Tests pass: `cargo test`
+3. Canister deploys successfully: `icarus deploy`
+4. Bridge connects properly: `icarus bridge start --canister-id <id>`
+
 ## Migrating from 0.3.1 to 0.3.2
 
 This is a patch release with CI/CD improvements and cleanup. No code changes are required.
@@ -257,9 +313,9 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.5.8)**: Full support
-- **Previous Minor (0.3.0)**: Critical fixes only
-- **Previous Minor (0.2.5)**: Security updates only
+- **Current Version (0.6.0)**: Full support
+- **Previous Minor (0.5.8)**: Critical fixes only
+- **Previous Minor (0.4.x)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
 
 We recommend staying on the latest version for the best experience and security.

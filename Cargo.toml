@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.5.8"
+version = "0.6.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -18,9 +18,9 @@ canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
 core = ["dep:icarus-core"]
 
 [dependencies]
-icarus-core = { version = "0.5.8", path = "crates/icarus-core", optional = true }
-icarus-derive = { version = "0.5.8", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.5.8", path = "crates/icarus-canister", optional = true }
+icarus-core = { version = "0.6.0", path = "crates/icarus-core", optional = true }
+icarus-derive = { version = "0.6.0", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.6.0", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -54,7 +54,7 @@ name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
 [workspace.package]
-version = "0.5.8"
+version = "0.6.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -62,17 +62,18 @@ repository = "https://github.com/galenoshea/icarus-sdk"
 
 [workspace.dependencies]
 # External dependencies  
-rmcp = "0.6.3"
+rmcp = "0.6"
 # Override problematic time dependencies to disable wasm features
-chrono = { version = "0.4.41", default-features = false, features = [
+chrono = { version = "0.4", default-features = false, features = [
     "std",
     "serde",
 ] }
-web-time = { version = "1.1.0", default-features = false }
-ic-cdk = "0.16"
-ic-cdk-macros = "0.16"
-ic-cdk-timers = "0.10"
-ic-stable-structures = "0.6"
+web-time = { version = "1.1", default-features = false }
+ic-cdk = "0.18"
+ic-cdk-macros = "0.18"
+ic-cdk-timers = "0.12"
+ic-stable-structures = "0.7"
+ic-management-canister-types = "0.3"
 candid = "0.10"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -86,9 +87,9 @@ proc-macro2 = "1.0"
 linkme = "0.3"
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.5.8" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.5.8" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.5.8" }
+icarus-core = { path = "crates/icarus-core", version = "0.6.0" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.6.0" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.6.0" }
 
 [profile.release]
 opt-level = 3

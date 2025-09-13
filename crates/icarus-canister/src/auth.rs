@@ -110,7 +110,7 @@ pub fn init_auth(owner: Principal) {
 
 /// Validate authentication and return detailed auth info, or trap on failure
 pub fn authenticate() -> AuthInfo {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
 
     // Security check: anonymous principal is never authenticated
     if caller == Principal::anonymous() {
@@ -131,7 +131,7 @@ pub fn authenticate() -> AuthInfo {
                 "Principal not found in authorized users".to_string(),
             );
 
-            ic_cdk::trap(&format!(
+            ic_cdk::trap(format!(
                 "Access denied: Principal {} not authorized",
                 caller.to_text()
             ));
@@ -194,7 +194,7 @@ pub fn require_role_or_higher(minimum_role: AuthRole) -> AuthInfo {
     if has_permission {
         auth_info
     } else {
-        ic_cdk::trap(&format!(
+        ic_cdk::trap(format!(
             "Insufficient permissions: {:?} or higher required",
             minimum_role
         ));
@@ -207,7 +207,7 @@ pub fn require_exact_role(role: AuthRole) -> AuthInfo {
     if matches!(auth_info.role, ref r if *r == role) {
         auth_info
     } else {
-        ic_cdk::trap(&format!(
+        ic_cdk::trap(format!(
             "Requires exactly {:?} role, but caller has {:?}",
             role, auth_info.role
         ));
@@ -220,7 +220,7 @@ pub fn require_any_of_roles(roles: &[AuthRole]) -> AuthInfo {
     if roles.contains(&auth_info.role) {
         auth_info
     } else {
-        ic_cdk::trap(&format!(
+        ic_cdk::trap(format!(
             "Requires one of: {:?}, but caller has {:?}",
             roles, auth_info.role
         ));
@@ -233,7 +233,7 @@ pub fn require_none_of_roles(excluded: &[AuthRole]) -> AuthInfo {
     if !excluded.contains(&auth_info.role) {
         auth_info
     } else {
-        ic_cdk::trap(&format!("Role {:?} is not allowed here", auth_info.role));
+        ic_cdk::trap(format!("Role {:?} is not allowed here", auth_info.role));
     }
 }
 
@@ -245,7 +245,7 @@ pub fn add_user(principal: Principal, role: AuthRole) -> String {
     }
 
     let auth_info = require_role_or_higher(AuthRole::Admin);
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
 
     // Prevent self-elevation (Admins can't create Owners)
     if matches!(role, AuthRole::Owner) && !matches!(auth_info.role, AuthRole::Owner) {
@@ -290,7 +290,7 @@ pub fn add_user(principal: Principal, role: AuthRole) -> String {
 /// Remove a user (requires Admin or Owner role)
 pub fn remove_user(principal: Principal) -> String {
     let auth_info = require_role_or_higher(AuthRole::Admin);
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
 
     AUTH_USERS.with(|users| {
         // First, check the user and validate permissions in a separate scope
@@ -333,7 +333,7 @@ pub fn remove_user(principal: Principal) -> String {
                 caller.to_text()
             )
         } else {
-            ic_cdk::trap(&format!("User {} not found", principal.to_text()))
+            ic_cdk::trap(format!("User {} not found", principal.to_text()))
         }
     })
 }
@@ -346,7 +346,7 @@ pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
     }
 
     require_role_or_higher(AuthRole::Owner); // Only owners can change roles
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
 
     AUTH_USERS.with(|users| {
         // Clone the entry to avoid holding a borrow across mutable operations
@@ -381,7 +381,7 @@ pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
 /// Get all authorized users (requires Admin or Owner role)
 pub fn get_authorized_users() -> Vec<User> {
     require_role_or_higher(AuthRole::Admin);
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
 
     log_auth_action(
         AuthAction::ViewAuditLog,
@@ -396,7 +396,7 @@ pub fn get_authorized_users() -> Vec<User> {
         users
             .borrow()
             .iter()
-            .map(|(_, entry)| entry.clone())
+            .map(|entry| entry.value().clone())
             .collect()
     })
 }
@@ -404,7 +404,7 @@ pub fn get_authorized_users() -> Vec<User> {
 /// Get authentication audit log (requires Owner role)
 pub fn get_auth_audit(limit: Option<u32>) -> Vec<AuthAuditEntry> {
     require_role_or_higher(AuthRole::Owner);
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     let limit = limit.unwrap_or(100).min(1000) as usize;
 
     log_auth_action(
@@ -420,7 +420,7 @@ pub fn get_auth_audit(limit: Option<u32>) -> Vec<AuthAuditEntry> {
         let mut entries: Vec<AuthAuditEntry> = audit
             .borrow()
             .iter()
-            .map(|(_, entry)| entry.clone())
+            .map(|entry| entry.value().clone())
             .collect();
 
         // Sort by timestamp (newest first)

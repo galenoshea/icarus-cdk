@@ -46,7 +46,7 @@ pub fn expand_icarus_server(args: TokenStream, input: DeriveInput) -> TokenStrea
                 ::icarus::canister::state::ServerConfig {
                     name: #name.to_string(),
                     version: #version.to_string(),
-                    canister_id: ic_cdk::id(),
+                    canister_id: ic_cdk::api::canister_self(),
                 }
             }
 

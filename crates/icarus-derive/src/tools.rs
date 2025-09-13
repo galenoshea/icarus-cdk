@@ -637,7 +637,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             ::icarus::canister::auth::init_auth(owner);
 
             // Log initialization
-            ::ic_cdk::print(format!(
+            ::ic_cdk::api::debug_print(format!(
                 "{} canister initialized with owner: {}",
                 env!("CARGO_PKG_NAME"),
                 owner

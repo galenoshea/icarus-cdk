@@ -3,9 +3,9 @@
 //! Provides simple, idiomatic HTTP client functionality for ICP canisters.
 //! Abstracts the complexity of ICP's HTTP outcalls into clean, easy-to-use APIs.
 
-use ic_cdk::api::management_canister::http_request::{
-    http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod,
-    HttpResponse as IcHttpResponse, TransformArgs, TransformContext,
+use ic_cdk::management_canister::{
+    http_request, HttpHeader, HttpMethod, HttpRequestArgs, HttpRequestResult, TransformArgs,
+    TransformContext, TransformFunc,
 };
 use serde_json::Value;
 use std::collections::HashMap;
@@ -177,22 +177,22 @@ async fn execute_single_request(
         .map(|(name, value)| HttpHeader { name, value })
         .collect();
 
-    let request = CanisterHttpRequestArgument {
+    let request = HttpRequestArgs {
         url: url.to_string(),
         method,
         body,
         max_response_bytes: Some(config.max_response_bytes as u64),
-        transform: Some(TransformContext::from_name(
-            "transform_response".to_string(),
-            vec![],
-        )),
+        transform: Some(TransformContext {
+            function: TransformFunc(candid::Func {
+                principal: ic_cdk::api::canister_self(),
+                method: "transform_response".to_string(),
+            }),
+            context: vec![],
+        }),
         headers: request_headers,
     };
 
-    // Calculate cycles needed (approximate)
-    let cycles = calculate_http_request_cycles(&request);
-
-    let (response,) = http_request(request, cycles)
+    let response = http_request(&request)
         .await
         .map_err(|e| HttpError::RequestFailed(format!("{:?}", e)))?;
 
@@ -220,30 +220,9 @@ async fn execute_single_request(
         .map_err(|e| HttpError::InvalidJson(format!("Invalid UTF-8 in response: {}", e)))
 }
 
-/// Calculate cycles needed for HTTP request
-fn calculate_http_request_cycles(request: &CanisterHttpRequestArgument) -> u128 {
-    // Base cost
-    let mut cycles = 49_140_000_u128;
-
-    // Add cost per byte (request and expected response)
-    let request_size = request.url.len()
-        + request.body.as_ref().map_or(0, |b| b.len())
-        + request
-            .headers
-            .iter()
-            .map(|h| h.name.len() + h.value.len())
-            .sum::<usize>();
-
-    let expected_response_size = request.max_response_bytes.unwrap_or(2_000_000) as usize;
-
-    cycles += (request_size + expected_response_size) as u128 * 5_200;
-
-    cycles
-}
-
 /// Transform function for HTTP responses (required by ICP)
 #[ic_cdk::query]
-fn transform_response(args: TransformArgs) -> IcHttpResponse {
+fn transform_response(args: TransformArgs) -> HttpRequestResult {
     // Simply return the response as-is
     // In production, you might want to sanitize or transform the response
     args.response
@@ -313,21 +292,5 @@ mod tests {
         assert_eq!(config.timeout_seconds, 30);
         assert_eq!(config.max_retries, 3);
         assert_eq!(config.retry_delay_ms, 1000);
-    }
-
-    #[test]
-    fn test_cycle_calculation() {
-        let request = CanisterHttpRequestArgument {
-            url: "https://example.com".to_string(),
-            method: HttpMethod::GET,
-            body: None,
-            max_response_bytes: Some(1000),
-            transform: None,
-            headers: vec![],
-        };
-
-        let cycles = calculate_http_request_cycles(&request);
-        // Base cost + (URL length + expected response) * cost per byte
-        assert!(cycles > 49_140_000);
     }
 }

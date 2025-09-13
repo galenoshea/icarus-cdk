@@ -13,11 +13,11 @@ thread_local! {
 }
 
 /// A stable map that automatically manages its memory
-pub struct StableMap<K: Storable + Ord + Clone, V: Storable> {
+pub struct StableMap<K: Storable + Ord + Clone, V: Storable + Clone> {
     inner: RefCell<StableBTreeMap<K, V, VirtualMemory<DefaultMemoryImpl>>>,
 }
 
-impl<K: Storable + Ord + Clone, V: Storable> StableMap<K, V> {
+impl<K: Storable + Ord + Clone, V: Storable + Clone> StableMap<K, V> {
     /// Create a new stable map with the given memory ID
     pub fn new(memory_id: u8) -> Self {
         let memory = MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(memory_id)));
@@ -63,14 +63,18 @@ impl<K: Storable + Ord + Clone, V: Storable> StableMap<K, V> {
     {
         let map = self.inner.borrow();
         let mut func = f;
-        for (k, v) in map.iter() {
-            func(&k, &v);
+        for entry in map.iter() {
+            func(entry.key(), &entry.value());
         }
     }
 
     /// Collect all values into a Vec
     pub fn values(&self) -> Vec<V> {
-        self.inner.borrow().iter().map(|(_, v)| v).collect()
+        self.inner
+            .borrow()
+            .iter()
+            .map(|entry| entry.value().clone())
+            .collect()
     }
 
     /// Filter and collect values
@@ -81,8 +85,8 @@ impl<K: Storable + Ord + Clone, V: Storable> StableMap<K, V> {
         self.inner
             .borrow()
             .iter()
-            .filter(|(k, v)| predicate(k, v))
-            .map(|(_, v)| v)
+            .filter(|entry| predicate(entry.key(), &entry.value()))
+            .map(|entry| entry.value().clone())
             .collect()
     }
 }

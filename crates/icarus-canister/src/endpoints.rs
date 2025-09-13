@@ -14,11 +14,12 @@ pub fn icarus_metadata() -> IcarusMetadata {
         if let Some(state) = state.as_ref() {
             IcarusMetadata {
                 version: state.config.get().version.clone(),
-                canister_id: ic_cdk::id(),
+                canister_id: ic_cdk::api::canister_self(),
                 tools: state
                     .tools
                     .iter()
-                    .map(|(name, tool_state)| {
+                    .map(|entry| {
+                        let (name, tool_state) = (entry.key().clone(), entry.value());
                         ToolMetadata {
                             name: name.clone(),
                             candid_method: name.clone(), // Method name matches tool name
@@ -32,7 +33,7 @@ pub fn icarus_metadata() -> IcarusMetadata {
         } else {
             IcarusMetadata {
                 version: "1.0.0".to_string(),
-                canister_id: ic_cdk::id(),
+                canister_id: ic_cdk::api::canister_self(),
                 tools: vec![],
             }
         }
@@ -147,10 +148,10 @@ pub fn http_request(_req: HttpRequest) -> HttpResponse {
     </div>
 </body>
 </html>"#,
-        ic_cdk::id().to_text(),
+        ic_cdk::api::canister_self().to_text(),
         metadata.version,
         tools_html,
-        ic_cdk::id().to_text()
+        ic_cdk::api::canister_self().to_text()
     );
 
     HttpResponse {

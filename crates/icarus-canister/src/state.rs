@@ -43,6 +43,10 @@ impl Storable for ServerConfig {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        candid::encode_one(&self).unwrap()
+    }
+
     fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
@@ -59,6 +63,10 @@ impl Storable for ToolState {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
 
+    fn into_bytes(self) -> Vec<u8> {
+        candid::encode_one(&self).unwrap()
+    }
+
     fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
         candid::decode_one(&bytes).unwrap()
     }
@@ -73,6 +81,10 @@ impl Storable for ToolState {
 impl Storable for ResourceState {
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        candid::encode_one(&self).unwrap()
     }
 
     fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
@@ -94,7 +106,7 @@ thread_local! {
 impl IcarusCanisterState {
     pub fn init(config: ServerConfig) {
         let state = Self {
-            config: StableCell::init(get_memory(MEMORY_ID_CONFIG), config).unwrap(),
+            config: StableCell::init(get_memory(MEMORY_ID_CONFIG), config),
             tools: StableBTreeMap::init(get_memory(MEMORY_ID_TOOLS)),
             resources: StableBTreeMap::init(get_memory(MEMORY_ID_RESOURCES)),
         };
@@ -125,11 +137,11 @@ impl IcarusCanisterState {
 /// Access control functions
 /// Assert that the caller is the canister owner
 pub fn assert_owner() {
-    let caller = ic_cdk::caller();
+    let caller = ic_cdk::api::msg_caller();
     IcarusCanisterState::with(|state| {
         let owner = state.get_owner();
         if caller != owner {
-            ic_cdk::trap(&format!(
+            ic_cdk::trap(format!(
                 "Access denied: caller {} is not the owner {}",
                 caller.to_text(),
                 owner.to_text()

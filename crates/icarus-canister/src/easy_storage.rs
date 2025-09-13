@@ -1,7 +1,7 @@
 //! Simplified storage patterns for common use cases
 
 use crate::memory::get_memory;
-use crate::result::{IcarusError, IcarusResult};
+use crate::result::IcarusResult;
 use ic_stable_structures::memory_manager::VirtualMemory;
 use ic_stable_structures::DefaultMemoryImpl;
 use ic_stable_structures::{StableBTreeMap, StableCell, Storable};
@@ -169,13 +169,17 @@ where
     where
         F: FnMut(&K, &V),
     {
-        for (k, v) in self.inner.borrow().iter() {
-            f(&k, &v);
+        for entry in self.inner.borrow().iter() {
+            f(entry.key(), &entry.value());
         }
     }
 
     pub fn values(&self) -> Vec<V> {
-        self.inner.borrow().iter().map(|(_, v)| v).collect()
+        self.inner
+            .borrow()
+            .iter()
+            .map(|entry| entry.value())
+            .collect()
     }
 
     pub fn get_or_insert<F>(&self, key: K, f: F) -> V
@@ -206,10 +210,7 @@ where
 {
     pub fn new(memory_id: u8) -> Self {
         Self {
-            inner: RefCell::new(
-                StableCell::init(get_memory(memory_id), T::default())
-                    .expect("Failed to init storage cell"),
-            ),
+            inner: RefCell::new(StableCell::init(get_memory(memory_id), T::default())),
         }
     }
 
@@ -218,11 +219,8 @@ where
     }
 
     pub fn set(&self, value: T) -> IcarusResult<()> {
-        self.inner
-            .borrow_mut()
-            .set(value)
-            .map(|_| ())
-            .map_err(|_| IcarusError::storage("Failed to set value"))
+        let _old_value = self.inner.borrow_mut().set(value);
+        Ok(())
     }
 }
 
@@ -234,9 +232,7 @@ pub struct CounterCell {
 impl CounterCell {
     pub fn new(memory_id: u8) -> Self {
         Self {
-            inner: RefCell::new(
-                StableCell::init(get_memory(memory_id), 0u64).expect("Failed to init counter cell"),
-            ),
+            inner: RefCell::new(StableCell::init(get_memory(memory_id), 0u64)),
         }
     }
 
@@ -245,11 +241,8 @@ impl CounterCell {
     }
 
     pub fn set(&self, value: u64) -> IcarusResult<()> {
-        self.inner
-            .borrow_mut()
-            .set(value)
-            .map(|_| ())
-            .map_err(|_| IcarusError::storage("Failed to set counter value"))
+        let _old_value = self.inner.borrow_mut().set(value);
+        Ok(())
     }
 
     pub fn increment(&self) -> u64 {

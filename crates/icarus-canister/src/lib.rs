@@ -53,7 +53,7 @@ pub use icarus_derive::{
 pub mod prelude {
     // Core IC CDK types and macros
     pub use candid::{CandidType, Principal};
-    pub use ic_cdk::{api, caller, print, storage, trap};
+    pub use ic_cdk::{api, storage, trap};
     pub use ic_cdk_macros::{init, post_upgrade, pre_upgrade, query, update};
 
     // Stable structures for persistence

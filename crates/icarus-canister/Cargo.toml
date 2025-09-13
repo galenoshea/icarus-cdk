@@ -18,8 +18,9 @@ icarus-derive = { workspace = true }
 rmcp = { workspace = true }
 ic-cdk = { workspace = true }
 ic-cdk-macros = { workspace = true }
-ic-cdk-timers = "0.10"
+ic-cdk-timers = { workspace = true }
 ic-stable-structures = { workspace = true }
+ic-management-canister-types = { workspace = true }
 candid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -28,4 +29,4 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-pocket-ic = "4.0.0"
+pocket-ic = "9"

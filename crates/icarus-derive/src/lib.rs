@@ -409,6 +409,10 @@ pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
                 )
             }
 
+            fn into_bytes(self) -> std::vec::Vec<u8> {
+                candid::encode_one(&self).expect("Failed to encode to Candid")
+            }
+
             fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Self {
                 candid::decode_one(&bytes).expect("Failed to decode from Candid")
             }

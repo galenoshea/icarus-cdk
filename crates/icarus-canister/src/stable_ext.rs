@@ -78,11 +78,18 @@ where
     }
 
     fn iter(&self) -> Vec<(K, V)> {
-        self.borrow().iter().collect()
+        self.borrow()
+            .iter()
+            .map(|entry| (entry.key().clone(), entry.value().clone()))
+            .collect()
     }
 
     fn clear(&self) {
-        let keys: Vec<K> = self.borrow().iter().map(|(k, _)| k).collect();
+        let keys: Vec<K> = self
+            .borrow()
+            .iter()
+            .map(|entry| entry.key().clone())
+            .collect();
         for key in keys {
             self.borrow_mut().remove(&key);
         }
@@ -100,7 +107,7 @@ where
     }
 
     fn set(&self, value: T) -> Result<T, ValueError> {
-        self.borrow_mut().set(value)
+        Ok(self.borrow_mut().set(value))
     }
 
     fn update<F>(&self, f: F) -> T

@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-09-13
+
+### Changed
+- **BREAKING: Major dependency upgrades for production readiness**
+  - `ic-cdk`: 0.13 → 0.18 (latest stable)
+  - `ic-cdk-macros`: 0.13 → 0.18
+  - `ic-cdk-timers`: 0.9 → 0.12
+  - `ic-stable-structures`: 0.6 → 0.7 (major breaking changes)
+  - `rmcp`: 0.5 → 0.6
+  - `web-time`: 1.0 → 1.1
+  - `pocket-ic`: Aligned to version 9.x across all crates
+  - All dependencies updated to latest major.minor versions using semantic versioning strategy
+- **Removed all deprecated code** for production deployment
+  - Migrated from `ic_cdk::api::caller()` to `ic_cdk::api::msg_caller()` (8 instances)
+  - Migrated from `ic_cdk::api::id()` to `ic_cdk::api::canister_self()` (6 instances)
+  - Migrated from `ic_cdk::api::print()` to `ic_cdk::api::debug_print()` (2 instances)
+  - All deprecated function calls have been replaced with modern equivalents
+- **HTTP Module completely refactored** to use new ic-cdk 0.18 API
+  - Migrated from deprecated `ic_cdk::api::management_canister::http_request` to `ic_cdk::management_canister`
+  - Updated to use `HttpRequestArgs` instead of `CanisterHttpRequestArgument`
+  - Updated to use `HttpRequestResult` instead of `HttpResponse`
+  - Removed manual cycles calculation (now handled automatically by IC)
+  - Updated `TransformContext` construction for new API
+  - Removed `calculate_http_request_cycles()` function and its test
+
+### Fixed
+- **ic-stable-structures 0.7 compatibility**
+  - Added `into_bytes()` method to `IcarusStorable` derive macro for new Storable trait
+  - Updated all iterator patterns from tuple destructuring to `LazyEntry` methods
+  - Fixed `for (k, v)` patterns to use `entry.key()` and `entry.value()`
+  - Updated manual `Storable` implementations in state module
+- **All clippy warnings resolved** for clean builds
+  - Fixed unnecessary borrows in `ic_cdk::trap()` calls (8 instances)
+  - Removed unused imports and dead code
+  - Zero warnings on `cargo clippy --all-targets --all-features -- -D warnings`
+- **Build and test compatibility**
+  - All 47 unit and integration tests pass
+  - Clean builds with zero deprecation warnings
+  - Production-ready codebase with modern APIs throughout
+
+### Migration Notes
+This is a **breaking change** release. To upgrade from 0.5.x:
+1. Update your `Cargo.toml`: `icarus = "0.6.0"`
+2. Update peer dependencies: `ic-cdk = "0.18"`, `candid = "0.10"`
+3. Rebuild and redeploy your canisters
+4. No source code changes required - all breaking changes are internal to the SDK
+
 ## [0.5.8] - 2025-09-09
 
 ### Added

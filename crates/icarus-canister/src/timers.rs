@@ -285,7 +285,7 @@ where
 
             // Note: In a real implementation, we'd need to properly reschedule
             // For now, this demonstrates the pattern
-            ic_cdk::print(format!(
+            ic_cdk::api::debug_print(format!(
                 "Would reschedule {} with delay {} seconds",
                 state.name, state.current_delay
             ));

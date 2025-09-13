@@ -54,7 +54,7 @@ impl IcarusError {
 
     /// Convert to a trap message for compatibility
     pub fn trap(self) -> ! {
-        ic_cdk::trap(&self.to_string())
+        ic_cdk::trap(self.to_string())
     }
 }
 
