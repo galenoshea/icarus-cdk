@@ -25,7 +25,9 @@ pub fn icarus_metadata() -> IcarusMetadata {
                             candid_method: name.clone(), // Method name matches tool name
                             is_query: tool_state.is_query,
                             description: tool_state.description.clone(),
-                            parameters: tool_state.parameters.iter()
+                            parameters: tool_state
+                                .parameters
+                                .iter()
                                 .map(|p| icarus_core::protocol::ParameterMetadata {
                                     name: p.name.clone(),
                                     candid_type: p.param_type.clone(),

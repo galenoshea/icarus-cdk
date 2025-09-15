@@ -1,7 +1,7 @@
 //! Tool registry for dynamic registration
 
 use crate::error::Result;
-use crate::tool::{IcarusTool, ToolCategory, ComplexityLevel};
+use crate::tool::{ComplexityLevel, IcarusTool, ToolCategory};
 use async_trait::async_trait;
 use std::collections::HashMap;
 
@@ -90,7 +90,10 @@ impl IcarusToolRegistry for DefaultToolRegistry {
             // Search in name, description, and tags
             let matches_name = name.to_lowercase().contains(&query_lower);
             let matches_desc = info.description.to_lowercase().contains(&query_lower);
-            let matches_tags = info.tags.iter().any(|tag| tag.to_lowercase().contains(&query_lower));
+            let matches_tags = info
+                .tags
+                .iter()
+                .any(|tag| tag.to_lowercase().contains(&query_lower));
 
             if matches_name || matches_desc || matches_tags {
                 matches.push(name.clone());
@@ -111,7 +114,8 @@ impl IcarusToolRegistry for DefaultToolRegistry {
     }
 
     async fn filter_by_category(&self, category: &ToolCategory) -> Result<Vec<String>> {
-        let matches: Vec<String> = self.tools
+        let matches: Vec<String> = self
+            .tools
             .iter()
             .filter_map(|(name, tool)| {
                 if tool.info().category.as_ref() == Some(category) {
@@ -125,7 +129,8 @@ impl IcarusToolRegistry for DefaultToolRegistry {
     }
 
     async fn filter_by_complexity(&self, complexity: &ComplexityLevel) -> Result<Vec<String>> {
-        let matches: Vec<String> = self.tools
+        let matches: Vec<String> = self
+            .tools
             .iter()
             .filter_map(|(name, tool)| {
                 if tool.info().complexity.as_ref() == Some(complexity) {
@@ -141,15 +146,16 @@ impl IcarusToolRegistry for DefaultToolRegistry {
     async fn find_by_tags(&self, tags: &[String]) -> Result<Vec<String>> {
         let search_tags: Vec<String> = tags.iter().map(|t| t.to_lowercase()).collect();
 
-        let matches: Vec<String> = self.tools
+        let matches: Vec<String> = self
+            .tools
             .iter()
             .filter_map(|(name, tool)| {
-                let tool_tags: Vec<String> = tool.info().tags.iter()
-                    .map(|t| t.to_lowercase())
-                    .collect();
+                let tool_tags: Vec<String> =
+                    tool.info().tags.iter().map(|t| t.to_lowercase()).collect();
 
                 // Check if ALL search tags are present (AND logic)
-                let has_all_tags = search_tags.iter()
+                let has_all_tags = search_tags
+                    .iter()
                     .all(|search_tag| tool_tags.contains(search_tag));
 
                 if has_all_tags {
@@ -177,7 +183,11 @@ impl IcarusToolRegistry for DefaultToolRegistry {
             if info.description.to_lowercase().contains(&context_lower) {
                 score += 5.0;
             }
-            if info.tags.iter().any(|tag| context_lower.contains(&tag.to_lowercase())) {
+            if info
+                .tags
+                .iter()
+                .any(|tag| context_lower.contains(&tag.to_lowercase()))
+            {
                 score += 3.0;
             }
             if name.to_lowercase().contains(&context_lower) {
@@ -194,7 +204,11 @@ impl IcarusToolRegistry for DefaultToolRegistry {
 
         // Sort by score (descending) and take top N
         scored_tools.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
-        Ok(scored_tools.into_iter().take(limit).map(|(name, _)| name).collect())
+        Ok(scored_tools
+            .into_iter()
+            .take(limit)
+            .map(|(name, _)| name)
+            .collect())
     }
 
     async fn record_usage(&mut self, tool_name: &str, _execution_time_ms: u64) -> Result<()> {
@@ -212,7 +226,7 @@ impl IcarusToolRegistry for DefaultToolRegistry {
             Ok(())
         } else {
             Err(crate::error::IcarusError::Tool(
-                crate::error::ToolError::operation_failed("Tool not found for usage recording")
+                crate::error::ToolError::operation_failed("Tool not found for usage recording"),
             ))
         }
     }
@@ -221,7 +235,7 @@ impl IcarusToolRegistry for DefaultToolRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tool::{IconInfo, StorageRequirements, ToolInfo, ToolCategory, ComplexityLevel};
+    use crate::tool::{ComplexityLevel, IconInfo, StorageRequirements, ToolCategory, ToolInfo};
     use serde_json::json;
 
     // Mock tool implementation for testing
@@ -564,13 +578,17 @@ mod tests {
         let mut registry = DefaultToolRegistry::new();
 
         // Create tools with different properties for search testing
-        let data_tool = Box::new(MockTool::new("data_processor", "Process data files")
-            .with_category(ToolCategory::Data)
-            .with_tags(vec!["processing", "files"]));
+        let data_tool = Box::new(
+            MockTool::new("data_processor", "Process data files")
+                .with_category(ToolCategory::Data)
+                .with_tags(vec!["processing", "files"]),
+        );
 
-        let ui_tool = Box::new(MockTool::new("button_creator", "Create UI buttons")
-            .with_category(ToolCategory::Interface)
-            .with_tags(vec!["ui", "buttons"]));
+        let ui_tool = Box::new(
+            MockTool::new("button_creator", "Create UI buttons")
+                .with_category(ToolCategory::Interface)
+                .with_tags(vec!["ui", "buttons"]),
+        );
 
         registry.register_tool(data_tool).await.unwrap();
         registry.register_tool(ui_tool).await.unwrap();
@@ -599,30 +617,42 @@ mod tests {
     async fn test_filter_by_category() {
         let mut registry = DefaultToolRegistry::new();
 
-        let data_tool1 = Box::new(MockTool::new("csv_reader", "Read CSV files")
-            .with_category(ToolCategory::Data));
-        let data_tool2 = Box::new(MockTool::new("json_parser", "Parse JSON data")
-            .with_category(ToolCategory::Data));
-        let ui_tool = Box::new(MockTool::new("modal_creator", "Create modals")
-            .with_category(ToolCategory::Interface));
+        let data_tool1 = Box::new(
+            MockTool::new("csv_reader", "Read CSV files").with_category(ToolCategory::Data),
+        );
+        let data_tool2 = Box::new(
+            MockTool::new("json_parser", "Parse JSON data").with_category(ToolCategory::Data),
+        );
+        let ui_tool = Box::new(
+            MockTool::new("modal_creator", "Create modals").with_category(ToolCategory::Interface),
+        );
 
         registry.register_tool(data_tool1).await.unwrap();
         registry.register_tool(data_tool2).await.unwrap();
         registry.register_tool(ui_tool).await.unwrap();
 
         // Filter by Data category
-        let data_tools = registry.filter_by_category(&ToolCategory::Data).await.unwrap();
+        let data_tools = registry
+            .filter_by_category(&ToolCategory::Data)
+            .await
+            .unwrap();
         assert_eq!(data_tools.len(), 2);
         assert!(data_tools.contains(&"csv_reader".to_string()));
         assert!(data_tools.contains(&"json_parser".to_string()));
 
         // Filter by Interface category
-        let ui_tools = registry.filter_by_category(&ToolCategory::Interface).await.unwrap();
+        let ui_tools = registry
+            .filter_by_category(&ToolCategory::Interface)
+            .await
+            .unwrap();
         assert_eq!(ui_tools.len(), 1);
         assert_eq!(ui_tools[0], "modal_creator");
 
         // Filter by category with no matches
-        let system_tools = registry.filter_by_category(&ToolCategory::System).await.unwrap();
+        let system_tools = registry
+            .filter_by_category(&ToolCategory::System)
+            .await
+            .unwrap();
         assert_eq!(system_tools.len(), 0);
     }
 
@@ -630,19 +660,27 @@ mod tests {
     async fn test_filter_by_complexity() {
         let mut registry = DefaultToolRegistry::new();
 
-        let simple_tool = Box::new(MockTool::new("echo", "Echo input")
-            .with_complexity(ComplexityLevel::Simple));
-        let complex_tool = Box::new(MockTool::new("ml_trainer", "Train ML models")
-            .with_complexity(ComplexityLevel::Complex));
+        let simple_tool =
+            Box::new(MockTool::new("echo", "Echo input").with_complexity(ComplexityLevel::Simple));
+        let complex_tool = Box::new(
+            MockTool::new("ml_trainer", "Train ML models")
+                .with_complexity(ComplexityLevel::Complex),
+        );
 
         registry.register_tool(simple_tool).await.unwrap();
         registry.register_tool(complex_tool).await.unwrap();
 
-        let simple_tools = registry.filter_by_complexity(&ComplexityLevel::Simple).await.unwrap();
+        let simple_tools = registry
+            .filter_by_complexity(&ComplexityLevel::Simple)
+            .await
+            .unwrap();
         assert_eq!(simple_tools.len(), 1);
         assert_eq!(simple_tools[0], "echo");
 
-        let complex_tools = registry.filter_by_complexity(&ComplexityLevel::Complex).await.unwrap();
+        let complex_tools = registry
+            .filter_by_complexity(&ComplexityLevel::Complex)
+            .await
+            .unwrap();
         assert_eq!(complex_tools.len(), 1);
         assert_eq!(complex_tools[0], "ml_trainer");
     }
@@ -651,12 +689,15 @@ mod tests {
     async fn test_find_by_tags() {
         let mut registry = DefaultToolRegistry::new();
 
-        let tool1 = Box::new(MockTool::new("web_scraper", "Scrape web pages")
-            .with_tags(vec!["web", "scraping", "data"]));
-        let tool2 = Box::new(MockTool::new("api_client", "Make API calls")
-            .with_tags(vec!["web", "api", "http"]));
-        let tool3 = Box::new(MockTool::new("file_reader", "Read files")
-            .with_tags(vec!["files", "io"]));
+        let tool1 = Box::new(
+            MockTool::new("web_scraper", "Scrape web pages")
+                .with_tags(vec!["web", "scraping", "data"]),
+        );
+        let tool2 = Box::new(
+            MockTool::new("api_client", "Make API calls").with_tags(vec!["web", "api", "http"]),
+        );
+        let tool3 =
+            Box::new(MockTool::new("file_reader", "Read files").with_tags(vec!["files", "io"]));
 
         registry.register_tool(tool1).await.unwrap();
         registry.register_tool(tool2).await.unwrap();
@@ -669,12 +710,18 @@ mod tests {
         assert!(web_tools.contains(&"api_client".to_string()));
 
         // Find tools with both "web" AND "data" tags (AND logic)
-        let web_data_tools = registry.find_by_tags(&["web".to_string(), "data".to_string()]).await.unwrap();
+        let web_data_tools = registry
+            .find_by_tags(&["web".to_string(), "data".to_string()])
+            .await
+            .unwrap();
         assert_eq!(web_data_tools.len(), 1);
         assert_eq!(web_data_tools[0], "web_scraper");
 
         // Find tools with non-existent tag
-        let no_tools = registry.find_by_tags(&["nonexistent".to_string()]).await.unwrap();
+        let no_tools = registry
+            .find_by_tags(&["nonexistent".to_string()])
+            .await
+            .unwrap();
         assert_eq!(no_tools.len(), 0);
     }
 
@@ -683,17 +730,23 @@ mod tests {
         let mut registry = DefaultToolRegistry::new();
 
         // Create tools with different usage patterns
-        let popular_tool = Box::new(MockTool::new("popular_tool", "Frequently used tool")
-            .with_usage_count(100)
-            .with_tags(vec!["data", "popular"]));
-        let simple_tool = Box::new(MockTool::new("simple_tool", "Simple data processor")
-            .with_complexity(ComplexityLevel::Simple)
-            .with_usage_count(50)
-            .with_tags(vec!["data", "simple"]));
-        let complex_tool = Box::new(MockTool::new("complex_tool", "Complex data analysis")
-            .with_complexity(ComplexityLevel::Complex)
-            .with_usage_count(75)
-            .with_tags(vec!["data", "analysis"]));
+        let popular_tool = Box::new(
+            MockTool::new("popular_tool", "Frequently used tool")
+                .with_usage_count(100)
+                .with_tags(vec!["data", "popular"]),
+        );
+        let simple_tool = Box::new(
+            MockTool::new("simple_tool", "Simple data processor")
+                .with_complexity(ComplexityLevel::Simple)
+                .with_usage_count(50)
+                .with_tags(vec!["data", "simple"]),
+        );
+        let complex_tool = Box::new(
+            MockTool::new("complex_tool", "Complex data analysis")
+                .with_complexity(ComplexityLevel::Complex)
+                .with_usage_count(75)
+                .with_tags(vec!["data", "analysis"]),
+        );
 
         registry.register_tool(popular_tool).await.unwrap();
         registry.register_tool(simple_tool).await.unwrap();

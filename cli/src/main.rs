@@ -199,7 +199,11 @@ enum DevCommands {
         #[arg(long, help = "File patterns to watch (glob)", value_delimiter = ',')]
         patterns: Option<Vec<String>>,
 
-        #[arg(long, help = "Delay before triggering redeploy (ms)", default_value = "500")]
+        #[arg(
+            long,
+            help = "Delay before triggering redeploy (ms)",
+            default_value = "500"
+        )]
         delay: u64,
 
         #[arg(long, help = "Enable verbose file watching output")]
@@ -514,7 +518,7 @@ async fn main() -> Result<()> {
                 metrics,
             };
             monitor_cmd.run().await?;
-        },
+        }
     }
 
     Ok(())

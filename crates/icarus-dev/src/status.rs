@@ -5,46 +5,80 @@ use std::path::Path;
 use crate::utils::print_warning;
 
 pub async fn execute(detailed: bool) -> Result<()> {
-    println!("\n{} {}", "📊".bright_blue(), "Development Environment Status".bright_cyan().bold());
-    println!("{}", "Current status of your Icarus development environment.\n".bright_white());
+    println!(
+        "\n{} {}",
+        "📊".bright_blue(),
+        "Development Environment Status".bright_cyan().bold()
+    );
+    println!(
+        "{}",
+        "Current status of your Icarus development environment.\n".bright_white()
+    );
 
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
     let is_icarus_project = is_icarus_project(&current_dir);
 
-    println!("{} {}", "📁".bright_blue(), "Project Status".bright_cyan().bold());
+    println!(
+        "{} {}",
+        "📁".bright_blue(),
+        "Project Status".bright_cyan().bold()
+    );
     println!("{}", "──────────────────".bright_blue());
 
     if is_icarus_project {
-        println!("  {} Status: {}", "📦".bright_green(), "Icarus Project".bright_green());
+        println!(
+            "  {} Status: {}",
+            "📦".bright_green(),
+            "Icarus Project".bright_green()
+        );
 
         // Get project name
         match get_project_name(&current_dir) {
             Ok(name) => println!("  {} Name: {}", "🏷️".bright_blue(), name.bright_cyan()),
-            Err(_) => println!("  {} Name: {}", "🏷️".bright_yellow(), "Unknown".bright_yellow()),
+            Err(_) => println!(
+                "  {} Name: {}",
+                "🏷️".bright_yellow(),
+                "Unknown".bright_yellow()
+            ),
         }
 
         // Check if built
         let wasm_exists = check_wasm_exists(&current_dir).await;
-        let build_status = if wasm_exists { "Built".bright_green() } else { "Not Built".bright_yellow() };
+        let build_status = if wasm_exists {
+            "Built".bright_green()
+        } else {
+            "Not Built".bright_yellow()
+        };
         println!("  {} Build: {}", "🔨".bright_blue(), build_status);
-
     } else {
-        println!("  {} Status: {}", "📁".bright_yellow(), "Not an Icarus Project".bright_yellow());
+        println!(
+            "  {} Status: {}",
+            "📁".bright_yellow(),
+            "Not an Icarus Project".bright_yellow()
+        );
         print_warning("Run this command from within an Icarus project directory.");
     }
 
     println!();
 
     // Check development tools
-    println!("{} {}", "🔧".bright_blue(), "Development Tools".bright_cyan().bold());
+    println!(
+        "{} {}",
+        "🔧".bright_blue(),
+        "Development Tools".bright_cyan().bold()
+    );
     println!("{}", "──────────────────".bright_blue());
     check_dev_tools().await;
 
     println!();
 
     // Check local IC status
-    println!("{} {}", "🌐".bright_blue(), "Local Internet Computer".bright_cyan().bold());
+    println!(
+        "{} {}",
+        "🌐".bright_blue(),
+        "Local Internet Computer".bright_cyan().bold()
+    );
     println!("{}", "──────────────────".bright_blue());
     check_local_ic_status().await?;
 
@@ -62,9 +96,7 @@ pub async fn execute(detailed: bool) -> Result<()> {
 }
 
 fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists()
-        && path.join("dfx.json").exists()
-        && path.join("src").exists()
+    path.join("Cargo.toml").exists() && path.join("dfx.json").exists() && path.join("src").exists()
 }
 
 fn get_project_name(project_dir: &Path) -> Result<String> {
@@ -105,19 +137,25 @@ async fn check_dev_tools() {
         let cmd = parts[0];
         let args = &parts[1..];
 
-        match tokio::process::Command::new(cmd)
-            .args(args)
-            .output()
-            .await
-        {
+        match tokio::process::Command::new(cmd).args(args).output().await {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
                 let version_line = version.lines().next().unwrap_or("unknown").trim();
                 let version_str = version_line.to_string();
-                println!("  {} {}: {}", "✅".bright_green(), name, version_str.bright_cyan());
+                println!(
+                    "  {} {}: {}",
+                    "✅".bright_green(),
+                    name,
+                    version_str.bright_cyan()
+                );
             }
             _ => {
-                println!("  {} {}: {}", "❌".bright_red(), name, "Not found".bright_red());
+                println!(
+                    "  {} {}: {}",
+                    "❌".bright_red(),
+                    name,
+                    "Not found".bright_red()
+                );
             }
         }
     }
@@ -125,7 +163,11 @@ async fn check_dev_tools() {
     // Check optional tools
     let optional_tools = [
         ("ic-wasm", "ic-wasm --version", "WASM optimization"),
-        ("candid-extractor", "candid-extractor --version", "Candid generation"),
+        (
+            "candid-extractor",
+            "candid-extractor --version",
+            "Candid generation",
+        ),
     ];
 
     for (name, command, description) in &optional_tools {
@@ -133,19 +175,27 @@ async fn check_dev_tools() {
         let cmd = parts[0];
         let args = &parts[1..];
 
-        match tokio::process::Command::new(cmd)
-            .args(args)
-            .output()
-            .await
-        {
+        match tokio::process::Command::new(cmd).args(args).output().await {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
                 let version_line = version.lines().next().unwrap_or("unknown").trim();
                 let version_str = version_line.to_string();
-                println!("  {} {} ({}): {}", "✅".bright_green(), name, description, version_str.bright_cyan());
+                println!(
+                    "  {} {} ({}): {}",
+                    "✅".bright_green(),
+                    name,
+                    description,
+                    version_str.bright_cyan()
+                );
             }
             _ => {
-                println!("  {} {} ({}): {}", "⚠️".bright_yellow(), name, description, "Not installed".bright_yellow());
+                println!(
+                    "  {} {} ({}): {}",
+                    "⚠️".bright_yellow(),
+                    name,
+                    description,
+                    "Not installed".bright_yellow()
+                );
             }
         }
     }
@@ -159,7 +209,11 @@ async fn check_local_ic_status() -> Result<()> {
         .await
     {
         Ok(output) if output.status.success() => {
-            println!("  {} Local replica: {}", "✅".bright_green(), "Running".bright_green());
+            println!(
+                "  {} Local replica: {}",
+                "✅".bright_green(),
+                "Running".bright_green()
+            );
 
             // Get replica info if available
             if let Ok(info_output) = tokio::process::Command::new("dfx")
@@ -171,7 +225,8 @@ async fn check_local_ic_status() -> Result<()> {
                     let info = String::from_utf8_lossy(&info_output.stdout);
                     for line in info.lines() {
                         if line.contains("replica") && line.contains("http://") {
-                            let url = line.split_whitespace()
+                            let url = line
+                                .split_whitespace()
                                 .find(|s| s.starts_with("http://"))
                                 .unwrap_or("http://localhost:4943");
                             println!("  {} URL: {}", "🔗".bright_blue(), url.bright_cyan());
@@ -182,8 +237,15 @@ async fn check_local_ic_status() -> Result<()> {
             }
         }
         _ => {
-            println!("  {} Local replica: {}", "❌".bright_red(), "Not running".bright_red());
-            println!("    💡 Start with: {}", "dfx start --background".bright_cyan());
+            println!(
+                "  {} Local replica: {}",
+                "❌".bright_red(),
+                "Not running".bright_red()
+            );
+            println!(
+                "    💡 Start with: {}",
+                "dfx start --background".bright_cyan()
+            );
         }
     }
 
@@ -196,10 +258,18 @@ async fn check_local_ic_status() -> Result<()> {
         Ok(output) if output.status.success() => {
             let identity = String::from_utf8_lossy(&output.stdout);
             let identity_str = identity.trim().to_string();
-            println!("  {} Identity: {}", "👤".bright_blue(), identity_str.bright_cyan());
+            println!(
+                "  {} Identity: {}",
+                "👤".bright_blue(),
+                identity_str.bright_cyan()
+            );
         }
         _ => {
-            println!("  {} Identity: {}", "⚠️".bright_yellow(), "Unknown".bright_yellow());
+            println!(
+                "  {} Identity: {}",
+                "⚠️".bright_yellow(),
+                "Unknown".bright_yellow()
+            );
         }
     }
 
@@ -207,7 +277,11 @@ async fn check_local_ic_status() -> Result<()> {
 }
 
 async fn show_detailed_project_info(project_dir: &Path) -> Result<()> {
-    println!("{} {}", "📋".bright_blue(), "Detailed Project Information".bright_cyan().bold());
+    println!(
+        "{} {}",
+        "📋".bright_blue(),
+        "Detailed Project Information".bright_cyan().bold()
+    );
     println!("{}", "──────────────────".bright_blue());
 
     // Check canister information if dfx is available
@@ -222,7 +296,11 @@ async fn show_detailed_project_info(project_dir: &Path) -> Result<()> {
             Ok(output) if output.status.success() => {
                 let canister_id = String::from_utf8_lossy(&output.stdout);
                 let canister_id_str = canister_id.trim().to_string();
-                println!("  {} Local Canister ID: {}", "🆔".bright_blue(), canister_id_str.bright_cyan());
+                println!(
+                    "  {} Local Canister ID: {}",
+                    "🆔".bright_blue(),
+                    canister_id_str.bright_cyan()
+                );
 
                 // Try to get canister status
                 match tokio::process::Command::new("dfx")
@@ -234,29 +312,48 @@ async fn show_detailed_project_info(project_dir: &Path) -> Result<()> {
                     Ok(status_output) if status_output.status.success() => {
                         let status = String::from_utf8_lossy(&status_output.stdout);
                         for line in status.lines() {
-                            if line.contains("Status:") || line.contains("Memory:") || line.contains("Balance:") {
+                            if line.contains("Status:")
+                                || line.contains("Memory:")
+                                || line.contains("Balance:")
+                            {
                                 println!("  {} {}", "📊".bright_blue(), line.trim().bright_white());
                             }
                         }
                     }
                     _ => {
-                        println!("  {} Canister status: {}", "⚠️".bright_yellow(), "Could not retrieve".bright_yellow());
+                        println!(
+                            "  {} Canister status: {}",
+                            "⚠️".bright_yellow(),
+                            "Could not retrieve".bright_yellow()
+                        );
                     }
                 }
             }
             _ => {
-                println!("  {} Local Canister: {}", "📦".bright_yellow(), "Not deployed".bright_yellow());
+                println!(
+                    "  {} Local Canister: {}",
+                    "📦".bright_yellow(),
+                    "Not deployed".bright_yellow()
+                );
             }
         }
     }
 
     // Check file sizes
     if let Ok(metadata) = std::fs::metadata(project_dir.join("Cargo.toml")) {
-        println!("  {} Cargo.toml: {} bytes", "📄".bright_blue(), metadata.len().to_string().bright_cyan());
+        println!(
+            "  {} Cargo.toml: {} bytes",
+            "📄".bright_blue(),
+            metadata.len().to_string().bright_cyan()
+        );
     }
 
     if let Ok(metadata) = std::fs::metadata(project_dir.join("dfx.json")) {
-        println!("  {} dfx.json: {} bytes", "📄".bright_blue(), metadata.len().to_string().bright_cyan());
+        println!(
+            "  {} dfx.json: {} bytes",
+            "📄".bright_blue(),
+            metadata.len().to_string().bright_cyan()
+        );
     }
 
     // Check WASM size if exists
@@ -269,7 +366,11 @@ async fn show_detailed_project_info(project_dir: &Path) -> Result<()> {
             .join(format!("{}.wasm", wasm_name));
 
         if let Ok(metadata) = std::fs::metadata(&wasm_path) {
-            println!("  {} WASM size: {} bytes", "⚙️".bright_blue(), metadata.len().to_string().bright_cyan());
+            println!(
+                "  {} WASM size: {} bytes",
+                "⚙️".bright_blue(),
+                metadata.len().to_string().bright_cyan()
+            );
         }
     }
 
@@ -277,27 +378,46 @@ async fn show_detailed_project_info(project_dir: &Path) -> Result<()> {
 }
 
 fn check_dev_configuration(project_dir: &Path) {
-    println!("{} {}", "⚙️".bright_blue(), "Development Configuration".bright_cyan().bold());
+    println!(
+        "{} {}",
+        "⚙️".bright_blue(),
+        "Development Configuration".bright_cyan().bold()
+    );
     println!("{}", "──────────────────".bright_blue());
 
     let dev_config_path = project_dir.join(".icarus-dev.toml");
     if dev_config_path.exists() {
-        println!("  {} Development config: {}", "✅".bright_green(), "Found".bright_green());
+        println!(
+            "  {} Development config: {}",
+            "✅".bright_green(),
+            "Found".bright_green()
+        );
 
         if let Ok(content) = std::fs::read_to_string(&dev_config_path) {
-            println!("  {} Config size: {} bytes", "📄".bright_blue(), content.len().to_string().bright_cyan());
+            println!(
+                "  {} Config size: {} bytes",
+                "📄".bright_blue(),
+                content.len().to_string().bright_cyan()
+            );
         }
     } else {
-        println!("  {} Development config: {}", "⚠️".bright_yellow(), "Not found".bright_yellow());
-        println!("    💡 Initialize with: {}", "icarus dev init".bright_cyan());
+        println!(
+            "  {} Development config: {}",
+            "⚠️".bright_yellow(),
+            "Not found".bright_yellow()
+        );
+        println!(
+            "    💡 Initialize with: {}",
+            "icarus dev init".bright_cyan()
+        );
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
     use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_is_icarus_project_with_all_files() {
@@ -305,7 +425,11 @@ mod tests {
         let project_path = temp_dir.path();
 
         // Create required files
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         fs::write(project_path.join("dfx.json"), "{}").unwrap();
         fs::create_dir(project_path.join("src")).unwrap();
 
@@ -330,7 +454,11 @@ mod tests {
         let project_path = temp_dir.path();
 
         // Create only some files
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         fs::create_dir(project_path.join("src")).unwrap();
 
         assert!(!is_icarus_project(project_path));
@@ -342,7 +470,11 @@ mod tests {
         let project_path = temp_dir.path();
 
         // Create only some files
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         fs::write(project_path.join("dfx.json"), "{}").unwrap();
 
         assert!(!is_icarus_project(project_path));
@@ -523,7 +655,11 @@ version = "0.1.0"
         let project_path = temp_dir.path();
 
         // Create required files plus extras
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         fs::write(project_path.join("dfx.json"), "{}").unwrap();
         fs::create_dir(project_path.join("src")).unwrap();
         fs::write(project_path.join("README.md"), "# Test project").unwrap();

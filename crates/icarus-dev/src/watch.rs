@@ -1,18 +1,25 @@
 use anyhow::Result;
 use colored::Colorize;
-use notify::{RecursiveMode, Watcher, Event, EventKind};
+use notify::{Event, EventKind, RecursiveMode, Watcher};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::time::Instant;
 use tokio::signal;
 use tokio::sync::mpsc as tokio_mpsc;
-use tokio::time::{Duration, timeout};
+use tokio::time::{timeout, Duration};
 
 use crate::utils::{print_info, print_success, print_warning, run_command_interactive};
 
 pub async fn execute(patterns: Option<Vec<String>>, delay: u64, verbose: bool) -> Result<()> {
-    println!("\n{} {}", "👁️".bright_blue(), "File Watcher".bright_cyan().bold());
-    println!("{}", "Monitoring files for changes and triggering automatic redeployment.\n".bright_white());
+    println!(
+        "\n{} {}",
+        "👁️".bright_blue(),
+        "File Watcher".bright_cyan().bold()
+    );
+    println!(
+        "{}",
+        "Monitoring files for changes and triggering automatic redeployment.\n".bright_white()
+    );
 
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
@@ -23,19 +30,33 @@ pub async fn execute(patterns: Option<Vec<String>>, delay: u64, verbose: bool) -
     }
 
     // Default watch patterns - simplified to directories for notify crate
-    let watch_paths = patterns.unwrap_or_else(|| vec![
-        "src".to_string(),
-        "Cargo.toml".to_string(),
-        "dfx.json".to_string(),
-    ]);
+    let watch_paths = patterns.unwrap_or_else(|| {
+        vec![
+            "src".to_string(),
+            "Cargo.toml".to_string(),
+            "dfx.json".to_string(),
+        ]
+    });
 
     print_info("File watcher configuration:");
     println!("  {} Watching:", "📋".bright_blue());
     for pattern in &watch_paths {
         println!("    {} {}", "📄".bright_cyan(), pattern.bright_white());
     }
-    println!("  {} Delay: {}ms", "⏱️".bright_blue(), delay.to_string().bright_cyan());
-    println!("  {} Verbose: {}", "🔍".bright_blue(), if verbose { "enabled".bright_green() } else { "disabled".bright_yellow() });
+    println!(
+        "  {} Delay: {}ms",
+        "⏱️".bright_blue(),
+        delay.to_string().bright_cyan()
+    );
+    println!(
+        "  {} Verbose: {}",
+        "🔍".bright_blue(),
+        if verbose {
+            "enabled".bright_green()
+        } else {
+            "disabled".bright_yellow()
+        }
+    );
     println!();
 
     // Check if local IC replica is running
@@ -57,9 +78,7 @@ pub async fn execute(patterns: Option<Vec<String>>, delay: u64, verbose: bool) -
 }
 
 fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists()
-        && path.join("dfx.json").exists()
-        && path.join("src").exists()
+    path.join("Cargo.toml").exists() && path.join("dfx.json").exists() && path.join("src").exists()
 }
 
 async fn check_local_replica() -> Result<()> {
@@ -85,7 +104,7 @@ async fn start_file_watcher(
     project_dir: &Path,
     watch_paths: Vec<String>,
     debounce_delay: u64,
-    verbose: bool
+    verbose: bool,
 ) -> Result<()> {
     // Create channels for file events
     let (file_tx, mut file_rx) = tokio_mpsc::unbounded_channel::<FileChangeEvent>();
@@ -107,7 +126,11 @@ async fn start_file_watcher(
             if let Err(e) = watcher.watch(&full_path, mode) {
                 print_warning(&format!("Failed to watch {}: {}", watch_path, e));
             } else if verbose {
-                println!("  {} Watching: {}", "👁️".bright_blue(), full_path.display().to_string().bright_cyan());
+                println!(
+                    "  {} Watching: {}",
+                    "👁️".bright_blue(),
+                    full_path.display().to_string().bright_cyan()
+                );
             }
         } else if verbose {
             print_warning(&format!("Path does not exist: {}", watch_path));
@@ -128,7 +151,8 @@ async fn start_file_watcher(
                         let now = Instant::now();
 
                         // Simple debouncing - only process if enough time has passed
-                        if now.duration_since(last_event_time).as_millis() > debounce_delay as u128 {
+                        if now.duration_since(last_event_time).as_millis() > debounce_delay as u128
+                        {
                             last_event_time = now;
 
                             if let Some(path) = event.paths.first() {
@@ -213,7 +237,10 @@ async fn start_file_watcher(
         }
     }
 
-    print_success(&format!("File watcher stopped after {} deployments", deployment_count));
+    print_success(&format!(
+        "File watcher stopped after {} deployments",
+        deployment_count
+    ));
     Ok(())
 }
 
@@ -226,7 +253,7 @@ struct FileChangeEvent {
 fn should_process_event(event: &Event, project_dir: &Path) -> bool {
     // Only process write/create/remove events
     match event.kind {
-        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {},
+        EventKind::Create(_) | EventKind::Modify(_) | EventKind::Remove(_) => {}
         _ => return false,
     }
 
@@ -251,7 +278,8 @@ fn should_process_event(event: &Event, project_dir: &Path) -> bool {
                 || path_str.starts_with(".git/")
                 || path_str.contains("/.")
                 || path_str.ends_with(".tmp")
-                || path_str.ends_with(".lock") {
+                || path_str.ends_with(".lock")
+            {
                 continue;
             }
         }
@@ -292,7 +320,9 @@ async fn build_and_deploy(project_dir: &Path) -> Result<String> {
         return Err(anyhow::anyhow!("Failed to get dfx identity"));
     }
 
-    let principal = String::from_utf8_lossy(&principal_output.stdout).trim().to_string();
+    let principal = String::from_utf8_lossy(&principal_output.stdout)
+        .trim()
+        .to_string();
     let init_arg = format!("(principal \"{}\")", principal);
 
     // Deploy canister
@@ -308,11 +338,7 @@ async fn build_and_deploy(project_dir: &Path) -> Result<String> {
         "--upgrade-unchanged",
     ];
 
-    let deploy_future = run_command_interactive(
-        "dfx",
-        &deploy_args,
-        Some(project_dir),
-    );
+    let deploy_future = run_command_interactive("dfx", &deploy_args, Some(project_dir));
 
     // Add timeout for deployment too
     match timeout(Duration::from_secs(60), deploy_future).await {
@@ -333,7 +359,9 @@ async fn build_and_deploy(project_dir: &Path) -> Result<String> {
         return Err(anyhow::anyhow!("Failed to get canister ID"));
     }
 
-    let canister_id = String::from_utf8_lossy(&canister_id_output.stdout).trim().to_string();
+    let canister_id = String::from_utf8_lossy(&canister_id_output.stdout)
+        .trim()
+        .to_string();
     Ok(canister_id)
 }
 
@@ -352,9 +380,9 @@ fn get_project_name(project_dir: &Path) -> Result<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
-    use std::fs;
     use notify::{Event, EventKind};
+    use std::fs;
+    use tempfile::TempDir;
 
     #[test]
     fn test_is_icarus_project_valid() {
@@ -362,7 +390,11 @@ mod tests {
         let project_path = temp_dir.path();
 
         // Create required files for Icarus project
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         fs::write(project_path.join("dfx.json"), "{}").unwrap();
         fs::create_dir(project_path.join("src")).unwrap();
 
@@ -378,7 +410,11 @@ mod tests {
         assert!(!is_icarus_project(project_path));
 
         // Only some files present
-        fs::write(project_path.join("Cargo.toml"), "[package]\nname = \"test\"").unwrap();
+        fs::write(
+            project_path.join("Cargo.toml"),
+            "[package]\nname = \"test\"",
+        )
+        .unwrap();
         assert!(!is_icarus_project(project_path));
 
         fs::write(project_path.join("dfx.json"), "{}").unwrap();
@@ -466,7 +502,9 @@ serde = "1.0"
         fs::write(&rust_file, "// rust code").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![rust_file],
             attrs: Default::default(),
         };
@@ -484,7 +522,9 @@ serde = "1.0"
         fs::write(&cargo_toml, "[package]").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![cargo_toml],
             attrs: Default::default(),
         };
@@ -496,7 +536,9 @@ serde = "1.0"
         fs::write(&dfx_json, "{}").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![dfx_json],
             attrs: Default::default(),
         };
@@ -510,12 +552,18 @@ serde = "1.0"
         let project_path = temp_dir.path();
 
         // Test target directory (should be ignored)
-        let target_file = project_path.join("target").join("debug").join("build").join("something");
+        let target_file = project_path
+            .join("target")
+            .join("debug")
+            .join("build")
+            .join("something");
         fs::create_dir_all(target_file.parent().unwrap()).unwrap();
         fs::write(&target_file, "build artifact").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![target_file],
             attrs: Default::default(),
         };
@@ -528,7 +576,9 @@ serde = "1.0"
         fs::write(&dfx_file, "dfx artifact").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![dfx_file],
             attrs: Default::default(),
         };
@@ -541,7 +591,9 @@ serde = "1.0"
         fs::write(&git_file, "git config").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![git_file],
             attrs: Default::default(),
         };
@@ -560,7 +612,9 @@ serde = "1.0"
         fs::write(&tmp_file, "temp content").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![tmp_file],
             attrs: Default::default(),
         };
@@ -572,7 +626,9 @@ serde = "1.0"
         fs::write(&lock_file, "lock content").unwrap();
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![lock_file],
             attrs: Default::default(),
         };
@@ -642,13 +698,18 @@ serde = "1.0"
         fs::create_dir_all(rust_file.parent().unwrap()).unwrap();
         fs::write(&rust_file, "// rust code").unwrap();
 
-        let target_file = project_path.join("target").join("debug").join("build_artifact");
+        let target_file = project_path
+            .join("target")
+            .join("debug")
+            .join("build_artifact");
         fs::create_dir_all(target_file.parent().unwrap()).unwrap();
         fs::write(&target_file, "build artifact").unwrap();
 
         // Event with both relevant and irrelevant paths
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![rust_file, target_file],
             attrs: Default::default(),
         };
@@ -666,7 +727,9 @@ serde = "1.0"
         let outside_file = temp_dir.path().parent().unwrap().join("outside.rs");
 
         let event = Event {
-            kind: EventKind::Modify(notify::event::ModifyKind::Data(notify::event::DataChange::Content)),
+            kind: EventKind::Modify(notify::event::ModifyKind::Data(
+                notify::event::DataChange::Content,
+            )),
             paths: vec![outside_file],
             attrs: Default::default(),
         };

@@ -77,7 +77,8 @@ impl BridgeBuilder {
     /// This validates the configuration and creates a `Bridge` instance
     /// ready to be started.
     pub async fn build(self) -> Result<Bridge> {
-        let canister_id = self.canister_id
+        let canister_id = self
+            .canister_id
             .ok_or_else(|| anyhow::anyhow!("Canister ID is required"))?;
 
         // Validate canister ID format
@@ -106,11 +107,7 @@ impl Bridge {
     /// This method runs indefinitely, handling MCP protocol messages
     /// and translating them to canister calls.
     pub async fn start(self) -> Result<()> {
-        crate::rmcp_server::run_with_auth(
-            self.canister_id,
-            self.authenticate,
-            self.use_local,
-        ).await
+        crate::rmcp_server::run_with_auth(self.canister_id, self.authenticate, self.use_local).await
     }
 
     /// Get the canister ID this bridge is configured for

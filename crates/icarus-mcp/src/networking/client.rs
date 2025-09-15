@@ -259,7 +259,10 @@ impl CanisterClient {
 
     /// Convert single value based on schema type
     fn convert_value_with_schema(&self, value: &JsonValue, schema: &JsonValue) -> Result<Vec<u8>> {
-        let type_name = schema.get("type").and_then(|t| t.as_str()).unwrap_or("string");
+        let type_name = schema
+            .get("type")
+            .and_then(|t| t.as_str())
+            .unwrap_or("string");
 
         match (value, type_name) {
             (JsonValue::String(s), "string") => Ok(Encode!(s)?),

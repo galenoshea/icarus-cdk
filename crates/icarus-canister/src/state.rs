@@ -540,7 +540,7 @@ mod tests {
         }
         match ToolState::BOUND {
             ic_stable_structures::storable::Bound::Bounded { max_size, .. } => {
-                assert_eq!(max_size, 512)
+                assert_eq!(max_size, 2048) // Increased to accommodate description and parameters
             }
             _ => panic!("Expected bounded"),
         }

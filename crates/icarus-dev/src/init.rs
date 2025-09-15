@@ -5,8 +5,16 @@ use std::path::Path;
 use crate::utils::{print_info, print_success, print_warning, run_command};
 
 pub async fn execute(skip_checks: bool, force: bool) -> Result<()> {
-    println!("\n{} {}", "🔧".bright_blue(), "Initializing Development Environment".bright_cyan().bold());
-    println!("{}", "Setting up your local development environment for Icarus MCP server development.\n".bright_white());
+    println!(
+        "\n{} {}",
+        "🔧".bright_blue(),
+        "Initializing Development Environment".bright_cyan().bold()
+    );
+    println!(
+        "{}",
+        "Setting up your local development environment for Icarus MCP server development.\n"
+            .bright_white()
+    );
 
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
@@ -50,17 +58,27 @@ pub async fn execute(skip_checks: bool, force: bool) -> Result<()> {
 
     print_success("Development environment initialized!");
     println!("\n{} Next steps:", "💡".bright_yellow());
-    println!("  {} Start development server: {}", "🚀".bright_green(), "icarus dev start".bright_cyan());
-    println!("  {} Watch for changes: {}", "👀".bright_green(), "icarus dev watch".bright_cyan());
-    println!("  {} Check status: {}", "📊".bright_green(), "icarus dev status".bright_cyan());
+    println!(
+        "  {} Start development server: {}",
+        "🚀".bright_green(),
+        "icarus dev start".bright_cyan()
+    );
+    println!(
+        "  {} Watch for changes: {}",
+        "👀".bright_green(),
+        "icarus dev watch".bright_cyan()
+    );
+    println!(
+        "  {} Check status: {}",
+        "📊".bright_green(),
+        "icarus dev status".bright_cyan()
+    );
 
     Ok(())
 }
 
 fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists()
-        && path.join("dfx.json").exists()
-        && path.join("src").exists()
+    path.join("Cargo.toml").exists() && path.join("dfx.json").exists() && path.join("src").exists()
 }
 
 async fn check_development_dependencies() -> Result<()> {
@@ -88,12 +106,21 @@ async fn check_development_dependencies() -> Result<()> {
     match run_command("rustup", &["target", "list", "--installed"], None).await {
         Ok(output) => {
             if output.contains("wasm32-unknown-unknown") {
-                println!("  {} wasm32-unknown-unknown target installed", "✅".bright_green());
+                println!(
+                    "  {} wasm32-unknown-unknown target installed",
+                    "✅".bright_green()
+                );
             } else {
-                println!("  {} wasm32-unknown-unknown target missing", "❌".bright_red());
+                println!(
+                    "  {} wasm32-unknown-unknown target missing",
+                    "❌".bright_red()
+                );
                 print_info("Installing wasm32-unknown-unknown target...");
                 run_command("rustup", &["target", "add", "wasm32-unknown-unknown"], None).await?;
-                println!("  {} wasm32-unknown-unknown target installed", "✅".bright_green());
+                println!(
+                    "  {} wasm32-unknown-unknown target installed",
+                    "✅".bright_green()
+                );
             }
         }
         Err(_) => {
@@ -114,7 +141,10 @@ async fn check_development_dependencies() -> Result<()> {
     match run_command("candid-extractor", &["--version"], None).await {
         Ok(_) => println!("  {} candid-extractor installed", "✅".bright_green()),
         Err(_) => {
-            println!("  {} candid-extractor not found (optional)", "⚠️".bright_yellow());
+            println!(
+                "  {} candid-extractor not found (optional)",
+                "⚠️".bright_yellow()
+            );
             println!("    Install for Candid generation: cargo install candid-extractor");
         }
     }
@@ -152,7 +182,10 @@ async fn initialize_dev_config(force: bool) -> Result<()> {
     let dev_config_path = Path::new(".icarus-dev.toml");
 
     if dev_config_path.exists() && !force {
-        println!("  {} Development configuration already exists", "✅".bright_green());
+        println!(
+            "  {} Development configuration already exists",
+            "✅".bright_green()
+        );
         return Ok(());
     }
 

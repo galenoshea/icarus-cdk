@@ -108,7 +108,12 @@ impl DevConfig {
 /// development tools based on the provided configuration.
 pub async fn start_dev_server(config: DevConfig) -> Result<()> {
     // Use watch instead of start for the file watching functionality
-    watch::execute(Some(config.watch_paths), config.debounce_delay, config.verbose).await
+    watch::execute(
+        Some(config.watch_paths),
+        config.debounce_delay,
+        config.verbose,
+    )
+    .await
 }
 
 /// Get the current development status

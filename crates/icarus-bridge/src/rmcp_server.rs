@@ -67,7 +67,6 @@ pub struct CanisterTool {
     pub icon: Option<String>,
 }
 
-
 /// ICP Canister Bridge service
 #[derive(Clone)]
 #[allow(dead_code)] // Used in MCP mode but analysis doesn't detect it
@@ -92,7 +91,8 @@ impl IcpBridge {
 
     /// Fallback to dfx-based authentication
     async fn new_with_dfx_fallback(canister_id: Principal, is_mcp_mode: bool) -> Result<Self> {
-        let (identity_name, _principal, agent) = auth::create_authenticated_agent(is_mcp_mode).await?;
+        let (identity_name, _principal, agent) =
+            auth::create_authenticated_agent(is_mcp_mode).await?;
 
         let canister_client = Arc::new(RwLock::new(CanisterClient::new_with_agent(
             canister_id,
@@ -452,7 +452,8 @@ impl ServerHandler for IcpBridge {
                 .unwrap_or(false);
 
             // Use streaming response handler with mode selection
-            self.call_tool_streaming(&request.name, args, is_progress_mode).await
+            self.call_tool_streaming(&request.name, args, is_progress_mode)
+                .await
         } else {
             // Use standard response handler
             self.call_tool_standard(&request.name, args).await
@@ -574,7 +575,7 @@ impl IcpBridge {
             "📤 Sending request to IC",
             "⏳ Processing on canister",
             "📥 Receiving response",
-            "✅ Formatting result"
+            "✅ Formatting result",
         ];
 
         let mut progress_data = Vec::new();
@@ -622,7 +623,10 @@ impl IcpBridge {
     }
 
     /// Stream large responses in chunks with progress updates
-    async fn stream_large_response(&self, response: String) -> std::result::Result<CallToolResult, ErrorData> {
+    async fn stream_large_response(
+        &self,
+        response: String,
+    ) -> std::result::Result<CallToolResult, ErrorData> {
         const CHUNK_SIZE: usize = 1024;
         let chunks: Vec<String> = response
             .chars()

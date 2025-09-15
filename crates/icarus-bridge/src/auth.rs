@@ -30,7 +30,10 @@ pub async fn create_authenticated_agent(is_mcp_mode: bool) -> Result<(String, Pr
         });
 
     if let Ok(dfx_path) = dfx_path {
-        match Command::new(&dfx_path).args(["identity", "whoami"]).output() {
+        match Command::new(&dfx_path)
+            .args(["identity", "whoami"])
+            .output()
+        {
             Ok(output) if output.status.success() => {
                 let identity_name = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
@@ -40,8 +43,9 @@ pub async fn create_authenticated_agent(is_mcp_mode: bool) -> Result<(String, Pr
                     .output()
                 {
                     Ok(principal_output) if principal_output.status.success() => {
-                        let principal_str =
-                            String::from_utf8_lossy(&principal_output.stdout).trim().to_string();
+                        let principal_str = String::from_utf8_lossy(&principal_output.stdout)
+                            .trim()
+                            .to_string();
                         if let Ok(principal) = Principal::from_text(&principal_str) {
                             // Get identity file path
                             let home_dir = std::env::var("HOME").unwrap_or_default();
@@ -54,7 +58,9 @@ pub async fn create_authenticated_agent(is_mcp_mode: bool) -> Result<(String, Pr
                             let agent = if Path::new(&identity_path).exists() {
                                 // Try Secp256k1 first (newer format)
                                 if let Ok(identity) =
-                                    ic_agent::identity::Secp256k1Identity::from_pem_file(&identity_path)
+                                    ic_agent::identity::Secp256k1Identity::from_pem_file(
+                                        &identity_path,
+                                    )
                                 {
                                     if !is_mcp_mode {
                                         eprintln!(
@@ -187,7 +193,10 @@ mod tests {
         // Test the identity path construction logic by checking the format
         let home = "/home/test";
         let identity_name = "default";
-        let expected_path = format!("{}/.config/dfx/identity/{}/identity.pem", home, identity_name);
+        let expected_path = format!(
+            "{}/.config/dfx/identity/{}/identity.pem",
+            home, identity_name
+        );
 
         // Just verify the path format is correct
         assert!(expected_path.contains("/.config/dfx/identity/"));

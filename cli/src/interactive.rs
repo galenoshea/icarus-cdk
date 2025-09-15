@@ -53,7 +53,11 @@ impl InteractiveWizard {
                 3 => self.wizard_analyze().await?,
                 4 => self.wizard_health_check().await?,
                 5 => {
-                    println!("\n{} {}", "👋".bright_blue(), "Thanks for using Icarus! Happy coding!".bright_green());
+                    println!(
+                        "\n{} {}",
+                        "👋".bright_blue(),
+                        "Thanks for using Icarus! Happy coding!".bright_green()
+                    );
                     break;
                 }
                 _ => unreachable!(),
@@ -67,8 +71,15 @@ impl InteractiveWizard {
 
     /// Wizard for creating a new project
     async fn wizard_new_project(&self) -> Result<()> {
-        println!("\n{} {}", "🆕".bright_blue(), "New Project Wizard".bright_cyan().bold());
-        println!("{}", "Let's create your new MCP server project!\n".bright_white());
+        println!(
+            "\n{} {}",
+            "🆕".bright_blue(),
+            "New Project Wizard".bright_cyan().bold()
+        );
+        println!(
+            "{}",
+            "Let's create your new MCP server project!\n".bright_white()
+        );
 
         // Project name
         let name: String = Input::with_theme(&self.theme)
@@ -76,7 +87,10 @@ impl InteractiveWizard {
             .validate_with(|input: &String| -> Result<(), &str> {
                 if input.trim().is_empty() {
                     Err("Project name cannot be empty")
-                } else if !input.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_') {
+                } else if !input
+                    .chars()
+                    .all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+                {
                     Err("Project name can only contain letters, numbers, hyphens, and underscores")
                 } else {
                     Ok(())
@@ -99,7 +113,10 @@ impl InteractiveWizard {
         // Check if directory exists
         if Path::new(&path).exists() {
             let overwrite = Confirm::with_theme(&self.theme)
-                .with_prompt(format!("Directory '{}' already exists. Continue anyway?", path))
+                .with_prompt(format!(
+                    "Directory '{}' already exists. Continue anyway?",
+                    path
+                ))
                 .default(false)
                 .interact()?;
 
@@ -122,20 +139,38 @@ impl InteractiveWizard {
             .interact()?;
 
         let local_sdk = if use_local_sdk {
-            Some(Input::<String>::with_theme(&self.theme)
-                .with_prompt("Path to local SDK")
-                .interact_text()?)
+            Some(
+                Input::<String>::with_theme(&self.theme)
+                    .with_prompt("Path to local SDK")
+                    .interact_text()?,
+            )
         } else {
             None
         };
 
         // Show summary
-        println!("\n{} {}", "📋".bright_blue(), "Project Summary".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "📋".bright_blue(),
+            "Project Summary".bright_cyan().bold()
+        );
         println!("  {} {}", "Name:".bright_white(), name.bright_green());
         println!("  {} {}", "Path:".bright_white(), path.bright_green());
-        println!("  {} {}", "Tests:".bright_white(), if with_tests { "Yes".bright_green() } else { "No".bright_red() });
+        println!(
+            "  {} {}",
+            "Tests:".bright_white(),
+            if with_tests {
+                "Yes".bright_green()
+            } else {
+                "No".bright_red()
+            }
+        );
         if let Some(ref sdk_path) = local_sdk {
-            println!("  {} {}", "Local SDK:".bright_white(), sdk_path.bright_green());
+            println!(
+                "  {} {}",
+                "Local SDK:".bright_white(),
+                sdk_path.bright_green()
+            );
         }
 
         let confirm = Confirm::with_theme(&self.theme)
@@ -147,13 +182,32 @@ impl InteractiveWizard {
             println!("\n{} Creating project...", "⏳".bright_blue());
 
             // Use existing new command function
-            match commands::new::execute(name.clone(), Some(path.clone()), local_sdk, with_tests).await {
+            match commands::new::execute(name.clone(), Some(path.clone()), local_sdk, with_tests)
+                .await
+            {
                 Ok(_) => {
-                    println!("{} {} {}", "✅".bright_green(), "Successfully created project".bright_green(), name.bright_cyan().bold());
+                    println!(
+                        "{} {} {}",
+                        "✅".bright_green(),
+                        "Successfully created project".bright_green(),
+                        name.bright_cyan().bold()
+                    );
                     println!("\n{} Next steps:", "💡".bright_yellow());
-                    println!("  {} {}", "1.".bright_white(), format!("cd {}", path).bright_cyan());
-                    println!("  {} {}", "2.".bright_white(), "icarus deploy --network local".bright_cyan());
-                    println!("  {} {}", "3.".bright_white(), "icarus mcp start".bright_cyan());
+                    println!(
+                        "  {} {}",
+                        "1.".bright_white(),
+                        format!("cd {}", path).bright_cyan()
+                    );
+                    println!(
+                        "  {} {}",
+                        "2.".bright_white(),
+                        "icarus deploy --network local".bright_cyan()
+                    );
+                    println!(
+                        "  {} {}",
+                        "3.".bright_white(),
+                        "icarus mcp start".bright_cyan()
+                    );
                 }
                 Err(e) => {
                     println!("{} Failed to create project: {}", "❌".bright_red(), e);
@@ -168,12 +222,20 @@ impl InteractiveWizard {
 
     /// Wizard for deployment
     async fn wizard_deploy(&self) -> Result<()> {
-        println!("\n{} {}", "📦".bright_blue(), "Deployment Wizard".bright_cyan().bold());
-        println!("{}", "Let's deploy your MCP server to the Internet Computer!\n".bright_white());
+        println!(
+            "\n{} {}",
+            "📦".bright_blue(),
+            "Deployment Wizard".bright_cyan().bold()
+        );
+        println!(
+            "{}",
+            "Let's deploy your MCP server to the Internet Computer!\n".bright_white()
+        );
 
         // Check if we're in a project directory
         if !Path::new("Cargo.toml").exists() {
-            println!("{} {} {}",
+            println!(
+                "{} {} {}",
                 "⚠️".bright_yellow(),
                 "No Cargo.toml found in current directory.".bright_yellow(),
                 "Are you in an Icarus project?".bright_white()
@@ -202,9 +264,25 @@ impl InteractiveWizard {
         };
 
         // Show deployment summary
-        println!("\n{} {}", "📋".bright_blue(), "Deployment Summary".bright_cyan().bold());
-        println!("  {} {}", "Network:".bright_white(), network_name.bright_green());
-        println!("  {} {}", "Force:".bright_white(), if force { "Yes".bright_yellow() } else { "No".bright_green() });
+        println!(
+            "\n{} {}",
+            "📋".bright_blue(),
+            "Deployment Summary".bright_cyan().bold()
+        );
+        println!(
+            "  {} {}",
+            "Network:".bright_white(),
+            network_name.bright_green()
+        );
+        println!(
+            "  {} {}",
+            "Force:".bright_white(),
+            if force {
+                "Yes".bright_yellow()
+            } else {
+                "No".bright_green()
+            }
+        );
 
         let confirm = Confirm::with_theme(&self.theme)
             .with_prompt("\nProceed with deployment?")
@@ -212,15 +290,32 @@ impl InteractiveWizard {
             .interact()?;
 
         if confirm {
-            println!("\n{} Deploying to {}...", "⏳".bright_blue(), network_name.bright_cyan());
+            println!(
+                "\n{} Deploying to {}...",
+                "⏳".bright_blue(),
+                network_name.bright_cyan()
+            );
 
             // Use existing deploy command function
             match commands::deploy::execute(network_name.to_string(), force, None).await {
                 Ok(_) => {
-                    println!("{} {} {}", "✅".bright_green(), "Successfully deployed to".bright_green(), network_name.bright_cyan().bold());
+                    println!(
+                        "{} {} {}",
+                        "✅".bright_green(),
+                        "Successfully deployed to".bright_green(),
+                        network_name.bright_cyan().bold()
+                    );
                     println!("\n{} Next steps:", "💡".bright_yellow());
-                    println!("  {} {}", "1.".bright_white(), "icarus mcp start --canister-id <your-canister-id>".bright_cyan());
-                    println!("  {} {}", "2.".bright_white(), "Test your MCP server with Claude Desktop".bright_cyan());
+                    println!(
+                        "  {} {}",
+                        "1.".bright_white(),
+                        "icarus mcp start --canister-id <your-canister-id>".bright_cyan()
+                    );
+                    println!(
+                        "  {} {}",
+                        "2.".bright_white(),
+                        "Test your MCP server with Claude Desktop".bright_cyan()
+                    );
                 }
                 Err(e) => {
                     println!("{} Deployment failed: {}", "❌".bright_red(), e);
@@ -235,12 +330,20 @@ impl InteractiveWizard {
 
     /// Wizard for configuration
     async fn wizard_configure(&self) -> Result<()> {
-        println!("\n{} {}", "⚙️".bright_blue(), "Configuration Wizard".bright_cyan().bold());
-        println!("{}", "Let's configure your Icarus project settings!\n".bright_white());
+        println!(
+            "\n{} {}",
+            "⚙️".bright_blue(),
+            "Configuration Wizard".bright_cyan().bold()
+        );
+        println!(
+            "{}",
+            "Let's configure your Icarus project settings!\n".bright_white()
+        );
 
         // Check if we're in a project directory
         if !Path::new("Cargo.toml").exists() {
-            println!("{} {} {}",
+            println!(
+                "{} {} {}",
                 "⚠️".bright_yellow(),
                 "No Cargo.toml found in current directory.".bright_yellow(),
                 "Are you in an Icarus project?".bright_white()
@@ -255,7 +358,10 @@ impl InteractiveWizard {
                 Some(config)
             }
             Err(_) => {
-                println!("{} No existing configuration found, will create new one", "💡".bright_yellow());
+                println!(
+                    "{} No existing configuration found, will create new one",
+                    "💡".bright_yellow()
+                );
                 None
             }
         };
@@ -294,52 +400,85 @@ impl InteractiveWizard {
 
     /// Basic project settings configuration
     async fn configure_basic_settings(&self, _config: &Option<IcarusConfig>) -> Result<()> {
-        println!("\n{} {}", "🔧".bright_blue(), "Basic Settings".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "🔧".bright_blue(),
+            "Basic Settings".bright_cyan().bold()
+        );
 
         // For now, just show a placeholder
-        println!("{} Basic settings configuration coming soon!", "🚧".bright_yellow());
+        println!(
+            "{} Basic settings configuration coming soon!",
+            "🚧".bright_yellow()
+        );
 
         Ok(())
     }
 
     /// Network settings configuration
     async fn configure_network_settings(&self, _config: &Option<IcarusConfig>) -> Result<()> {
-        println!("\n{} {}", "🌐".bright_blue(), "Network Settings".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "🌐".bright_blue(),
+            "Network Settings".bright_cyan().bold()
+        );
 
         // For now, just show a placeholder
-        println!("{} Network settings configuration coming soon!", "🚧".bright_yellow());
+        println!(
+            "{} Network settings configuration coming soon!",
+            "🚧".bright_yellow()
+        );
 
         Ok(())
     }
 
     /// Identity settings configuration
     async fn configure_identity_settings(&self, _config: &Option<IcarusConfig>) -> Result<()> {
-        println!("\n{} {}", "🔐".bright_blue(), "Identity Settings".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "🔐".bright_blue(),
+            "Identity Settings".bright_cyan().bold()
+        );
 
         // For now, just show a placeholder
-        println!("{} Identity settings configuration coming soon!", "🚧".bright_yellow());
+        println!(
+            "{} Identity settings configuration coming soon!",
+            "🚧".bright_yellow()
+        );
 
         Ok(())
     }
 
     /// Monitoring settings configuration
     async fn configure_monitoring_settings(&self, _config: &Option<IcarusConfig>) -> Result<()> {
-        println!("\n{} {}", "📊".bright_blue(), "Monitoring Settings".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "📊".bright_blue(),
+            "Monitoring Settings".bright_cyan().bold()
+        );
 
         // For now, just show a placeholder
-        println!("{} Monitoring settings configuration coming soon!", "🚧".bright_yellow());
+        println!(
+            "{} Monitoring settings configuration coming soon!",
+            "🚧".bright_yellow()
+        );
 
         Ok(())
     }
 
     /// Wizard for project analysis
     async fn wizard_analyze(&self) -> Result<()> {
-        println!("\n{} {}", "🔍".bright_blue(), "Project Analysis Wizard".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "🔍".bright_blue(),
+            "Project Analysis Wizard".bright_cyan().bold()
+        );
         println!("{}", "Let's analyze your Icarus project!\n".bright_white());
 
         // Check if we're in a project directory
         if !Path::new("Cargo.toml").exists() {
-            println!("{} {} {}",
+            println!(
+                "{} {} {}",
                 "⚠️".bright_yellow(),
                 "No Cargo.toml found in current directory.".bright_yellow(),
                 "Are you in an Icarus project?".bright_white()
@@ -385,7 +524,11 @@ impl InteractiveWizard {
 
     /// Analyze project structure
     async fn analyze_project_structure(&self) -> Result<()> {
-        println!("\n{} {}", "🏗️".bright_blue(), "Project Structure Analysis".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "🏗️".bright_blue(),
+            "Project Structure Analysis".bright_cyan().bold()
+        );
 
         // Basic project structure analysis
         let paths_to_check = vec![
@@ -399,7 +542,11 @@ impl InteractiveWizard {
         println!("\n{} Project Files:", "📁".bright_cyan());
         for (path, description) in paths_to_check {
             let exists = Path::new(path).exists();
-            let status = if exists { "✅".bright_green() } else { "❌".bright_red() };
+            let status = if exists {
+                "✅".bright_green()
+            } else {
+                "❌".bright_red()
+            };
             println!("  {} {} - {}", status, path.bright_white(), description);
         }
 
@@ -408,22 +555,40 @@ impl InteractiveWizard {
 
     /// Analyze dependencies
     async fn analyze_dependencies(&self) -> Result<()> {
-        println!("\n{} {}", "🔧".bright_blue(), "Dependencies Analysis".bright_cyan().bold());
-        println!("{} Dependencies analysis coming soon!", "🚧".bright_yellow());
+        println!(
+            "\n{} {}",
+            "🔧".bright_blue(),
+            "Dependencies Analysis".bright_cyan().bold()
+        );
+        println!(
+            "{} Dependencies analysis coming soon!",
+            "🚧".bright_yellow()
+        );
         Ok(())
     }
 
     /// Analyze performance
     async fn analyze_performance(&self) -> Result<()> {
-        println!("\n{} {}", "⚡".bright_blue(), "Performance Analysis".bright_cyan().bold());
+        println!(
+            "\n{} {}",
+            "⚡".bright_blue(),
+            "Performance Analysis".bright_cyan().bold()
+        );
         println!("{} Performance analysis coming soon!", "🚧".bright_yellow());
         Ok(())
     }
 
     /// Health check wizard
     async fn wizard_health_check(&self) -> Result<()> {
-        println!("\n{} {}", "🏥".bright_blue(), "Health Check & Diagnostics".bright_cyan().bold());
-        println!("{}", "Let's check the health of your development environment!\n".bright_white());
+        println!(
+            "\n{} {}",
+            "🏥".bright_blue(),
+            "Health Check & Diagnostics".bright_cyan().bold()
+        );
+        println!(
+            "{}",
+            "Let's check the health of your development environment!\n".bright_white()
+        );
 
         println!("{} Running diagnostics...", "⏳".bright_blue());
 
@@ -454,7 +619,11 @@ impl InteractiveWizard {
         {
             Ok(output) if output.status.success() => {
                 let version = String::from_utf8_lossy(&output.stdout);
-                println!("  {} dfx found: {}", "✅".bright_green(), version.trim().bright_cyan());
+                println!(
+                    "  {} dfx found: {}",
+                    "✅".bright_green(),
+                    version.trim().bright_cyan()
+                );
             }
             _ => {
                 println!("  {} dfx not found or not working", "❌".bright_red());
@@ -467,7 +636,10 @@ impl InteractiveWizard {
 
     /// Check IC connection
     async fn check_ic_connection(&self) -> Result<()> {
-        println!("\n{} Checking Internet Computer connection...", "🔍".bright_blue());
+        println!(
+            "\n{} Checking Internet Computer connection...",
+            "🔍".bright_blue()
+        );
 
         // Check if dfx is running locally
         match tokio::process::Command::new("dfx")
@@ -517,25 +689,57 @@ impl InteractiveWizard {
 
     /// Show welcome banner
     fn show_welcome_banner(&self) {
-        println!("\n{}", "╔═══════════════════════════════════════════════════════════════╗".bright_cyan());
-        println!("{}", "║                                                               ║".bright_cyan());
-        println!("{}", "║  🧙✨  ICARUS INTERACTIVE WIZARD  ✨🧙                      ║".bright_cyan());
-        println!("{}", "║                                                               ║".bright_cyan());
-        println!("{}", "║  Welcome to the guided setup and management experience!      ║".bright_cyan());
-        println!("{}", "║  This wizard will help you with common Icarus operations.    ║".bright_cyan());
-        println!("{}", "║                                                               ║".bright_cyan());
-        println!("{}", "╚═══════════════════════════════════════════════════════════════╝".bright_cyan());
+        println!(
+            "\n{}",
+            "╔═══════════════════════════════════════════════════════════════╗".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║                                                               ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║  🧙✨  ICARUS INTERACTIVE WIZARD  ✨🧙                      ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║                                                               ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║  Welcome to the guided setup and management experience!      ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║  This wizard will help you with common Icarus operations.    ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "║                                                               ║".bright_cyan()
+        );
+        println!(
+            "{}",
+            "╚═══════════════════════════════════════════════════════════════╝".bright_cyan()
+        );
         println!();
     }
 
     /// Show quick system status
     async fn show_quick_status(&self) {
-        println!("{} {}", "📊".bright_blue(), "Quick System Status".bright_cyan().bold());
+        println!(
+            "{} {}",
+            "📊".bright_blue(),
+            "Quick System Status".bright_cyan().bold()
+        );
         println!("{}", "────────────────────────────────".bright_blue());
 
         // Check if we're in a project
         let in_project = Path::new("Cargo.toml").exists() && Path::new("dfx.json").exists();
-        let project_status = if in_project { "✅ Icarus Project".bright_green() } else { "📁 No Project".bright_yellow() };
+        let project_status = if in_project {
+            "✅ Icarus Project".bright_green()
+        } else {
+            "📁 No Project".bright_yellow()
+        };
         println!("  Project: {}", project_status);
 
         // Check dfx availability
@@ -546,7 +750,11 @@ impl InteractiveWizard {
             .map(|output| output.status.success())
             .unwrap_or(false);
 
-        let dfx_status = if dfx_available { "✅ Available".bright_green() } else { "❌ Not Found".bright_red() };
+        let dfx_status = if dfx_available {
+            "✅ Available".bright_green()
+        } else {
+            "❌ Not Found".bright_red()
+        };
         println!("  DFX: {}", dfx_status);
 
         // Check if local replica is running
@@ -558,7 +766,11 @@ impl InteractiveWizard {
                 .map(|output| output.status.success())
                 .unwrap_or(false);
 
-            let replica_status = if replica_running { "✅ Running".bright_green() } else { "⏹️ Stopped".bright_yellow() };
+            let replica_status = if replica_running {
+                "✅ Running".bright_green()
+            } else {
+                "⏹️ Stopped".bright_yellow()
+            };
             println!("  Local IC: {}", replica_status);
         } else {
             println!("  Local IC: {} Cannot Check", "⚠️".bright_yellow());

@@ -5,8 +5,15 @@ use std::path::Path;
 use crate::utils::{print_info, print_success, print_warning};
 
 pub async fn execute(clean: bool, yes: bool) -> Result<()> {
-    println!("\n{} {}", "🔄".bright_blue(), "Reset Development Environment".bright_cyan().bold());
-    println!("{}", "This will reset your local development environment.\n".bright_white());
+    println!(
+        "\n{} {}",
+        "🔄".bright_blue(),
+        "Reset Development Environment".bright_cyan().bold()
+    );
+    println!(
+        "{}",
+        "This will reset your local development environment.\n".bright_white()
+    );
 
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
@@ -31,7 +38,10 @@ pub async fn execute(clean: bool, yes: bool) -> Result<()> {
 
     // Confirmation unless --yes flag is provided
     if !yes {
-        println!("\n{} This operation cannot be undone.", "⚠️".bright_yellow());
+        println!(
+            "\n{} This operation cannot be undone.",
+            "⚠️".bright_yellow()
+        );
 
         use std::io::{self, Write};
         print!("Continue with reset? (y/N): ");
@@ -100,21 +110,31 @@ pub async fn execute(clean: bool, yes: bool) -> Result<()> {
     print_success("Development environment reset complete!");
 
     println!("\n{} Next steps:", "💡".bright_yellow());
-    println!("  {} Reinitialize: {}", "🔧".bright_green(), "icarus dev init".bright_cyan());
+    println!(
+        "  {} Reinitialize: {}",
+        "🔧".bright_green(),
+        "icarus dev init".bright_cyan()
+    );
 
     if clean {
-        println!("  {} Start replica: {}", "🚀".bright_green(), "dfx start --background".bright_cyan());
+        println!(
+            "  {} Start replica: {}",
+            "🚀".bright_green(),
+            "dfx start --background".bright_cyan()
+        );
     }
 
-    println!("  {} Deploy project: {}", "📦".bright_green(), "icarus deploy --network local".bright_cyan());
+    println!(
+        "  {} Deploy project: {}",
+        "📦".bright_green(),
+        "icarus deploy --network local".bright_cyan()
+    );
 
     Ok(())
 }
 
 fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists()
-        && path.join("dfx.json").exists()
-        && path.join("src").exists()
+    path.join("Cargo.toml").exists() && path.join("dfx.json").exists() && path.join("src").exists()
 }
 
 async fn clear_build_artifacts(project_dir: &Path) -> Result<()> {
@@ -156,7 +176,10 @@ async fn reset_dev_configuration(project_dir: &Path) -> Result<()> {
             println!("  {} Removed .icarus-dev.toml", "✅".bright_green());
         }
     } else {
-        println!("  {} No development configuration to reset", "ℹ️".bright_blue());
+        println!(
+            "  {} No development configuration to reset",
+            "ℹ️".bright_blue()
+        );
     }
 
     Ok(())
@@ -191,7 +214,11 @@ async fn clear_temporary_files(project_dir: &Path) -> Result<()> {
     }
 
     if cleared_count > 0 {
-        println!("  {} Removed {} temporary files", "✅".bright_green(), cleared_count);
+        println!(
+            "  {} Removed {} temporary files",
+            "✅".bright_green(),
+            cleared_count
+        );
     } else {
         println!("  {} No temporary files to clear", "ℹ️".bright_blue());
     }

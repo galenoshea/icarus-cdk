@@ -6,7 +6,11 @@ use tokio::signal;
 use crate::utils::{print_info, print_success, print_warning, run_command_interactive};
 
 pub async fn execute(port: u16, hot_reload: bool, skip_deploy: bool, debug: bool) -> Result<()> {
-    println!("\n{} {}", "🚀".bright_blue(), "Starting Development Server".bright_cyan().bold());
+    println!(
+        "\n{} {}",
+        "🚀".bright_blue(),
+        "Starting Development Server".bright_cyan().bold()
+    );
 
     // Check if we're in an Icarus project
     let current_dir = std::env::current_dir()?;
@@ -23,9 +27,29 @@ pub async fn execute(port: u16, hot_reload: bool, skip_deploy: bool, debug: bool
     }
 
     print_info(&format!("Development server configuration:"));
-    println!("  {} Port: {}", "🔌".bright_blue(), port.to_string().bright_cyan());
-    println!("  {} Hot reload: {}", "🔄".bright_blue(), if hot_reload { "enabled".bright_green() } else { "disabled".bright_yellow() });
-    println!("  {} Skip initial deploy: {}", "📦".bright_blue(), if skip_deploy { "yes".bright_yellow() } else { "no".bright_green() });
+    println!(
+        "  {} Port: {}",
+        "🔌".bright_blue(),
+        port.to_string().bright_cyan()
+    );
+    println!(
+        "  {} Hot reload: {}",
+        "🔄".bright_blue(),
+        if hot_reload {
+            "enabled".bright_green()
+        } else {
+            "disabled".bright_yellow()
+        }
+    );
+    println!(
+        "  {} Skip initial deploy: {}",
+        "📦".bright_blue(),
+        if skip_deploy {
+            "yes".bright_yellow()
+        } else {
+            "no".bright_green()
+        }
+    );
     println!();
 
     // Check if local IC replica is running
@@ -37,7 +61,11 @@ pub async fn execute(port: u16, hot_reload: bool, skip_deploy: bool, debug: bool
         match build_and_deploy().await {
             Ok(canister_id) => {
                 print_success(&format!("Project deployed successfully!"));
-                println!("  {} Canister ID: {}", "🆔".bright_blue(), canister_id.bright_cyan());
+                println!(
+                    "  {} Canister ID: {}",
+                    "🆔".bright_blue(),
+                    canister_id.bright_cyan()
+                );
             }
             Err(e) => {
                 print_warning(&format!("Initial deployment failed: {}", e));
@@ -56,8 +84,20 @@ pub async fn execute(port: u16, hot_reload: bool, skip_deploy: bool, debug: bool
 
     println!("\n{} Development server is running!", "✅".bright_green());
     println!("{}", "────────────────────────────────────".bright_blue());
-    println!("  {} Local development: http://localhost:{}", "🌐".bright_blue(), port.to_string().bright_cyan());
-    println!("  {} Hot reload: {}", "🔄".bright_blue(), if hot_reload { "ON".bright_green() } else { "OFF".bright_yellow() });
+    println!(
+        "  {} Local development: http://localhost:{}",
+        "🌐".bright_blue(),
+        port.to_string().bright_cyan()
+    );
+    println!(
+        "  {} Hot reload: {}",
+        "🔄".bright_blue(),
+        if hot_reload {
+            "ON".bright_green()
+        } else {
+            "OFF".bright_yellow()
+        }
+    );
     println!("  {} Press Ctrl+C to stop", "⏹️".bright_blue());
     println!("{}", "────────────────────────────────────".bright_blue());
     println!();
@@ -74,9 +114,7 @@ pub async fn execute(port: u16, hot_reload: bool, skip_deploy: bool, debug: bool
 }
 
 fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists()
-        && path.join("dfx.json").exists()
-        && path.join("src").exists()
+    path.join("Cargo.toml").exists() && path.join("dfx.json").exists() && path.join("src").exists()
 }
 
 async fn check_local_replica() -> Result<()> {
@@ -104,11 +142,15 @@ async fn check_local_replica() -> Result<()> {
                 }
                 Ok(_) => {
                     print_warning("Failed to start local IC replica - non-zero exit code");
-                    return Err(anyhow::anyhow!("Local IC replica required for development server"));
+                    return Err(anyhow::anyhow!(
+                        "Local IC replica required for development server"
+                    ));
                 }
                 Err(e) => {
                     print_warning(&format!("Failed to start local IC replica: {}", e));
-                    return Err(anyhow::anyhow!("Local IC replica required for development server"));
+                    return Err(anyhow::anyhow!(
+                        "Local IC replica required for development server"
+                    ));
                 }
             }
         }
@@ -142,7 +184,9 @@ async fn build_and_deploy() -> Result<String> {
         return Err(anyhow::anyhow!("Failed to get dfx identity"));
     }
 
-    let principal = String::from_utf8_lossy(&principal_output.stdout).trim().to_string();
+    let principal = String::from_utf8_lossy(&principal_output.stdout)
+        .trim()
+        .to_string();
     let init_arg = format!("(principal \"{}\")", principal);
 
     // Deploy canister
@@ -171,7 +215,9 @@ async fn build_and_deploy() -> Result<String> {
         return Err(anyhow::anyhow!("Failed to get canister ID"));
     }
 
-    let canister_id = String::from_utf8_lossy(&canister_id_output.stdout).trim().to_string();
+    let canister_id = String::from_utf8_lossy(&canister_id_output.stdout)
+        .trim()
+        .to_string();
     Ok(canister_id)
 }
 
@@ -202,7 +248,10 @@ async fn simulate_hot_reload_server() -> Result<()> {
     // Wait for Ctrl+C
     match signal::ctrl_c().await {
         Ok(()) => {
-            println!("\n{} Shutting down development server...", "⏹️".bright_yellow());
+            println!(
+                "\n{} Shutting down development server...",
+                "⏹️".bright_yellow()
+            );
         }
         Err(err) => {
             print_warning(&format!("Failed to listen for shutdown signal: {}", err));
@@ -221,7 +270,10 @@ async fn simulate_basic_server() -> Result<()> {
     // Wait for Ctrl+C
     match signal::ctrl_c().await {
         Ok(()) => {
-            println!("\n{} Shutting down development server...", "⏹️".bright_yellow());
+            println!(
+                "\n{} Shutting down development server...",
+                "⏹️".bright_yellow()
+            );
         }
         Err(err) => {
             print_warning(&format!("Failed to listen for shutdown signal: {}", err));

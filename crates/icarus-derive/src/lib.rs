@@ -12,7 +12,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, parse2, Lit, Meta};
+use syn::{parse2, parse_macro_input, DeriveInput, Lit, Meta};
 
 mod server;
 mod tools;
@@ -657,11 +657,9 @@ pub(crate) fn parse_tool_metadata(attr: TokenStream2) -> ToolMetadata {
     let mut metadata = ToolMetadata::default();
 
     // Try to parse as a simple string literal first
-    if let Ok(lit) = parse2::<Lit>(attr.clone()) {
-        if let Lit::Str(lit_str) = lit {
-            metadata.description = lit_str.value();
-            return metadata;
-        }
+    if let Ok(Lit::Str(lit_str)) = parse2::<Lit>(attr.clone()) {
+        metadata.description = lit_str.value();
+        return metadata;
     }
 
     // Try to parse as structured meta attributes
@@ -684,7 +682,6 @@ pub(crate) fn parse_tool_metadata(attr: TokenStream2) -> ToolMetadata {
 
     metadata
 }
-
 
 /// Parse structured metadata from a meta list
 fn parse_metadata_list(metadata: &mut ToolMetadata, list: syn::MetaList) {
