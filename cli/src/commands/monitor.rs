@@ -43,7 +43,6 @@ pub struct CanisterHealth {
     pub cycles: Option<u64>,
     pub memory_usage: Option<u64>,
     pub response_time: Duration,
-    pub last_updated: Instant,
 }
 
 /// Tool usage statistics
@@ -73,7 +72,6 @@ pub struct MonitoringDashboard {
     detailed: bool,
     format: String,
     start_time: Instant,
-    metrics_filter: Vec<String>,
 }
 
 impl MonitoringDashboard {
@@ -82,7 +80,7 @@ impl MonitoringDashboard {
         interval: u64,
         detailed: bool,
         format: String,
-        metrics: Vec<String>,
+        _metrics: Vec<String>,
     ) -> Result<Self> {
         let canister_principal = if let Some(id) = canister_id {
             Some(Principal::from_text(&id)?)
@@ -96,14 +94,16 @@ impl MonitoringDashboard {
             detailed,
             format,
             start_time: Instant::now(),
-            metrics_filter: metrics,
         })
     }
 
     /// Start the monitoring dashboard
     pub async fn start(&self) -> Result<()> {
         println!("🔍 Starting Icarus SDK Monitoring Dashboard");
-        println!("📊 Refresh interval: {} seconds", self.refresh_interval.as_secs());
+        println!(
+            "📊 Refresh interval: {} seconds",
+            self.refresh_interval.as_secs()
+        );
 
         if let Some(canister_id) = &self.canister_id {
             println!("🎯 Monitoring canister: {}", canister_id);
@@ -157,10 +157,9 @@ impl MonitoringDashboard {
         // For now, return mock data
         Ok(CanisterHealth {
             status: "Running".to_string(),
-            cycles: Some(1_000_000_000_000), // 1T cycles
+            cycles: Some(1_000_000_000_000),      // 1T cycles
             memory_usage: Some(50 * 1024 * 1024), // 50MB
             response_time: start.elapsed(),
-            last_updated: Instant::now(),
         })
     }
 
@@ -213,7 +212,10 @@ impl MonitoringDashboard {
     /// Display metrics in table format
     async fn display_table(&self, data: &MonitoringData) -> Result<()> {
         println!("🔍 Icarus SDK Monitoring Dashboard");
-        println!("⏰ Last updated: {} ms ago", data.collection_time.as_millis());
+        println!(
+            "⏰ Last updated: {} ms ago",
+            data.collection_time.as_millis()
+        );
         println!("{}", "─".repeat(60));
 
         // Canister Health Section
@@ -221,7 +223,10 @@ impl MonitoringDashboard {
             println!("🏥 CANISTER HEALTH");
             println!("  Status:       {}", health.status);
             if let Some(cycles) = health.cycles {
-                println!("  Cycles:       {:.2}T", cycles as f64 / 1_000_000_000_000.0);
+                println!(
+                    "  Cycles:       {:.2}T",
+                    cycles as f64 / 1_000_000_000_000.0
+                );
             }
             if let Some(memory) = health.memory_usage {
                 println!("  Memory:       {:.1}MB", memory as f64 / (1024.0 * 1024.0));
@@ -233,18 +238,30 @@ impl MonitoringDashboard {
         // Bridge Metrics Section
         println!("🌉 BRIDGE PERFORMANCE");
         let metrics = &data.bridge_metrics;
-        println!("  Uptime:       {:.1}h", metrics.uptime.as_secs() as f64 / 3600.0);
+        println!(
+            "  Uptime:       {:.1}h",
+            metrics.uptime.as_secs() as f64 / 3600.0
+        );
         println!("  Requests:     {}", metrics.total_requests);
         println!("  Sessions:     {}", metrics.active_sessions);
-        println!("  Avg Response: {}ms", metrics.avg_response_time.as_millis());
+        println!(
+            "  Avg Response: {}ms",
+            metrics.avg_response_time.as_millis()
+        );
         println!("  Error Rate:   {:.1}%", metrics.error_rate * 100.0);
         println!();
 
         // Tool Usage Section
         if !data.tool_usage.is_empty() {
             println!("🛠️  TOOL USAGE");
-            println!("  {:<20} {:<8} {:<10} {:<8} {:<12}", "Tool", "Calls", "Avg Time", "Success", "Last Called");
-            println!("  {:<20} {:<8} {:<10} {:<8} {:<12}", "────", "─────", "────────", "───────", "───────────");
+            println!(
+                "  {:<20} {:<8} {:<10} {:<8} {:<12}",
+                "Tool", "Calls", "Avg Time", "Success", "Last Called"
+            );
+            println!(
+                "  {:<20} {:<8} {:<10} {:<8} {:<12}",
+                "────", "─────", "────────", "───────", "───────────"
+            );
 
             for tool in &data.tool_usage {
                 let last_called = if let Some(last) = tool.last_called {
@@ -275,7 +292,10 @@ impl MonitoringDashboard {
         if self.detailed {
             println!("📊 DETAILED METRICS");
             println!("  Collection time: {}ms", data.collection_time.as_millis());
-            println!("  Dashboard uptime: {:.1}h", self.start_time.elapsed().as_secs() as f64 / 3600.0);
+            println!(
+                "  Dashboard uptime: {:.1}h",
+                self.start_time.elapsed().as_secs() as f64 / 3600.0
+            );
         }
 
         Ok(())
