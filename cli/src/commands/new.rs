@@ -2,6 +2,7 @@ use anyhow::Result;
 use colored::Colorize;
 use std::fs;
 use std::path::{Path, PathBuf};
+use toml::Value;
 
 use crate::utils::{ensure_directory_exists, print_info, print_success};
 
@@ -283,21 +284,94 @@ fn create_cargo_toml(
     Ok(())
 }
 
+fn get_workspace_versions() -> Result<std::collections::HashMap<String, String>> {
+    // Try to find workspace Cargo.toml relative to CLI location
+    let workspace_cargo_paths = [
+        "../Cargo.toml",
+        "../../Cargo.toml",
+        "../../../Cargo.toml",
+        "Cargo.toml",
+    ];
+
+    for path in &workspace_cargo_paths {
+        if let Ok(content) = fs::read_to_string(path) {
+            if let Ok(toml_value) = content.parse::<Value>() {
+                if let Some(workspace) = toml_value.get("workspace") {
+                    if let Some(deps) = workspace.get("dependencies") {
+                        let mut versions = std::collections::HashMap::new();
+
+                        if let Some(deps_table) = deps.as_table() {
+                            for (name, value) in deps_table {
+                                let version = match value {
+                                    Value::String(v) => v.clone(),
+                                    Value::Table(t) => {
+                                        if let Some(v) = t.get("version") {
+                                            v.as_str().unwrap_or("").to_string()
+                                        } else {
+                                            continue;
+                                        }
+                                    }
+                                    _ => continue,
+                                };
+                                versions.insert(name.clone(), version);
+                            }
+                        }
+                        return Ok(versions);
+                    }
+                }
+            }
+        }
+    }
+
+    // Fallback to hardcoded versions if workspace not found
+    let mut fallback = std::collections::HashMap::new();
+    fallback.insert("ic-cdk".to_string(), "0.18".to_string());
+    fallback.insert("ic-cdk-macros".to_string(), "0.18".to_string());
+    fallback.insert("ic-stable-structures".to_string(), "0.7".to_string());
+    fallback.insert("candid".to_string(), "0.10".to_string());
+    fallback.insert("serde".to_string(), "1.0".to_string());
+    fallback.insert("serde_json".to_string(), "1.0".to_string());
+    fallback.insert("pocket-ic".to_string(), "9".to_string());
+    fallback.insert("tokio".to_string(), "1".to_string());
+    Ok(fallback)
+}
+
 fn create_cargo_toml_content(
     name: &str,
     local_sdk: Option<String>,
     with_tests: bool,
 ) -> Result<String> {
+    let versions = get_workspace_versions()?;
+
+    let get_version = |dep: &str| -> String {
+        versions.get(dep).cloned().unwrap_or_else(|| match dep {
+            "ic-cdk" => "0.18".to_string(),
+            "ic-cdk-macros" => "0.18".to_string(),
+            "ic-stable-structures" => "0.7".to_string(),
+            "candid" => "0.10".to_string(),
+            "serde" => "1.0".to_string(),
+            "serde_json" => "1.0".to_string(),
+            "pocket-ic" => "9".to_string(),
+            "tokio" => "1".to_string(),
+            _ => "1.0".to_string(),
+        })
+    };
+
     let dev_dependencies_section = if with_tests {
-        r#"
+        format!(
+            r#"
 
 [dev-dependencies]
-pocket-ic = "4.0"
-candid = "0.10"
-tokio = { version = "1", features = ["full"] }
-"#
+pocket-ic = "{}"
+candid = "{}"
+tokio = {{ version = "{}", features = ["full"] }}
+"#,
+            get_version("pocket-ic"),
+            get_version("candid"),
+            get_version("tokio")
+        )
     } else {
-        ""
+        "".to_string()
     };
 
     let icarus_dep = if let Some(ref sdk) = local_sdk {
@@ -314,7 +388,7 @@ tokio = { version = "1", features = ["full"] }
         r#"[package]
 name = "{}"
 version = "0.1.0"
-edition = "2024"
+edition = "2021"
 
 [package.metadata.icarus]
 claude_desktop.auto_update = true
@@ -322,25 +396,25 @@ claude_desktop.config_path = ""
 
 [dependencies]
 icarus = {}
-ic-cdk = "0.16"
-ic-cdk-macros = "0.16"
-ic-stable-structures = "0.6"
-candid = "0.10"
-serde = {{ version = "1.0", features = ["derive"] }}
-serde_json = "1.0"{}
+ic-cdk = "{}"
+ic-cdk-macros = "{}"
+ic-stable-structures = "{}"
+candid = "{}"
+serde = {{ version = "{}", features = ["derive"] }}
+serde_json = "{}"{}
 
 [lib]
 crate-type = ["cdylib"]
-
-[profile.release]
-opt-level = 'z'       # Optimize for size
-lto = true            # Enable link-time optimization
-codegen-units = 1     # Single codegen unit for better optimization
-strip = "debuginfo"   # Strip debug info
-panic = "abort"       # Smaller binaries, matches WASM behavior
-overflow-checks = false # Disable runtime overflow checks
 "#,
-        name, icarus_dep, dev_dependencies_section
+        name,
+        icarus_dep,
+        get_version("ic-cdk"),
+        get_version("ic-cdk-macros"),
+        get_version("ic-stable-structures"),
+        get_version("candid"),
+        get_version("serde"),
+        get_version("serde_json"),
+        dev_dependencies_section
     ))
 }
 

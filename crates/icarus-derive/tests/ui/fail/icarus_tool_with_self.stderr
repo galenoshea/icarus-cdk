@@ -1,0 +1,7 @@
+error: Tool function validation failed:
+         - Tool functions must have either #[query] or #[update] attribute
+         - Tool functions cannot have self parameters
+ --> tests/ui/fail/icarus_tool_with_self.rs:7:8
+  |
+7 |     fn bad_tool(&self) -> Result<String, String> {
+  |        ^^^^^^^^

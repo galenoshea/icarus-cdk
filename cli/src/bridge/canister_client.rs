@@ -515,20 +515,10 @@ impl CanisterClient {
                     eprintln!("[DEBUG] Failed to decode as IDLArgs: {}", e);
                 }
 
-                // Fallback: Try the old approach for backward compatibility
-                if let Ok(result) = Decode!(&response, Result<String, String>) {
-                    match result {
-                        Ok(success) => Ok(success),
-                        Err(e) => Err(anyhow::anyhow!("Canister error: {}", e)),
-                    }
-                } else if let Ok(string_result) = Decode!(&response, String) {
-                    Ok(string_result)
-                } else {
-                    Err(anyhow::anyhow!(
-                        "Unable to decode canister response. The response format is not supported. Error: {}",
-                        e
-                    ))
-                }
+                Err(anyhow::anyhow!(
+                    "Unable to decode canister response. The response format is not supported. Error: {}",
+                    e
+                ))
             }
         }
     }

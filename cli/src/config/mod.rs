@@ -14,7 +14,7 @@ pub const MARKETPLACE_API_MAINNET: &str = "https://ic0.app";
 pub const MARKETPLACE_API_LOCAL: &str = "http://localhost:4943";
 
 // Marketplace canister IDs
-pub const MARKETPLACE_CANISTER_ID_MAINNET: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai"; // TODO: Deploy to mainnet
+pub const MARKETPLACE_CANISTER_ID_MAINNET: &str = "rdmx6-jaaaa-aaaaa-aaadq-cai"; // Placeholder - mainnet deployment pending
 pub const MARKETPLACE_CANISTER_ID_LOCAL: &str = "crobb-r4zot-lulfi-e76ua";
 
 // Installation URLs

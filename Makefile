@@ -1,4 +1,4 @@
-.PHONY: help test test-quick test-e2e test-all test-pre-push test-parallel build clean deep-clean release install-hooks ci coverage
+.PHONY: help test test-quick test-e2e test-all test-pre-push test-parallel build clean deep-clean release install-hooks ci coverage coverage-unit coverage-e2e
 
 # Default target
 help:
@@ -19,7 +19,9 @@ help:
 	@echo "  make clean         - Clean build artifacts (cargo clean)"
 	@echo "  make deep-clean    - Deep clean all artifacts, caches, and temporary files"
 	@echo "  make ci            - Run CI checks locally (fast, no coverage)"
-	@echo "  make coverage      - Run tests with code coverage analysis"
+	@echo "  make coverage      - Run comprehensive coverage analysis (unit+integration+E2E)"
+	@echo "  make coverage-unit - Run unit and integration tests with coverage only"
+	@echo "  make coverage-e2e  - Run E2E tests without coverage instrumentation"
 	@echo ""
 	@echo "Release:"
 	@echo "  make release-patch - Release patch version (0.x.y -> 0.x.y+1)"
@@ -115,17 +117,36 @@ ci:
 	DURATION=$$((END_TIME - START_TIME)); \
 	echo "✅ CI completed in $$DURATION seconds"
 
-# Run tests with code coverage analysis
+# Run tests with code coverage analysis (two-phase approach)
 coverage:
-	@echo "Running tests with coverage analysis..."
+	@echo "Running comprehensive coverage analysis..."
 	@if command -v cargo-llvm-cov >/dev/null 2>&1; then \
-		cargo llvm-cov --all-features --workspace --html; \
-		echo "Coverage report generated in target/llvm-cov/html/"; \
+		./scripts/coverage.sh; \
 	else \
 		echo "Installing cargo-llvm-cov..."; \
 		cargo install cargo-llvm-cov; \
-		cargo llvm-cov --all-features --workspace --html; \
+		./scripts/coverage.sh; \
 	fi
+
+# Run only unit and integration tests with coverage (Phase 1)
+coverage-unit:
+	@echo "Running unit and integration tests with coverage..."
+	@if command -v cargo-llvm-cov >/dev/null 2>&1; then \
+		cargo llvm-cov clean --workspace; \
+		cargo llvm-cov --package icarus-core --package icarus-canister --package icarus-derive --package icarus-cli --all-features --lib --bins --tests --lcov --output-path lcov.info; \
+		cargo llvm-cov report --lcov --input-path lcov.info --html; \
+		echo "Unit/integration coverage report: target/llvm-cov/html/"; \
+	else \
+		echo "Installing cargo-llvm-cov..."; \
+		cargo install cargo-llvm-cov; \
+		$(MAKE) coverage-unit; \
+	fi
+
+# Run E2E tests without coverage instrumentation (Phase 2)
+coverage-e2e:
+	@echo "Running E2E tests without coverage instrumentation..."
+	@cargo build --package icarus-cli --bin icarus --release
+	@cd cli && cargo test --test '*' --release
 
 # Release commands
 release-patch:

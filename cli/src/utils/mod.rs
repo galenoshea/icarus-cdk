@@ -1,6 +1,8 @@
 pub mod claude_desktop;
 pub mod dfx;
+pub mod mcp_clients;
 pub mod platform;
+pub mod ui;
 
 use anyhow::Result;
 use colored::Colorize;

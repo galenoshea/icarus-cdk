@@ -42,17 +42,17 @@ cargo install --path .
    ```
    Deploys to your local dfx network and returns the canister ID.
 
-4. **Start the bridge**
+4. **Configure AI Clients**
+   ```bash
+   icarus mcp add <your-canister-id>
+   ```
+   Interactive selection to add your canister to AI clients (Claude Desktop, ChatGPT Desktop, Claude Code).
+
+5. **Start the bridge** (when needed)
    ```bash
    icarus bridge start --canister-id <your-canister-id>
    ```
-   This runs the bridge as a subprocess that Claude Desktop can connect to.
-
-5. **Configure Claude Desktop**
-   ```bash
-   icarus connect --canister-id <your-canister-id>
-   ```
-   Generates the configuration for Claude Desktop's MCP settings.
+   Starts a background bridge service for real-time communication with AI clients.
 
 ## Commands
 
@@ -62,20 +62,30 @@ cargo install --path .
 - `icarus test` - Run tests with progressive testing strategy
 - `icarus deploy` - Deploy to ICP (local or IC mainnet)
 
+### MCP Client Management
+
+Multi-client support for connecting your canisters to various AI clients:
+
+- `icarus mcp add <canister-id>` - Add canister to AI clients (interactive selection)
+- `icarus mcp add <canister-id> --clients claude,chatgpt,claude-code` - Add to specific clients
+- `icarus mcp add <canister-id> --config-path <path>` - Use custom configuration path
+- `icarus mcp list` - List all client configurations and MCP servers
+- `icarus mcp remove <canister-id>` - Remove canister from specific clients (interactive)
+- `icarus mcp dashboard` - Interactive MCP status dashboard with system health
+
 ### Bridge Management
 
-The bridge functionality is integrated directly into the CLI:
+Background service for real-time communication with AI clients:
 
-- `icarus bridge start --canister-id <id>` - Start bridge for a specific canister
-- `icarus bridge status` - Check if bridge is running
-- `icarus bridge stop` - Stop the running bridge
+- `icarus bridge start --canister-id <id>` - Start bridge for a specific canister (auto-detects dfx identity)
+- `icarus bridge status` - Check if bridge is running and show active connections
+- `icarus bridge stop` - Stop the running bridge service
 
 ### Advanced Commands
 
 - `icarus analyze` - Analyze canister for MCP compatibility
 - `icarus generate` - Generate project files or components
 - `icarus publish` - Publish your MCP server to the marketplace (coming soon)
-- `icarus connect` - Configure Claude Desktop connection
 
 ### Utilities
 
@@ -128,10 +138,17 @@ Configuration is stored in `~/.icarus/config.toml` and includes:
 ### dfx not found
 Install dfx from: https://internetcomputer.org/docs/current/developer-docs/setup/install/
 
+### MCP Client Issues
+- Use `icarus mcp dashboard` to check client status and configurations
+- Verify AI clients are installed and running
+- Check configuration paths with `icarus mcp list`
+- Use `--config-path` flag for custom installation locations
+
 ### Bridge connection issues
-- Ensure the bridge is installed: `icarus bridge install`
-- Check if port is available
-- Verify canister ID is correct
+- Check bridge status with `icarus bridge status`
+- Verify canister ID is correct and deployed
+- Ensure dfx identity has access to the canister
+- Check if port is available (default: random port)
 
 ### Build failures
 - Ensure Rust is up to date

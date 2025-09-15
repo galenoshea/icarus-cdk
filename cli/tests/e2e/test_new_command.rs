@@ -78,7 +78,7 @@ fn test_new_with_existing_directory_fails() {
     assert_contains(&output, "already exists");
 }
 
-// TODO: Re-enable this test when --template flag is implemented
+// TODO: Re-enable this test when --template flag is implemented for custom project templates
 // #[test]
 // fn test_new_with_custom_template() {
 //     let cli = CliRunner::new();

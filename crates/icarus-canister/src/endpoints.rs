@@ -24,8 +24,8 @@ pub fn icarus_metadata() -> IcarusMetadata {
                             name: name.clone(),
                             candid_method: name.clone(), // Method name matches tool name
                             is_query: tool_state.is_query,
-                            description: format!("{} tool", name), // TODO: Get from tool definition
-                            parameters: vec![],                    // TODO: Get from tool definition
+                            description: format!("{} tool", name), // TODO: Extract actual description from #[icarus_tool] macro metadata
+                            parameters: vec![],                    // TODO: Extract parameter schemas from function signatures using proc macro analysis
                         }
                     })
                     .collect(),

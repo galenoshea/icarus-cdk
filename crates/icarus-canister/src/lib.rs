@@ -2,7 +2,7 @@
 // Licensed under BSL-1.1. See LICENSE and NOTICE files.
 // Signature verification and telemetry must remain intact.
 
-// #![warn(missing_docs)] // TODO: Enable after adding all documentation
+// Missing docs warnings disabled during active development
 
 //! ICP canister integration for Icarus MCP servers
 //!
@@ -33,7 +33,7 @@ pub use auth::{
 pub use endpoints::{
     get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest, HttpResponse,
 };
-pub use lifecycle::{init, init_with_caller, post_upgrade, pre_upgrade};
+pub use lifecycle::{init, post_upgrade, pre_upgrade};
 pub use stable_ext::{StableBTreeMapExt, StableCellExt};
 pub use state::{assert_owner, get_owner, is_owner, IcarusCanisterState};
 pub use storage::{StableCounter, StableMap};

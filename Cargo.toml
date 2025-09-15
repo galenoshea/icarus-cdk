@@ -26,6 +26,9 @@ icarus-canister = { version = "0.6.0", path = "crates/icarus-canister", optional
 tokio = { version = "1", features = ["full"] }
 serde_json = "1.0"
 candid = "0.10"
+criterion = { version = "0.5", features = ["html_reports"] }
+fastrand = "2.0"
+futures = "0.3"
 
 # Known Issues:
 # - paste 1.0.15 (RUSTSEC-2024-0436): Unmaintained transitive dependency from rmcp and candid.
@@ -37,6 +40,7 @@ members = [
     "crates/icarus-core",
     "crates/icarus-derive",
     "crates/icarus-canister",
+    "crates/icarus-mcp",
     "cli",
 ]
 resolver = "2"
@@ -53,6 +57,10 @@ path = "tests/unit/test_tools.rs"
 name = "integration_sdk_workflow"
 path = "tests/integration/test_sdk_workflow.rs"
 
+[[bench]]
+name = "common_operations"
+harness = false
+
 [workspace.package]
 version = "0.6.0"
 authors = ["Icarus SDK Contributors"]
@@ -61,8 +69,8 @@ license-file = "LICENSE"
 repository = "https://github.com/galenoshea/icarus-sdk"
 
 [workspace.dependencies]
-# External dependencies  
-rmcp = "0.6"
+# External dependencies
+rmcp = "0.6.4"
 # Override problematic time dependencies to disable wasm features
 chrono = { version = "0.4", default-features = false, features = [
     "std",
@@ -74,17 +82,64 @@ ic-cdk-macros = "0.18"
 ic-cdk-timers = "0.12"
 ic-stable-structures = "0.7"
 ic-management-canister-types = "0.3"
-candid = "0.10"
+candid = { version = "0.10", features = ["value"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
 tokio = { version = "1", features = ["full"] }
+tokio-stream = "0.1"
 async-trait = "0.1"
 tracing = "0.1"
 syn = { version = "2.0", features = ["full"] }
 quote = "1.0"
 proc-macro2 = "1.0"
 linkme = "0.3"
+
+# Performance optimizations
+rustc-hash = "2.0"  # Faster HashMap for small keys
+smallvec = "1.13"   # Stack allocation for small collections
+bytes = "1.7"       # Efficient buffer management
+
+# CLI-specific dependencies
+anyhow = "1.0"
+clap = { version = "4.5", features = ["derive", "env", "unicode", "wrap_help"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+ic-agent = "0.44"
+ic-identity-hsm = "0.44"
+url = "2.5"
+toml = "0.9"
+ciborium = "0.2"
+rand = "0.9"
+indicatif = "0.18"
+dialoguer = "0.12"
+is-terminal = "0.4"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+console = "0.16"
+colored = "3.0"
+dirs = "6.0"
+which = "8.0"
+tempfile = "3"
+zip = "5"
+tar = "0.4"
+flate2 = "1"
+os_info = "3"
+sysinfo = "0.37"
+self_update = { version = "0.42", features = ["archive-tar", "archive-zip", "compression-flate2"] }
+nanoid = "0.4"
+futures = "0.3"
+futures-util = "0.3"
+tokio-tungstenite = { version = "0.27", features = ["native-tls"] }
+comfy-table = "7.1"        # Beautiful table formatting
+crossterm = "0.27"         # Better terminal control
+unicode-width = "0.2"      # Proper text width calculation
+
+# Test dependencies
+pocket-ic = "9"
+serial_test = "3"
+assert_cmd = "2"
+predicates = "3"
+once_cell = "1"
+ring = "0.17"
 
 # Internal dependencies
 icarus-core = { path = "crates/icarus-core", version = "0.6.0" }

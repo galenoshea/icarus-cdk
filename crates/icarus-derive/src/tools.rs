@@ -157,7 +157,12 @@ fn generate_query_method(
 
             SERVER_INSTANCE.with(|s| {
                 let server = s.borrow();
-                let server = server.as_ref().expect("Server not initialized");
+                let server = match server.as_ref() {
+                    Some(s) => s,
+                    None => {
+                        ic_cdk::trap("Server not initialized");
+                    }
+                };
 
                 // Call the sync method directly (now returns direct values or traps)
                 let result = server.#method_name(#(#param_pass),*);
@@ -200,7 +205,12 @@ fn generate_update_method(
 
             SERVER_INSTANCE.with(|s| {
                 let mut server = s.borrow_mut();
-                let server = server.as_mut().expect("Server not initialized");
+                let server = match server.as_mut() {
+                    Some(s) => s,
+                    None => {
+                        ic_cdk::trap("Server not initialized");
+                    }
+                };
 
                 // Call the sync method directly (now returns direct values or traps)
                 let result = server.#method_name(#(#param_pass),*);
@@ -268,6 +278,46 @@ fn extract_tool_description(attr: &syn::Attribute) -> Option<String> {
         });
 
         description
+    } else {
+        None
+    }
+}
+
+fn extract_tool_title(attr: &syn::Attribute) -> Option<String> {
+    // Parse #[icarus_tool] to extract title parameter
+    if attr.path().is_ident("icarus_tool") {
+        let mut title = None;
+        let _ = attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("title") {
+                if let Ok(value) = meta.value() {
+                    if let Ok(lit_str) = value.parse::<syn::LitStr>() {
+                        title = Some(lit_str.value());
+                    }
+                }
+            }
+            Ok(())
+        });
+        title
+    } else {
+        None
+    }
+}
+
+fn extract_tool_icon(attr: &syn::Attribute) -> Option<String> {
+    // Parse #[icarus_tool] to extract icon parameter
+    if attr.path().is_ident("icarus_tool") {
+        let mut icon = None;
+        let _ = attr.parse_nested_meta(|meta| {
+            if meta.path.is_ident("icon") {
+                if let Ok(value) = meta.value() {
+                    if let Ok(lit_str) = value.parse::<syn::LitStr>() {
+                        icon = Some(lit_str.value());
+                    }
+                }
+            }
+            Ok(())
+        });
+        icon
     } else {
         None
     }
@@ -346,7 +396,12 @@ fn generate_async_update_method(
             // We need to extract the future before awaiting to avoid RefCell issues
             let fut = SERVER_INSTANCE.with(|s| {
                 let mut server = s.borrow_mut();
-                let server = server.as_mut().expect("Server not initialized");
+                let server = match server.as_mut() {
+                    Some(s) => s,
+                    None => {
+                        ic_cdk::trap("Server not initialized");
+                    }
+                };
 
                 // For now, return a placeholder until we find a better solution
                 // The issue is that we can't hold a mutable borrow across an await point
@@ -374,261 +429,151 @@ fn generate_async_update_method(
 /// Currently empty as authentication is always mandatory
 #[derive(Debug, Clone, Default)]
 pub struct ModuleConfig {
-    // No fields - authentication is always enabled
-    // Future fields could include:
-    // - canister_name: Option<String>
-    // - version: Option<String>
+    /// Optional display title for the module
+    pub title: Option<String>,
+    /// Optional website URL for the module
+    pub website_url: Option<String>,
 }
 
 impl Parse for ModuleConfig {
     fn parse(input: ParseStream) -> syn::Result<Self> {
-        // For now, we don't accept any parameters
-        // If someone passes parameters, we'll error
-        if !input.is_empty() {
-            return Err(syn::Error::new(
-                input.span(),
-                "icarus_module does not accept parameters. Authentication is always enabled.",
-            ));
+        let mut config = ModuleConfig::default();
+
+        // If no parameters, return default
+        if input.is_empty() {
+            return Ok(config);
         }
 
-        Ok(ModuleConfig::default())
+        // Parse named parameters
+        while !input.is_empty() {
+            let name: syn::Ident = input.parse()?;
+            input.parse::<syn::Token![=]>()?;
+            let value: syn::LitStr = input.parse()?;
+
+            match name.to_string().as_str() {
+                "title" => config.title = Some(value.value()),
+                "website" => config.website_url = Some(value.value()),
+                "website_url" => config.website_url = Some(value.value()),
+                _ => {
+                    return Err(syn::Error::new(
+                        name.span(),
+                        format!(
+                            "Unknown parameter '{}'. Supported parameters: title, website",
+                            name
+                        ),
+                    ))
+                }
+            }
+
+            // Check for comma (optional for last parameter)
+            if input.peek(syn::Token![,]) {
+                input.parse::<syn::Token![,]>()?;
+            }
+        }
+
+        Ok(config)
     }
 }
 
+/// Processed function attributes result
+#[derive(Debug)]
+struct ProcessedAttributes {
+    has_update: bool,
+    has_query: bool,
+    skip_auth: bool,
+    has_require_role: bool,
+    description: Option<String>,
+    title: Option<String>,
+    icon: Option<String>,
+}
+
+impl ProcessedAttributes {
+    fn new() -> Self {
+        Self {
+            has_update: false,
+            has_query: false,
+            skip_auth: false,
+            has_require_role: false,
+            description: None,
+            title: None,
+            icon: None,
+        }
+    }
+
+    fn has_canister_attribute(&self) -> bool {
+        self.has_update || self.has_query
+    }
+
+    fn needs_authentication_injection(&self) -> bool {
+        !self.skip_auth && !self.has_require_role
+    }
+}
+
+/// Extract and process all attributes from a function in a single optimized pass
+fn process_function_attributes(func: &ItemFn) -> ProcessedAttributes {
+    let mut attrs = ProcessedAttributes::new();
+
+    for attr in &func.attrs {
+        if attr.path().is_ident("update") {
+            attrs.has_update = true;
+        } else if attr.path().is_ident("query") {
+            attrs.has_query = true;
+        } else if attr.path().is_ident("skip_auth") {
+            attrs.skip_auth = true;
+        } else if attr.path().is_ident("require_role") {
+            attrs.has_require_role = true;
+        } else if attr.path().is_ident("doc") && attrs.description.is_none() {
+            if let Ok(lit) = attr.parse_args::<syn::LitStr>() {
+                attrs.description = Some(lit.value());
+            }
+        } else if let Some(desc) = extract_tool_description(attr) {
+            attrs.description = Some(desc);
+        } else if let Some(t) = extract_tool_title(attr) {
+            attrs.title = Some(t);
+        } else if let Some(i) = extract_tool_icon(attr) {
+            attrs.icon = Some(i);
+        }
+    }
+
+    attrs
+}
+
+/// Extract function parameters in optimized format
+fn extract_function_parameters(func: &ItemFn) -> Vec<(syn::Ident, Box<syn::Type>)> {
+    func.sig
+        .inputs
+        .iter()
+        .filter_map(|arg| {
+            if let FnArg::Typed(pat_type) = arg {
+                if let Pat::Ident(ident) = &*pat_type.pat {
+                    Some((ident.ident.clone(), pat_type.ty.clone()))
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Inject authenticate() call at the beginning of a function
+/// This should only be called for functions that don't already have require_role attributes
 fn inject_authenticate_call(func: &mut ItemFn) {
     use syn::{parse_quote, Stmt};
 
-    // Check for require_role attribute
-    let role_requirement = func
-        .attrs
-        .iter()
-        .find(|attr| attr.path().is_ident("require_role"))
-        .and_then(|attr| {
-            // Parse the role from the attribute
-            attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
-        });
-
-    let auth_call: Stmt = if let Some(role) = role_requirement {
-        // Create require_role_or_higher() call based on the role
-        match role.as_str() {
-            "Owner" => parse_quote! {
-                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::Owner);
-            },
-            "Admin" => parse_quote! {
-                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::Admin);
-            },
-            "User" => parse_quote! {
-                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::User);
-            },
-            "ReadOnly" => parse_quote! {
-                ::icarus::canister::auth::require_role_or_higher(::icarus::canister::auth::AuthRole::ReadOnly);
-            },
-            _ => parse_quote! {
-                ::icarus::canister::auth::authenticate();
-            },
-        }
-    } else {
-        // Default to authenticate()
-        parse_quote! {
-            ::icarus::canister::auth::authenticate();
-        }
+    // Default to basic authenticate() call
+    let auth_call: Stmt = parse_quote! {
+        ::icarus::canister::auth::authenticate();
     };
 
     // Insert at the beginning of the function body
     func.block.stmts.insert(0, auth_call);
 }
 
-/// Expand a module marked with #[icarus_module] to automatically generate metadata
-pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenStream {
-    let _mod_name = &input.ident;
-    let _mod_vis = &input.vis;
-
-    // Ensure the module has content
-    let content = match &mut input.content {
-        Some((_, items)) => items,
-        None => {
-            // If module has no body, just return it unchanged
-            return quote! { #input };
-        }
-    };
-
-    // Collect all functions marked with #[icarus_tool]
-    let mut tools = Vec::new();
-    let mut functions_to_export = Vec::new();
-
-    for item in content.iter_mut() {
-        if let Item::Fn(func) = item {
-            // Check if function has both a canister attribute and icarus_tool
-            let has_update = func.attrs.iter().any(|attr| attr.path().is_ident("update"));
-            let has_query = func.attrs.iter().any(|attr| attr.path().is_ident("query"));
-
-            if has_update || has_query {
-                // Validate the tool function signature
-                let validation =
-                    crate::validation::validate_tool_function(func, has_query, has_update);
-                if !validation.is_valid {
-                    let error_msg = validation.errors.join("; ");
-                    return quote! {
-                        compile_error!(#error_msg);
-                    };
-                }
-                // Check for skip_auth attribute (rarely used, only for special cases)
-                let skip_auth = func
-                    .attrs
-                    .iter()
-                    .any(|attr| attr.path().is_ident("skip_auth"));
-
-                // Always inject authentication unless explicitly skipped
-                // Authentication is mandatory for all Icarus modules for security
-                if !skip_auth {
-                    inject_authenticate_call(func);
-                }
-
-                // Clone the function to export at crate level
-                let exported_func = func.clone();
-
-                // Look for icarus_tool attribute first, then fall back to doc comments
-                let description = func
-                    .attrs
-                    .iter()
-                    .find_map(extract_tool_description)
-                    .or_else(|| {
-                        // Fall back to doc comments if no icarus_tool description
-                        func.attrs.iter().find_map(|attr| {
-                            if attr.path().is_ident("doc") {
-                                attr.parse_args::<syn::LitStr>().ok().map(|lit| lit.value())
-                            } else {
-                                None
-                            }
-                        })
-                    })
-                    .unwrap_or_else(|| format!("{} function", func.sig.ident));
-
-                // Extract function information
-                let fn_name = &func.sig.ident;
-                let is_query = has_query;
-
-                // Extract parameters
-                let params: Vec<_> = func
-                    .sig
-                    .inputs
-                    .iter()
-                    .filter_map(|arg| {
-                        if let FnArg::Typed(pat_type) = arg {
-                            if let Pat::Ident(ident) = &*pat_type.pat {
-                                Some((ident.ident.clone(), pat_type.ty.clone()))
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
-
-                // Extract return type
-                let ret_type = match &func.sig.output {
-                    syn::ReturnType::Default => quote! { () },
-                    syn::ReturnType::Type(_, ty) => quote! { #ty },
-                };
-
-                tools.push((fn_name.clone(), description, params, ret_type, is_query));
-                functions_to_export.push(exported_func);
-            }
-        }
-    }
-
-    // Generate tool metadata entries
-    let tool_entries: Vec<_> = tools
-        .iter()
-        .map(|(fn_name, desc, params, _ret_type, _is_query)| {
-            let mut properties = quote! {};
-            let mut required = Vec::new();
-
-            let mut param_order = Vec::new();
-            let mut param_types = Vec::new();
-
-            for (param_name, param_type) in params {
-                let param_name_str = param_name.to_string();
-                let is_optional = quote!(#param_type).to_string().starts_with("Option <");
-                let json_type = type_to_json_schema(&quote!(#param_type).to_string());
-                let candid_type = type_to_candid_type(&quote!(#param_type).to_string());
-
-                properties = quote! {
-                    #properties
-                    properties.insert(
-                        #param_name_str.to_string(),
-                        ::serde_json::json!({ "type": #json_type })
-                    );
-                };
-
-                if !is_optional {
-                    required.push(param_name_str.clone());
-                }
-
-                param_order.push(param_name_str);
-                param_types.push(candid_type);
-            }
-
-            let required_array = if required.is_empty() {
-                quote! { Vec::<&str>::new() }
-            } else {
-                quote! { vec![#(#required),*] }
-            };
-
-            quote! {
-                {
-                    let mut properties = ::serde_json::Map::new();
-                    #properties
-
-                    {
-                        let param_style = if #required_array.is_empty() {
-                            "empty"
-                        } else {
-                            "positional"
-                        };
-
-                        let order_array: Vec<&str> = vec![#(#param_order),*];
-                        let types_array: Vec<&str> = vec![#(#param_types),*];
-
-                        ::serde_json::json!({
-                            "name": stringify!(#fn_name),
-                            "description": #desc,
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": properties,
-                                "required": #required_array,
-                                "x-icarus-params": {
-                                    "style": param_style,
-                                    "order": order_array,
-                                    "types": types_array
-                                }
-                            }
-                        })
-                    }
-                }
-            }
-        })
-        .collect();
-
-    // Generate the list_tools function
-    let list_tools_fn = quote! {
-        /// List available MCP tools for discovery
-        #[::ic_cdk_macros::query]
-        pub fn list_tools() -> String {
-            let tools: Vec<::serde_json::Value> = vec![#(#tool_entries),*];
-
-            ::serde_json::json!({
-                "name": env!("CARGO_PKG_NAME"),
-                "version": env!("CARGO_PKG_VERSION"),
-                "tools": tools
-            }).to_string()
-        }
-    };
-
-    // Always generate the init function for security and deployment compatibility
-    let init_fn = quote! {
+/// Generate the init function for canister initialization
+fn generate_init_function() -> TokenStream {
+    quote! {
         /// Canister initialization function (auto-generated by icarus_module)
         /// Requires an owner principal for deployment
         #[::ic_cdk_macros::init]
@@ -649,10 +594,12 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
         fn post_upgrade() {
             // State is preserved in stable memory, no action needed
         }
-    };
+    }
+}
 
-    // Generate auth management functions for tool administration
-    let auth_functions = quote! {
+/// Generate authentication management functions
+fn generate_auth_functions() -> TokenStream {
+    quote! {
         /// Add a user to the authorized users list
         /// Requires Admin role or higher
         #[::ic_cdk_macros::update]
@@ -663,11 +610,11 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             // Require Admin or Owner role
             require_role_or_higher(AuthRole::Admin);
 
-            // Parse principal from string
-            let principal = Principal::from_text(principal_text.clone())
-                .map_err(|e| format!("Invalid principal: {}", e))?;
+            // Parse the principal
+            let principal = Principal::from_text(principal_text)
+                .map_err(|e| format!("Invalid principal format: {}", e))?;
 
-            // Security check: prevent anonymous principal from being added
+            // Reject anonymous principal for security
             if principal == Principal::anonymous() {
                 return Err("Security Error: Anonymous principal cannot be authorized".to_string());
             }
@@ -685,7 +632,7 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             Ok(add_user(principal, auth_role))
         }
 
-        /// Remove a user from authorized users
+        /// Remove a user from the authorized users list
         /// Requires Admin role or higher
         #[::ic_cdk_macros::update]
         pub fn remove_authorized_user(principal_text: String) -> Result<String, String> {
@@ -695,29 +642,29 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             // Require Admin or Owner role
             require_role_or_higher(AuthRole::Admin);
 
-            // Parse principal from string
-            let principal = Principal::from_text(principal_text.clone())
-                .map_err(|e| format!("Invalid principal: {}", e))?;
+            // Parse the principal
+            let principal = Principal::from_text(principal_text)
+                .map_err(|e| format!("Invalid principal format: {}", e))?;
 
             // Remove the user
             Ok(remove_user(principal))
         }
 
         /// Update a user's role
-        /// Requires Owner role
+        /// Requires Admin role or higher
         #[::ic_cdk_macros::update]
         pub fn update_user_role(principal_text: String, new_role: String) -> Result<String, String> {
             use ::icarus::canister::auth::{update_user_role, AuthRole, require_role_or_higher};
             use ::candid::Principal;
 
-            // Only Owner can change roles
-            require_role_or_higher(AuthRole::Owner);
+            // Require Admin or Owner role
+            require_role_or_higher(AuthRole::Admin);
 
-            // Parse principal from string
-            let principal = Principal::from_text(principal_text.clone())
-                .map_err(|e| format!("Invalid principal: {}", e))?;
+            // Parse the principal
+            let principal = Principal::from_text(principal_text)
+                .map_err(|e| format!("Invalid principal format: {}", e))?;
 
-            // Security check: prevent anonymous principal from having any role
+            // Security check: reject anonymous principal
             if principal == Principal::anonymous() {
                 return Err("Security Error: Anonymous principal cannot have a role".to_string());
             }
@@ -762,10 +709,138 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
             ::serde_json::to_string(&get_auth_status())
                 .unwrap_or_else(|e| format!(r#"{{"error": "Failed to serialize auth status: {}"}}"#, e))
         }
+    }
+}
+
+/// Generate the list_tools function with module configuration
+fn generate_list_tools_function(
+    tool_entries: &[TokenStream],
+    config: &ModuleConfig,
+) -> TokenStream {
+    let config_title = &config.title;
+    let config_website = &config.website_url;
+
+    quote! {
+        /// List available MCP tools for discovery
+        #[::ic_cdk_macros::query]
+        pub fn list_tools() -> String {
+            let tools: Vec<::serde_json::Value> = vec![#(#tool_entries),*];
+
+            let mut metadata = ::serde_json::json!({
+                "name": env!("CARGO_PKG_NAME"),
+                "version": env!("CARGO_PKG_VERSION"),
+                "tools": tools
+            });
+
+            // Add optional module configuration fields
+            if let Some(title) = #config_title {
+                metadata["title"] = ::serde_json::json!(title);
+            }
+
+            if let Some(website_url) = #config_website {
+                metadata["website_url"] = ::serde_json::json!(website_url);
+            }
+
+            metadata.to_string()
+        }
+    }
+}
+
+/// Expand a module marked with #[icarus_module] to automatically generate metadata
+pub fn expand_icarus_module(mut input: ItemMod, config: ModuleConfig) -> syn::Result<TokenStream> {
+    let _mod_name = &input.ident;
+    let _mod_vis = &input.vis;
+
+    // Ensure the module has content
+    let content = match &mut input.content {
+        Some((_, items)) => items,
+        None => {
+            // If module has no body, just return it unchanged
+            return Ok(quote! { #input });
+        }
     };
 
+    // Collect all functions marked with #[icarus_tool]
+    let mut tools = Vec::new();
+    let mut functions_to_export = Vec::new();
+
+    // Process all functions using optimized helper functions
+    for item in content.iter_mut() {
+        if let Item::Fn(func) = item {
+            // Process all attributes in a single optimized pass
+            let attrs = process_function_attributes(func);
+
+            if attrs.has_canister_attribute() {
+                // Validate the tool function signature
+                let validation = crate::validation::validate_tool_function(
+                    func,
+                    attrs.has_query,
+                    attrs.has_update,
+                );
+                if !validation.is_valid {
+                    let error_msg = validation.errors.join("; ");
+                    return Ok(quote! {
+                        compile_error!(#error_msg);
+                    });
+                }
+
+                // Inject authentication if needed
+                if attrs.needs_authentication_injection() {
+                    inject_authenticate_call(func);
+                }
+
+                // Extract function metadata using optimized helpers
+                let fn_name = &func.sig.ident;
+                let final_description = attrs
+                    .description
+                    .unwrap_or_else(|| format!("{} function", fn_name));
+                let params = extract_function_parameters(func);
+                let ret_type = match &func.sig.output {
+                    syn::ReturnType::Default => quote! { () },
+                    syn::ReturnType::Type(_, ty) => quote! { #ty },
+                };
+
+                // Store tool information and export function
+                tools.push((
+                    fn_name.clone(),
+                    final_description,
+                    params,
+                    ret_type,
+                    attrs.has_query,
+                    attrs.title,
+                    attrs.icon,
+                ));
+                functions_to_export.push(func.clone());
+            }
+        }
+    }
+
+    // Generate tool metadata entries using optimized builder pattern
+    let tool_entries: Vec<_> = tools
+        .iter()
+        .map(
+            |(fn_name, desc, params, _ret_type, _is_query, title, icon)| {
+                let builder = ToolMetadataBuilder::new(
+                    fn_name.clone(),
+                    desc.clone(),
+                    params.clone(),
+                    title.clone(),
+                    icon.clone(),
+                );
+                builder.generate_metadata()
+            },
+        )
+        .collect();
+
+    // Generate the list_tools function using helper
+    let list_tools_fn = generate_list_tools_function(&tool_entries, &config);
+
+    // Generate boilerplate functions using optimized helpers
+    let init_fn = generate_init_function();
+    let auth_functions = generate_auth_functions();
+
     // Return the exported functions, metadata function, init function, and auth functions at crate level
-    quote! {
+    Ok(quote! {
         // Export tool functions at crate level for IC CDK
         #(#functions_to_export)*
 
@@ -777,55 +852,210 @@ pub fn expand_icarus_module(mut input: ItemMod, _config: ModuleConfig) -> TokenS
 
         // Export auth management functions (always included for tool administration)
         #auth_functions
-    }
+    })
 }
 
-/// Convert Rust type string to JSON Schema type
-fn type_to_json_schema(rust_type: &str) -> &'static str {
-    match rust_type {
-        s if s.contains("String") || s.contains("& str") => "string",
-        s if s.contains("i32")
-            || s.contains("i64")
-            || s.contains("u32")
-            || s.contains("u64")
-            || s.contains("usize") =>
-        {
-            "integer"
+/// Optimized type mapping using static lookup tables and `Cow<str>` to reduce allocations
+/// Reusable token builder for tool metadata - reduces quote! allocation overhead
+struct ToolMetadataBuilder {
+    fn_name: syn::Ident,
+    description: String,
+    params: Vec<(syn::Ident, Box<syn::Type>)>,
+    title: Option<String>,
+    icon: Option<String>,
+}
+
+impl ToolMetadataBuilder {
+    fn new(
+        fn_name: syn::Ident,
+        description: String,
+        params: Vec<(syn::Ident, Box<syn::Type>)>,
+        title: Option<String>,
+        icon: Option<String>,
+    ) -> Self {
+        Self {
+            fn_name,
+            description,
+            params,
+            title,
+            icon,
         }
-        s if s.contains("f32") || s.contains("f64") => "number",
-        s if s.contains("bool") => "boolean",
-        s if s.contains("Vec <") => "array",
-        _ => "string", // Default to string for unknown types
+    }
+
+    fn from_refs(
+        fn_name: &syn::Ident,
+        description: &str,
+        params: &[(syn::Ident, Box<syn::Type>)],
+        title: &Option<String>,
+        icon: &Option<String>,
+    ) -> Self {
+        Self {
+            fn_name: fn_name.clone(),
+            description: description.to_string(),
+            params: params.to_vec(),
+            title: title.clone(),
+            icon: icon.clone(),
+        }
+    }
+
+    /// Generate optimized tool metadata token stream
+    fn generate_metadata(&self) -> TokenStream {
+        // Pre-allocate vectors with known capacity to reduce allocations
+        let mut properties = Vec::with_capacity(self.params.len());
+        let mut required = Vec::with_capacity(self.params.len());
+        let mut param_order = Vec::with_capacity(self.params.len());
+        let mut param_types = Vec::with_capacity(self.params.len());
+
+        // Process parameters in single pass
+        for (param_name, param_type) in &self.params {
+            let param_name_str = param_name.to_string();
+            let type_str = quote!(#param_type).to_string();
+            let is_optional = type_str.starts_with("Option <") || type_str.starts_with("Option<");
+
+            let json_type = type_to_json_schema(&type_str);
+            let candid_type = type_to_candid_type(&type_str);
+
+            // Build property insertion efficiently
+            properties.push(quote! {
+                properties.insert(
+                    #param_name_str.to_string(),
+                    ::serde_json::json!({ "type": #json_type })
+                );
+            });
+
+            if !is_optional {
+                required.push(param_name_str.clone());
+            }
+
+            param_order.push(param_name_str);
+            param_types.push(candid_type);
+        }
+
+        let fn_name = &self.fn_name;
+        let desc = &self.description;
+        let title = &self.title;
+        let icon = &self.icon;
+
+        // Generate required array efficiently
+        let required_array = if required.is_empty() {
+            quote! { Vec::<&str>::new() }
+        } else {
+            quote! { vec![#(#required),*] }
+        };
+
+        // Generate the complete metadata in one optimized quote! block
+        quote! {
+            {
+                let mut properties = ::serde_json::Map::new();
+                #(#properties)*
+
+                let param_style = if #required_array.is_empty() { "empty" } else { "positional" };
+                let order_array: Vec<&str> = vec![#(#param_order),*];
+                let types_array: Vec<&str> = vec![#(#param_types),*];
+
+                let mut tool_json = ::serde_json::json!({
+                    "name": stringify!(#fn_name),
+                    "description": #desc,
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": properties,
+                        "required": #required_array,
+                        "x-icarus-params": {
+                            "style": param_style,
+                            "order": order_array,
+                            "types": types_array
+                        }
+                    }
+                });
+
+                // Add optional fields efficiently
+                if let Some(title_value) = #title {
+                    tool_json["title"] = ::serde_json::json!(title_value);
+                }
+                if let Some(icon_value) = #icon {
+                    tool_json["icon"] = ::serde_json::json!(icon_value);
+                }
+
+                tool_json
+            }
+        }
     }
 }
 
-/// Map Rust types to Candid type names
-fn type_to_candid_type(rust_type: &str) -> &'static str {
-    match rust_type {
-        s if s.contains("String") || s.contains("& str") => "text",
-        s if s.contains("i8") => "int8",
-        s if s.contains("i16") => "int16",
-        s if s.contains("i32") => "int32",
-        s if s.contains("i64") => "int64",
-        s if s.contains("i128") => "int",
-        s if s.contains("isize") => "int",
-        s if s.contains("u8") => "nat8",
-        s if s.contains("u16") => "nat16",
-        s if s.contains("u32") => "nat32",
-        s if s.contains("u64") => "nat64",
-        s if s.contains("u128") => "nat",
-        s if s.contains("usize") => "nat",
-        s if s.contains("f32") => "float32",
-        s if s.contains("f64") => "float64",
-        s if s.contains("bool") => "bool",
-        s if s.contains("Principal") => "principal",
-        s if s.contains("Vec") => "vec",
-        _ => "text", // Default to text for unknown types
+/// Static lookup table for JSON Schema types - avoids string allocations
+const JSON_SCHEMA_MAPPINGS: &[(&str, &str)] = &[
+    ("String", "string"),
+    ("& str", "string"),
+    ("&str", "string"),
+    ("str", "string"),
+    ("i8", "integer"),
+    ("i16", "integer"),
+    ("i32", "integer"),
+    ("i64", "integer"),
+    ("i128", "integer"),
+    ("isize", "integer"),
+    ("u8", "integer"),
+    ("u16", "integer"),
+    ("u32", "integer"),
+    ("u64", "integer"),
+    ("u128", "integer"),
+    ("usize", "integer"),
+    ("f32", "number"),
+    ("f64", "number"),
+    ("bool", "boolean"),
+    ("Vec <", "array"),
+    ("Vec<", "array"),
+];
+
+/// Static lookup table for Candid types - avoids string allocations
+const CANDID_MAPPINGS: &[(&str, &str)] = &[
+    ("String", "text"),
+    ("& str", "text"),
+    ("&str", "text"),
+    ("str", "text"),
+    ("i8", "int8"),
+    ("i16", "int16"),
+    ("i32", "int32"),
+    ("i64", "int64"),
+    ("i128", "int"),
+    ("isize", "int"),
+    ("u8", "nat8"),
+    ("u16", "nat16"),
+    ("u32", "nat32"),
+    ("u64", "nat64"),
+    ("u128", "nat"),
+    ("usize", "nat"),
+    ("f32", "float32"),
+    ("f64", "float64"),
+    ("bool", "bool"),
+    ("Principal", "principal"),
+    ("Vec", "vec"),
+];
+
+/// Optimized type lookup using static table - O(1) average case
+fn type_to_json_schema(rust_type: &str) -> &'static str {
+    // Fast path: check common exact matches first
+    for (pattern, json_type) in JSON_SCHEMA_MAPPINGS {
+        if rust_type.contains(pattern) {
+            return json_type;
+        }
     }
+    "string" // Default fallback
+}
+
+/// Optimized Candid type lookup using static table - O(1) average case
+fn type_to_candid_type(rust_type: &str) -> &'static str {
+    // Fast path: check common exact matches first
+    for (pattern, candid_type) in CANDID_MAPPINGS {
+        if rust_type.contains(pattern) {
+            return candid_type;
+        }
+    }
+    "text" // Default fallback
 }
 
 /// Expand a crate marked with #[icarus_canister] to automatically generate metadata
-pub fn expand_icarus_canister(mut input: File) -> TokenStream {
+pub fn expand_icarus_canister(mut input: File) -> syn::Result<TokenStream> {
     // Collect all functions marked with #[icarus_tool]
     let mut tools = Vec::new();
 
@@ -876,81 +1106,21 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
                     })
                     .collect();
 
-                tools.push((fn_name.clone(), description, params, is_query));
+                // Extract optional tool metadata
+                let title = func.attrs.iter().find_map(extract_tool_title);
+                let icon = func.attrs.iter().find_map(extract_tool_icon);
+
+                tools.push((fn_name.clone(), description, params, is_query, title, icon));
             }
         }
     }
 
-    // Generate tool metadata entries
+    // Generate tool metadata entries using optimized builder pattern
     let tool_entries: Vec<_> = tools
         .iter()
-        .map(|(fn_name, desc, params, _is_query)| {
-            let mut properties = quote! {};
-            let mut required = Vec::new();
-
-            let mut param_order = Vec::new();
-            let mut param_types = Vec::new();
-
-            for (param_name, param_type) in params {
-                let param_name_str = param_name.to_string();
-                let is_optional = quote!(#param_type).to_string().starts_with("Option <");
-                let json_type = type_to_json_schema(&quote!(#param_type).to_string());
-                let candid_type = type_to_candid_type(&quote!(#param_type).to_string());
-
-                properties = quote! {
-                    #properties
-                    properties.insert(
-                        #param_name_str.to_string(),
-                        ::serde_json::json!({ "type": #json_type })
-                    );
-                };
-
-                if !is_optional {
-                    required.push(param_name_str.clone());
-                }
-
-                param_order.push(param_name_str);
-                param_types.push(candid_type);
-            }
-
-            let required_array = if required.is_empty() {
-                quote! { Vec::<&str>::new() }
-            } else {
-                quote! { vec![#(#required),*] }
-            };
-
-            quote! {
-                {
-                    let mut properties = ::serde_json::Map::new();
-                    #properties
-
-                    {
-                        let param_style = if #required_array.is_empty() {
-                            "empty"
-                        } else {
-                            "positional"
-                        };
-
-                        let order_array: Vec<&str> = vec![#(#param_order),*];
-                        let types_array: Vec<&str> = vec![#(#param_types),*];
-
-                        ::serde_json::json!({
-                            "name": stringify!(#fn_name),
-                            "description": #desc,
-                            "inputSchema": {
-                                "type": "object",
-                                "properties": properties,
-                                "required": #required_array,
-                                "x-icarus-params": {
-                                    "style": param_style,
-                                    "order": order_array,
-                                    "types": types_array
-                                }
-                            }
-                        })
-                    }
-                }
-            }
+        .map(|(fn_name, desc, params, _is_query, title, icon)| {
+            let builder = ToolMetadataBuilder::from_refs(fn_name, desc, params, title, icon);
+            builder.generate_metadata()
         })
         .collect();
 
@@ -970,14 +1140,19 @@ pub fn expand_icarus_canister(mut input: File) -> TokenStream {
     };
 
     // Add the list_tools function to the crate items
-    let metadata_fn_item: ItemFn = syn::parse2(list_tools_fn.clone()).unwrap();
+    let metadata_fn_item: ItemFn = syn::parse2(list_tools_fn.clone()).map_err(|e| {
+        syn::Error::new_spanned(
+            &list_tools_fn,
+            format!("Failed to parse generated list_tools function: {}", e),
+        )
+    })?;
     input.items.push(Item::Fn(metadata_fn_item));
 
     // Return the modified crate
     let attrs = &input.attrs;
     let items = &input.items;
-    quote! {
+    Ok(quote! {
         #(#attrs)*
         #(#items)*
-    }
+    })
 }

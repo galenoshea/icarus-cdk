@@ -22,3 +22,8 @@ proc-macro2 = { workspace = true }
 
 [dev-dependencies]
 icarus-core = { workspace = true }
+trybuild = "1.0"
+ic-stable-structures = { workspace = true }
+candid = { workspace = true }
+serde = { workspace = true }
+ic-cdk = { workspace = true }

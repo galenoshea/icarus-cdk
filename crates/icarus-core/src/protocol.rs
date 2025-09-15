@@ -45,16 +45,22 @@ pub struct ParameterMetadata {
 /// Canister configuration
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
 pub struct CanisterConfig {
+    /// The name of the canister
     pub name: String,
+    /// The version of the canister
     pub version: String,
+    /// The principal ID of the canister on ICP
     pub canister_id: Principal,
 }
 
 /// Types of ICP subnets (kept for canister info)
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType, PartialEq)]
 pub enum SubnetType {
+    /// Application subnet for general-purpose dApps
     Application,
+    /// System subnet for Internet Computer management
     System,
+    /// Fiduciary subnet for cryptographic operations
     Fiduciary,
 }
 

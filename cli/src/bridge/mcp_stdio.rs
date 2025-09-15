@@ -142,7 +142,7 @@ pub async fn run(canister_id_str: String) -> Result<()> {
     };
     
     // For now, create a mock translator since we can't connect to the canister
-    // TODO: Implement proper canister connection
+    // TODO: Replace MockTranslator with actual canister client when MCP stdio mode is fully implemented
     eprintln!("Creating mock translator for canister: {}", canister_id);
     let translator = MockTranslator { canister_id };
     

@@ -211,4 +211,198 @@ mod tests {
         assert!(!result.is_valid);
         assert!(result.errors.iter().any(|e| e.contains("cannot have self")));
     }
+
+    #[test]
+    fn test_both_query_and_update() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool() -> Result<String, String> {
+                Ok("data".to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, true, true);
+        assert!(!result.is_valid);
+        assert!(result.errors.iter().any(|e| e.contains("either #[query] or #[update], not both")));
+    }
+
+    #[test]
+    fn test_neither_query_nor_update() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool() -> Result<String, String> {
+                Ok("data".to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, false, false);
+        assert!(!result.is_valid);
+        assert!(result.errors.iter().any(|e| e.contains("must have either #[query] or #[update]")));
+    }
+
+    #[test]
+    fn test_reference_parameters() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool(data: &str) -> Result<String, String> {
+                Ok(data.to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        assert!(!result.is_valid);
+        assert!(result.errors.iter().any(|e| e.contains("cannot contain references")));
+    }
+
+    #[test]
+    fn test_complex_pattern_warning() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool((a, b): (String, u64)) -> Result<String, String> {
+                Ok(format!("{}: {}", a, b))
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        // Should have warnings about complex patterns
+        assert!(!result.warnings.is_empty());
+        assert!(result.warnings.iter().any(|w| w.contains("simple identifiers")));
+    }
+
+    #[test]
+    fn test_void_return_warning() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool() {
+                println!("hello");
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        // Should have warning about return type
+        assert!(!result.warnings.is_empty());
+        assert!(result.warnings.iter().any(|w| w.contains("should return Result")));
+    }
+
+    #[test]
+    fn test_sync_query_valid() {
+        let func: ItemFn = parse_quote! {
+            fn my_query() -> Result<String, String> {
+                Ok("data".to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, true, false);
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_async_update_valid() {
+        let func: ItemFn = parse_quote! {
+            async fn my_update() -> Result<String, String> {
+                Ok("data".to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_sync_update_valid() {
+        let func: ItemFn = parse_quote! {
+            fn my_update() -> Result<String, String> {
+                Ok("data".to_string())
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_is_result_type() {
+        let result_type: syn::Type = parse_quote!(Result<String, String>);
+        assert!(is_result_type(&result_type));
+
+        let result_type: syn::Type = parse_quote!(std::result::Result<String, String>);
+        assert!(is_result_type(&result_type));
+
+        let non_result_type: syn::Type = parse_quote!(String);
+        assert!(!is_result_type(&non_result_type));
+
+        let option_type: syn::Type = parse_quote!(Option<String>);
+        assert!(!is_result_type(&option_type));
+    }
+
+    #[test]
+    fn test_has_references() {
+        let ref_type: syn::Type = parse_quote!(&str);
+        assert!(has_references(&ref_type));
+
+        let mut_ref_type: syn::Type = parse_quote!(&mut String);
+        assert!(has_references(&mut_ref_type));
+
+        let owned_type: syn::Type = parse_quote!(String);
+        assert!(!has_references(&owned_type));
+
+        let vec_type: syn::Type = parse_quote!(Vec<String>);
+        assert!(!has_references(&vec_type));
+    }
+
+    #[test]
+    fn test_is_simple_pattern() {
+        let simple_pat: syn::Pat = parse_quote!(name);
+        assert!(is_simple_pattern(&simple_pat));
+
+        let tuple_pat: syn::Pat = parse_quote!((a, b));
+        assert!(!is_simple_pattern(&tuple_pat));
+
+        let wildcard_pat: syn::Pat = parse_quote!(_);
+        assert!(!is_simple_pattern(&wildcard_pat));
+    }
+
+    #[test]
+    fn test_validation_result_accumulation() {
+        let mut result = ValidationResult::new();
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+        assert!(result.warnings.is_empty());
+
+        result.add_warning("Test warning".to_string());
+        assert!(result.is_valid); // Warnings don't affect validity
+        assert_eq!(result.warnings.len(), 1);
+
+        result.add_error("Test error".to_string());
+        assert!(!result.is_valid); // Errors affect validity
+        assert_eq!(result.errors.len(), 1);
+
+        result.add_error("Another error".to_string());
+        assert!(!result.is_valid);
+        assert_eq!(result.errors.len(), 2);
+    }
+
+    #[test]
+    fn test_multiple_parameter_types() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool(name: String, age: u32, active: bool) -> Result<String, String> {
+                Ok(format!("{}: {} years old, active: {}", name, age, active))
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        assert!(result.is_valid);
+        assert!(result.errors.is_empty());
+    }
+
+    #[test]
+    fn test_mixed_valid_invalid_parameters() {
+        let func: ItemFn = parse_quote! {
+            fn my_tool(name: String, data: &str) -> Result<String, String> {
+                Ok(format!("{}: {}", name, data))
+            }
+        };
+
+        let result = validate_tool_function(&func, false, true);
+        assert!(!result.is_valid);
+        assert!(result.errors.iter().any(|e| e.contains("cannot contain references")));
+    }
 }

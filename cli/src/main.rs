@@ -4,7 +4,6 @@ use colored::Colorize;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
-mod bridge;
 mod commands;
 mod config;
 mod utils;
@@ -65,10 +64,10 @@ enum Commands {
         upgrade: Option<String>,
     },
 
-    #[command(about = "Manage the Icarus bridge")]
-    Bridge {
+    #[command(about = "Manage the Icarus MCP server")]
+    Mcp {
         #[command(subcommand)]
-        command: BridgeCommands,
+        command: McpCommands,
     },
 
     #[command(about = "Validate WASM file for marketplace compatibility")]
@@ -86,58 +85,135 @@ enum Commands {
         #[arg(short, long, help = "Show detailed validation output")]
         verbose: bool,
     },
+
+    #[command(about = "Performance profiling and benchmarking")]
+    Profile {
+        #[command(subcommand)]
+        command: ProfileCommands,
+    },
 }
 
 #[derive(Subcommand)]
-enum BridgeCommands {
-    #[command(about = "Add a canister to Claude Desktop configuration")]
-    Add {
-        #[arg(help = "Canister ID to add")]
-        canister_id: String,
+enum ProfileCommands {
+    #[command(about = "Run performance benchmarks")]
+    Bench {
+        #[arg(long, help = "Filter benchmarks by name pattern")]
+        filter: Option<String>,
 
-        #[arg(long, help = "Name for the canister (defaults to canister ID)")]
-        name: Option<String>,
+        #[arg(long, help = "Save benchmark results to file")]
+        output: Option<String>,
 
-        #[arg(long, help = "Description for the canister")]
-        description: Option<String>,
+        #[arg(long, help = "Generate HTML report")]
+        html: bool,
     },
 
-    #[command(about = "List configured canisters")]
-    List {
-        #[arg(long, help = "Show detailed information")]
-        verbose: bool,
-    },
-
-    #[command(about = "Start the Icarus bridge")]
-    Start {
-        #[arg(long, help = "Canister ID to connect to")]
+    #[command(about = "Profile canister performance")]
+    Canister {
+        #[arg(help = "Canister ID to profile")]
         canister_id: String,
 
         #[arg(
             short,
             long,
-            default_value = "9090",
-            help = "Port to run the bridge on"
+            default_value = "30",
+            help = "Duration to profile in seconds"
         )]
-        port: u16,
+        duration: u64,
+
+        #[arg(long, help = "Network to connect to", default_value = "local")]
+        network: String,
+
+        #[arg(long, help = "Number of concurrent requests", default_value = "10")]
+        concurrency: usize,
+    },
+
+    #[command(about = "Analyze WASM binary performance characteristics")]
+    Analyze {
+        #[arg(long, help = "Path to WASM file to analyze")]
+        wasm_path: Option<String>,
+
+        #[arg(long, help = "Show memory usage analysis")]
+        memory: bool,
+
+        #[arg(long, help = "Show instruction count analysis")]
+        instructions: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum McpCommands {
+    #[command(about = "Add MCP server to AI client configurations")]
+    Add {
+        #[arg(help = "Canister ID to connect to")]
+        canister_id: String,
+
+        #[arg(long, help = "Name for the MCP server (defaults to canister ID)")]
+        name: Option<String>,
+
+        #[arg(
+            long,
+            help = "Specific AI clients to configure (claude, chatgpt, claude-code)",
+            value_delimiter = ','
+        )]
+        clients: Option<Vec<String>>,
+
+        #[arg(long, help = "Configure all available AI clients")]
+        all: bool,
+
+        #[arg(long, help = "Custom path to configuration file")]
+        config_path: Option<String>,
+    },
+
+    #[command(about = "Show comprehensive MCP status dashboard")]
+    Dashboard,
+
+    #[command(about = "List configured MCP servers across AI clients")]
+    List {
+        #[arg(long, help = "Filter by specific client type")]
+        client: Option<String>,
+    },
+
+    #[command(about = "Remove MCP server from AI client configurations")]
+    Remove {
+        #[arg(help = "Name of the MCP server to remove")]
+        server_name: String,
+
+        #[arg(
+            long,
+            help = "Specific AI clients to remove from (claude, chatgpt, claude-code)",
+            value_delimiter = ','
+        )]
+        clients: Option<Vec<String>>,
+
+        #[arg(long, help = "Remove from all available AI clients")]
+        all: bool,
+
+        #[arg(long, help = "Custom path to configuration file")]
+        config_path: Option<String>,
+    },
+
+    #[command(about = "Start the Icarus MCP server")]
+    Start {
+        #[arg(help = "Canister ID to connect to")]
+        canister_id: String,
 
         #[arg(long, help = "Run in background as daemon")]
         daemon: bool,
     },
 
-    #[command(about = "Check the status of the Icarus bridge")]
+    #[command(about = "Check the status of the Icarus MCP server")]
     Status {
         #[arg(short, long, help = "Show detailed status information")]
         verbose: bool,
     },
 
-    #[command(about = "Stop the Icarus bridge")]
+    #[command(about = "Stop the Icarus MCP server")]
     Stop {
-        #[arg(long, help = "Stop all running bridge instances")]
+        #[arg(long, help = "Stop all running MCP server instances")]
         all: bool,
 
-        #[arg(short, long, help = "Port of the bridge to stop")]
-        port: Option<u16>,
+        #[arg(long, help = "Stop MCP server for specific canister")]
+        canister_id: Option<String>,
     },
 }
 
@@ -145,13 +221,14 @@ enum BridgeCommands {
 async fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    // Check if we're in MCP mode (being run by Claude Desktop) or running auth commands
-    let is_mcp_mode = if let Commands::Bridge { command } = &cli.command {
-        matches!(command, BridgeCommands::Start { .. })
-            && !is_terminal::is_terminal(std::io::stdin())
-            && !is_terminal::is_terminal(std::io::stdout())
-    } else {
-        false
+    // Check if we're in MCP mode (being run by Claude Desktop)
+    let is_mcp_mode = match &cli.command {
+        Commands::Mcp { command } => {
+            matches!(command, McpCommands::Start { .. })
+                && !is_terminal::is_terminal(std::io::stdin())
+                && !is_terminal::is_terminal(std::io::stdout())
+        }
+        _ => false,
     };
 
     // Skip tracing for MCP mode to avoid hanging issues
@@ -220,37 +297,50 @@ async fn main() -> Result<()> {
             info!("Deploying to {}", network);
             commands::deploy::execute(network, force, upgrade).await?;
         }
-        Commands::Bridge { command } => match command {
-            BridgeCommands::Add {
+        Commands::Mcp { command } => match command {
+            McpCommands::Add {
                 canister_id,
                 name,
-                description,
+                clients,
+                all,
+                config_path,
             } => {
-                info!("Adding canister to Claude Desktop config");
-                commands::bridge::add::execute(canister_id, name, description).await?;
+                info!("Adding MCP server to AI clients");
+                commands::mcp::add::execute(canister_id, name, clients, all, config_path).await?;
             }
-            BridgeCommands::List { verbose } => {
-                info!("Listing configured canisters");
-                commands::bridge::list::execute(verbose).await?;
+            McpCommands::Dashboard => {
+                info!("Showing MCP status dashboard");
+                commands::mcp::dashboard::execute().await?;
             }
-            BridgeCommands::Start {
+            McpCommands::List { client } => {
+                info!("Listing configured MCP servers");
+                commands::mcp::list::execute(client).await?;
+            }
+            McpCommands::Remove {
+                server_name,
+                clients,
+                all,
+                config_path,
+            } => {
+                info!("Removing MCP server from AI clients");
+                commands::mcp::remove::execute(server_name, clients, all, config_path).await?;
+            }
+            McpCommands::Start {
                 canister_id,
-                port,
                 daemon,
             } => {
                 if !is_mcp_mode {
-                    info!("Starting bridge");
+                    info!("Starting MCP server");
                 }
-                // Always authenticate (using local for development)
-                commands::bridge::start::execute(canister_id, port, daemon).await?;
+                commands::mcp::start::execute(canister_id, daemon).await?;
             }
-            BridgeCommands::Status { verbose } => {
-                info!("Checking bridge status");
-                commands::bridge::status::execute(verbose).await?;
+            McpCommands::Status { verbose } => {
+                info!("Checking MCP server status");
+                commands::mcp::status::execute(verbose).await?;
             }
-            BridgeCommands::Stop { all, port } => {
-                info!("Stopping bridge");
-                commands::bridge::stop::execute(all, port).await?;
+            McpCommands::Stop { all, canister_id } => {
+                info!("Stopping MCP server");
+                commands::mcp::stop::execute(all, canister_id).await?;
             }
         },
         Commands::Validate {
@@ -261,6 +351,34 @@ async fn main() -> Result<()> {
             info!("Validating WASM for marketplace");
             commands::validate::execute(wasm_path, network, verbose).await?;
         }
+        Commands::Profile { command } => match command {
+            ProfileCommands::Bench {
+                filter,
+                output,
+                html,
+            } => {
+                info!("Running performance benchmarks");
+                commands::profile::bench::execute(filter, output, html).await?;
+            }
+            ProfileCommands::Canister {
+                canister_id,
+                duration,
+                network,
+                concurrency,
+            } => {
+                info!("Profiling canister performance");
+                commands::profile::canister::execute(canister_id, duration, network, concurrency)
+                    .await?;
+            }
+            ProfileCommands::Analyze {
+                wasm_path,
+                memory,
+                instructions,
+            } => {
+                info!("Analyzing WASM performance");
+                commands::profile::analyze::execute(wasm_path, memory, instructions).await?;
+            }
+        },
     }
 
     Ok(())

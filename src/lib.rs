@@ -2,7 +2,7 @@
 // Licensed under BSL-1.1. See LICENSE and NOTICE files.
 // Signature verification and telemetry must remain intact.
 
-// #![warn(missing_docs)] // TODO: Enable after adding all documentation
+// Missing docs warnings disabled during active development
 
 //! # Icarus SDK - Licensed under BSL-1.1
 //!

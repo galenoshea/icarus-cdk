@@ -27,6 +27,10 @@ pub struct CanisterMetadata {
     pub name: String,
     pub version: Option<String>,
     pub tools: Vec<CanisterTool>,
+    /// Optional display title for the canister
+    pub title: Option<String>,
+    /// Optional website URL for the canister
+    pub website_url: Option<String>,
 }
 
 /// Individual tool definition from canister
@@ -36,10 +40,15 @@ pub struct CanisterTool {
     pub description: String,
     #[serde(rename = "inputSchema")]
     pub input_schema: serde_json::Value,
+    /// Optional display title for the tool
+    pub title: Option<String>,
+    /// Optional icon identifier for the tool
+    pub icon: Option<String>,
 }
 
 /// ICP Canister Bridge service
 #[derive(Clone)]
+#[allow(dead_code)] // Used in MCP mode but analysis doesn't detect it
 pub struct IcpBridge {
     canister_id: Principal,
     canister_client: Arc<RwLock<CanisterClient>>,
@@ -460,6 +469,9 @@ impl ServerHandler for IcpBridge {
             server_info: rmcp::model::Implementation {
                 name: "icarus-bridge".to_string(),
                 version: "0.1.0".to_string(),
+                title: Some("Icarus ICP Bridge".to_string()),
+                website_url: Some("https://github.com/galenoshea/icarus-sdk".to_string()),
+                icons: None,
             },
             instructions: Some("ICP Canister Bridge for MCP - provides tools to interact with Internet Computer canisters".to_string()),
         }
@@ -489,6 +501,8 @@ impl ServerHandler for IcpBridge {
                     input_schema: schema,
                     output_schema: None,
                     annotations: None,
+                    title: tool.title.clone(),
+                    icons: None, // TODO: Implement icon support when MCP protocol spec evolves to include tool icons
                 }
             })
             .collect();
@@ -541,6 +555,7 @@ impl ServerHandler for IcpBridge {
 }
 
 /// Run the RMCP server with optional authentication
+#[allow(dead_code)] // Used in MCP mode but analysis doesn't detect it
 pub async fn run_with_auth(
     canister_id_str: String,
     _authenticate: bool,

@@ -168,4 +168,158 @@ mod tests {
         let err2 = err1.clone();
         assert_eq!(err1.to_string(), err2.to_string());
     }
+
+    #[test]
+    fn test_serde_json_error_conversion() {
+        // Test automatic conversion from serde_json::Error
+        let bad_json = r#"{"invalid": json"#;
+        let parse_result: std::result::Result<serde_json::Value, serde_json::Error> =
+            serde_json::from_str(bad_json);
+
+        match parse_result {
+            Err(json_err) => {
+                let icarus_err: IcarusError = json_err.into();
+                assert!(icarus_err.to_string().contains("Serialization error:"));
+            }
+            Ok(_) => panic!("Expected JSON parsing to fail"),
+        }
+    }
+
+    #[test]
+    fn test_error_debug_formatting() {
+        let err = IcarusError::Tool(ToolError::invalid_input("test"));
+        let debug_str = format!("{:?}", err);
+        assert!(debug_str.contains("Tool"));
+        assert!(debug_str.contains("InvalidInput"));
+        assert!(debug_str.contains("test"));
+    }
+
+    #[test]
+    fn test_result_type_alias() {
+        // Test that our Result type alias works correctly
+        let success: Result<i32> = Ok(42);
+        let failure: Result<i32> = Err(IcarusError::Other("failed".to_string()));
+
+        assert!(success.is_ok());
+        assert_eq!(success.unwrap(), 42);
+
+        assert!(failure.is_err());
+        assert_eq!(failure.unwrap_err().to_string(), "failed");
+    }
+
+    #[test]
+    fn test_tool_error_variants_coverage() {
+        // Ensure all ToolError variants are properly tested
+        let errors = vec![
+            ToolError::InvalidInput("test".to_string()),
+            ToolError::NotFound("test".to_string()),
+            ToolError::PermissionDenied("test".to_string()),
+            ToolError::OperationFailed("test".to_string()),
+            ToolError::InternalError("test".to_string()),
+        ];
+
+        for error in errors {
+            // Test Debug trait
+            let debug_str = format!("{:?}", error);
+            assert!(!debug_str.is_empty());
+
+            // Test Display trait
+            let display_str = error.to_string();
+            assert!(!display_str.is_empty());
+
+            // Test Clone trait
+            let cloned = error.clone();
+            assert_eq!(error.to_string(), cloned.to_string());
+        }
+    }
+
+    #[test]
+    fn test_icarus_error_variants_coverage() {
+        // Test all IcarusError variants
+        let tool_error = ToolError::invalid_input("test");
+        let json_error = serde_json::from_str::<serde_json::Value>(r#"{"invalid": json"#)
+            .unwrap_err();
+
+        let errors = vec![
+            IcarusError::Mcp("mcp error".to_string()),
+            IcarusError::Canister("canister error".to_string()),
+            IcarusError::Serialization(json_error),
+            IcarusError::State("state error".to_string()),
+            IcarusError::Protocol("protocol error".to_string()),
+            IcarusError::Tool(tool_error),
+            IcarusError::Other("other error".to_string()),
+        ];
+
+        for error in errors {
+            // Test Debug trait
+            let debug_str = format!("{:?}", error);
+            assert!(!debug_str.is_empty());
+
+            // Test Display trait
+            let display_str = error.to_string();
+            assert!(!display_str.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_tool_error_constructor_variants() {
+        // Test all constructor methods accept different string types
+        let static_str = "static string";
+        let owned_string = String::from("owned string");
+        let string_slice = &owned_string[..];
+
+        // Test with &str
+        let err1 = ToolError::invalid_input(static_str);
+        assert!(err1.to_string().contains("static string"));
+
+        // Test with String
+        let err2 = ToolError::not_found(owned_string.clone());
+        assert!(err2.to_string().contains("owned string"));
+
+        // Test with string slice
+        let err3 = ToolError::permission_denied(string_slice);
+        assert!(err3.to_string().contains("owned string"));
+
+        // Test with format! result
+        let err4 = ToolError::operation_failed(format!("formatted {}", 42));
+        assert!(err4.to_string().contains("formatted 42"));
+
+        // Test with owned literal
+        let err5 = ToolError::internal("literal".to_string());
+        assert!(err5.to_string().contains("literal"));
+    }
+
+    #[test]
+    fn test_error_chain_propagation() {
+        // Test that error chains work correctly through conversions
+        let tool_err = ToolError::operation_failed("database connection failed");
+        let icarus_err: IcarusError = tool_err.into();
+
+        // Verify the error message contains both levels
+        let full_message = icarus_err.to_string();
+        assert!(full_message.contains("Tool error:"));
+        assert!(full_message.contains("Operation failed:"));
+        assert!(full_message.contains("database connection failed"));
+    }
+
+    #[test]
+    fn test_error_equality_through_serialization() {
+        // Test that ToolError round-trip serialization preserves equality
+        let original_errors = vec![
+            ToolError::InvalidInput("input".to_string()),
+            ToolError::NotFound("resource".to_string()),
+            ToolError::PermissionDenied("access".to_string()),
+            ToolError::OperationFailed("operation".to_string()),
+            ToolError::InternalError("internal".to_string()),
+        ];
+
+        for original in original_errors {
+            let json = serde_json::to_string(&original).unwrap();
+            let deserialized: ToolError = serde_json::from_str(&json).unwrap();
+
+            // Since ToolError doesn't implement PartialEq, we compare string representations
+            assert_eq!(original.to_string(), deserialized.to_string());
+            assert_eq!(format!("{:?}", original), format!("{:?}", deserialized));
+        }
+    }
 }

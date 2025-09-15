@@ -36,7 +36,7 @@ pub trait IcarusReturn: CandidType + Serialize + Send + Sync + 'static {
 
 /// Trait for tool functions that ensures compatibility
 ///
-/// This trait is automatically implemented by the #[icarus_tool] macro
+/// This trait is automatically implemented by the `#[icarus_tool]` macro
 /// for functions with compatible signatures
 pub trait IcarusTool {
     /// The input type (tuple of parameters)
@@ -160,6 +160,7 @@ pub const fn validate_tool_type<T>() -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde::{Deserialize, Serialize};
 
     #[test]
     fn test_basic_types_implement_traits() {
@@ -183,5 +184,236 @@ mod tests {
         // Test that Result<T, String> implements IcarusReturn
         assert!(<Result<String, String> as IcarusReturn>::validate().is_ok());
         assert!(<Result<Vec<u64>, String> as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_all_integer_types_implement_param() {
+        // Test signed integers
+        assert!(<i8 as IcarusParam>::validate().is_ok());
+        assert!(<i16 as IcarusParam>::validate().is_ok());
+        assert!(<i32 as IcarusParam>::validate().is_ok());
+        assert!(<i64 as IcarusParam>::validate().is_ok());
+        assert!(<i128 as IcarusParam>::validate().is_ok());
+
+        // Test unsigned integers
+        assert!(<u8 as IcarusParam>::validate().is_ok());
+        assert!(<u16 as IcarusParam>::validate().is_ok());
+        assert!(<u32 as IcarusParam>::validate().is_ok());
+        assert!(<u64 as IcarusParam>::validate().is_ok());
+        assert!(<u128 as IcarusParam>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_all_integer_types_implement_return() {
+        // Test signed integers
+        assert!(<i8 as IcarusReturn>::validate().is_ok());
+        assert!(<i16 as IcarusReturn>::validate().is_ok());
+        assert!(<i32 as IcarusReturn>::validate().is_ok());
+        assert!(<i64 as IcarusReturn>::validate().is_ok());
+        assert!(<i128 as IcarusReturn>::validate().is_ok());
+
+        // Test unsigned integers
+        assert!(<u8 as IcarusReturn>::validate().is_ok());
+        assert!(<u16 as IcarusReturn>::validate().is_ok());
+        assert!(<u32 as IcarusReturn>::validate().is_ok());
+        assert!(<u64 as IcarusReturn>::validate().is_ok());
+        assert!(<u128 as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_floating_point_types() {
+        // Test as parameters
+        assert!(<f32 as IcarusParam>::validate().is_ok());
+        assert!(<f64 as IcarusParam>::validate().is_ok());
+
+        // Test as return types
+        assert!(<f32 as IcarusReturn>::validate().is_ok());
+        assert!(<f64 as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_tuple_parameters() {
+        // Test empty tuple
+        assert!(<() as IcarusParam>::validate().is_ok());
+
+        // Test single element tuple
+        assert!(<(String,) as IcarusParam>::validate().is_ok());
+
+        // Test two element tuple
+        assert!(<(String, u64) as IcarusParam>::validate().is_ok());
+
+        // Test three element tuple
+        assert!(<(String, u64, bool) as IcarusParam>::validate().is_ok());
+
+        // Test four element tuple
+        assert!(<(String, u64, bool, f64) as IcarusParam>::validate().is_ok());
+
+        // Test five element tuple
+        assert!(<(String, u64, bool, f64, i32) as IcarusParam>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_nested_option_types() {
+        // Test nested Options as parameters
+        assert!(<Option<Option<String>> as IcarusParam>::validate().is_ok());
+        assert!(<Option<Vec<String>> as IcarusParam>::validate().is_ok());
+
+        // Test nested Options as return types
+        assert!(<Option<Option<String>> as IcarusReturn>::validate().is_ok());
+        assert!(<Option<Vec<String>> as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_nested_vec_types() {
+        // Test Vec of Vec as parameters
+        assert!(<Vec<Vec<String>> as IcarusParam>::validate().is_ok());
+        assert!(<Vec<Option<u64>> as IcarusParam>::validate().is_ok());
+
+        // Test Vec of Vec as return types (need CandidType + Serialize)
+        assert!(<Vec<String> as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_unit_type_return() {
+        // Test unit type as return
+        assert!(<() as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_result_type_variants() {
+        // Test different Result types
+        assert!(<Result<(), String> as IcarusReturn>::validate().is_ok());
+        assert!(<Result<bool, String> as IcarusReturn>::validate().is_ok());
+        assert!(<Result<Vec<u64>, String> as IcarusReturn>::validate().is_ok());
+        assert!(<Result<Option<String>, String> as IcarusReturn>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_tool_result_type_alias() {
+        // Test the ToolResult type alias
+        let success: ToolResult<String> = Ok("success".to_string());
+        let error: ToolResult<String> = Err("error".to_string());
+
+        assert!(success.is_ok());
+        assert!(error.is_err());
+    }
+
+    #[test]
+    fn test_validate_tool_type_function() {
+        // Test the const validation function
+        assert!(validate_tool_type::<String>());
+        assert!(validate_tool_type::<u64>());
+        assert!(validate_tool_type::<Vec<String>>());
+        assert!(validate_tool_type::<Option<bool>>());
+    }
+
+    // Mock tool implementation for testing the IcarusTool trait
+    struct MockTool;
+
+    impl IcarusTool for MockTool {
+        type Input = (String, u64);
+        type Output = Result<String, String>;
+        const IS_QUERY: bool = false;
+        const IS_ASYNC: bool = false;
+    }
+
+    struct MockQueryTool;
+
+    impl IcarusTool for MockQueryTool {
+        type Input = String;
+        type Output = Result<bool, String>;
+        const IS_QUERY: bool = true;
+        const IS_ASYNC: bool = false;
+    }
+
+    struct MockAsyncTool;
+
+    impl IcarusTool for MockAsyncTool {
+        type Input = ();
+        type Output = Result<(), String>;
+        const IS_QUERY: bool = false;
+        const IS_ASYNC: bool = true;
+    }
+
+    #[test]
+    fn test_icarus_tool_validation() {
+        // Test valid tool configurations
+        assert!(MockTool::validate_signature().is_ok());
+        assert!(MockQueryTool::validate_signature().is_ok());
+        assert!(MockAsyncTool::validate_signature().is_ok());
+    }
+
+    // Test invalid configuration: async query (should fail validation)
+    struct InvalidAsyncQueryTool;
+
+    impl IcarusTool for InvalidAsyncQueryTool {
+        type Input = String;
+        type Output = Result<String, String>;
+        const IS_QUERY: bool = true;  // Query...
+        const IS_ASYNC: bool = true;  // ...but async (invalid)
+    }
+
+    #[test]
+    fn test_icarus_tool_invalid_async_query() {
+        // This should fail validation
+        let result = InvalidAsyncQueryTool::validate_signature();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Query functions cannot be async"));
+    }
+
+    #[test]
+    fn test_complex_parameter_combinations() {
+        // Test complex nested types as parameters
+        assert!(<Vec<(String, Option<u64>)> as IcarusParam>::validate().is_ok());
+        assert!(<Option<Vec<(bool, i32)>> as IcarusParam>::validate().is_ok());
+        assert!(<(Vec<String>, Option<u64>, bool) as IcarusParam>::validate().is_ok());
+    }
+
+    #[test]
+    fn test_custom_types_with_required_traits() {
+        #[derive(CandidType, Serialize, Deserialize)]
+        struct CustomParam {
+            name: String,
+            value: u64,
+        }
+
+        impl IcarusParam for CustomParam {}
+
+        #[derive(CandidType, Serialize)]
+        struct CustomReturn {
+            result: String,
+            count: u32,
+        }
+
+        impl IcarusReturn for CustomReturn {}
+
+        // Test validation
+        assert!(CustomParam::validate().is_ok());
+        assert!(CustomReturn::validate().is_ok());
+    }
+
+    #[test]
+    fn test_option_validation_delegation() {
+        #[derive(CandidType, Serialize)]
+        struct TestType;
+
+        impl IcarusReturn for TestType {
+            fn validate() -> Result<(), String> {
+                Err("TestType validation failed".to_string())
+            }
+        }
+
+        // Option should delegate validation to the inner type
+        let result = <Option<TestType> as IcarusReturn>::validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("TestType validation failed"));
+    }
+
+    #[test]
+    fn test_vec_validation_for_return() {
+        // Vec<T> should validate successfully for any T that meets bounds
+        assert!(<Vec<String> as IcarusReturn>::validate().is_ok());
+        assert!(<Vec<u64> as IcarusReturn>::validate().is_ok());
+        assert!(<Vec<bool> as IcarusReturn>::validate().is_ok());
     }
 }

@@ -7,6 +7,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Multi-Client MCP Support**: Complete support for multiple AI clients
+  - 🤖 **Claude Desktop** - Full configuration management with auto-detection
+  - 💬 **ChatGPT Desktop** - Future compatibility for when MCP support is added
+  - 🎨 **Claude Code/Cline** - VS Code extension integration with automatic path detection
+  - Interactive client selection with beautiful emoji-enhanced UI
+  - Custom configuration path support via `--config-path` flag
+  - Environment variable support (`CLAUDE_CONFIG_PATH`, `ICARUS_DEBUG`)
+- **New MCP Commands**: Complete replacement for deprecated bridge commands
+  - `icarus mcp add <canister-id>` - Add canister to AI clients with interactive selection
+  - `icarus mcp list` - Beautiful tree view of all client configurations and servers
+  - `icarus mcp remove <canister-id>` - Remove canister from specific clients
+  - `icarus mcp dashboard` - Interactive status dashboard with system health monitoring
+  - Support for `--clients`, `--config-path`, `--name`, and `--all` flags
+- **Enhanced Bridge Service**: Background service with improved identity management
+  - `icarus bridge start <canister-id>` - Auto-detects current dfx identity
+  - `icarus bridge status` - Shows active connections and bridge health
+  - `icarus bridge stop` - Graceful shutdown of bridge service
+  - Dynamic identity switching without restart (inherited from v0.5.8)
+- **Comprehensive Documentation**: Complete MCP client management guide
+  - `/cli/docs/MCP_CLIENT_MANAGEMENT.md` - 500+ line comprehensive guide
+  - Troubleshooting section with client detection and configuration validation
+  - Best practices for development workflow and environment management
+  - Advanced usage examples for CI/CD and multi-environment setups
+- **Beautiful CLI UI**: Enhanced terminal experience with modern UI components
+  - Progress bars with animations and spinners
+  - Tree-like configuration displays with Unicode characters
+  - Emoji-enhanced status indicators and client identification
+  - Interactive selection with dialoguer, colored output, and styled tables
+  - Auto-animated success messages and error styling
+- **Comprehensive Testing**: Full test coverage for new functionality
+  - E2E tests for all MCP commands with edge case coverage
+  - Unit tests for client detection, configuration management, and UI components
+  - Environment variable testing and custom configuration path validation
+  - Test utilities for environment variable injection and command execution
+
+### Changed
+- **Enhanced User Experience**: Completely redesigned CLI workflow
+  - Replaced boring comma-separated lists with interactive selection menus
+  - Beautiful tree visualizations for configuration listing
+  - Animated progress indicators and status updates
+  - Rich error messages with troubleshooting hints
+- **Improved Documentation**: Updated all README files and guides
+  - Main SDK README updated with new MCP commands and multi-client workflow
+  - CLI README updated with comprehensive command reference and troubleshooting
+  - Quick start workflow updated to reflect MCP-first approach
+  - Added configuration management and environment setup sections
+
+### Removed
+- **BREAKING: Deprecated bridge commands completely removed**
+  - Removed `icarus bridge` command and all subcommands (add, list, start, status, stop)
+  - All bridge functionality has been replaced by `icarus mcp` commands
+  - Bridge command directory and implementation removed (~100 lines of deprecated code)
+  - CLI structure simplified to focus on MCP-first workflow
+
+### Fixed
+- **Dead Code Cleanup**: Removed all unused code and imports for clean compilation
+  - Removed unused methods from ClientInfo struct and ClientType enum
+  - Cleaned up unused utility functions and test helpers
+  - Fixed all import warnings and dead code warnings
+  - Zero compilation warnings with strict linting enabled
+- **Documentation Accuracy**: Updated all TODO comments with clear descriptions
+  - Clarified template system TODO for future custom project templates
+  - Updated MCP protocol icon support TODO with protocol evolution context
+  - Enhanced MockTranslator TODO with stdio mode implementation context
+
 ## [0.6.0] - 2025-09-13
 
 ### Changed

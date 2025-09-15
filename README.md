@@ -116,13 +116,22 @@ mod tools {
 }
 ```
 
-### Connect to Claude Desktop
+### Connect to AI Clients
 
 ```bash
-# Add your deployed canister to Claude
-icarus bridge add <your-canister-id>
+# Add your deployed canister to AI clients (interactive selection)
+icarus mcp add <your-canister-id>
 
-# Now Claude has persistent memory! 🧠
+# Or specify clients directly
+icarus mcp add <your-canister-id> --clients claude,chatgpt,claude-code
+
+# Start MCP server for testing (foreground mode)
+icarus mcp start <your-canister-id>
+
+# Or run in daemon mode (background)
+icarus mcp start <your-canister-id> --daemon
+
+# Now your AI clients have persistent memory! 🧠
 ```
 
 ---
@@ -239,10 +248,17 @@ icarus new <name>           # Create a new project
 icarus deploy              # Deploy to ICP (builds automatically)
 icarus test                # Run tests
 
-# Bridge Commands (Claude Desktop integration)
-icarus bridge add <id>     # Add canister to Claude
-icarus bridge list         # List connected canisters
-icarus bridge remove <id>  # Remove a canister
+# MCP Client Management (Multi-Client Support)
+icarus mcp add <id>         # Add canister to AI clients (Claude Desktop, ChatGPT, Claude Code)
+icarus mcp list             # List all client configurations and servers
+icarus mcp remove <id>      # Remove canister from specific clients
+icarus mcp dashboard        # Interactive MCP status dashboard
+icarus mcp start <id>       # Start MCP server for canister (foreground/daemon mode)
+
+# Bridge Commands (Background Service)
+icarus bridge start <id>   # Start bridge for canister (auto-detects identity)
+icarus bridge status       # Check bridge status
+icarus bridge stop         # Stop running bridge
 
 # Development
 icarus dev                 # Start local development

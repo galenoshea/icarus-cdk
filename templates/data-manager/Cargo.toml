@@ -1,0 +1,20 @@
+[package]
+name = "data-manager"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+icarus = { path = "../../", features = ["storage"] }
+ic-cdk = "0.18"
+candid = "0.10"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+uuid = "1.0"
+
+[package.metadata.icarus]
+title = "Data Manager"
+description = "Production-ready template for managing structured data with full CRUD operations, search, and analytics"
+website = "https://github.com/anthgur/icarus-sdk"

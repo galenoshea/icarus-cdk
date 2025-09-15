@@ -91,6 +91,24 @@ impl CliRunner {
         eprintln!("Command completed with status: {}", output.status);
         output
     }
+
+    /// Run a command in a specific directory with environment variables
+    pub fn run_in_with_env(&self, dir: &Path, args: &[&str], env_vars: &[(&str, &str)]) -> Output {
+        eprintln!(
+            "Running command in {:?} with env {:?}: {:?} {:?}",
+            dir, env_vars, self.binary_path, args
+        );
+        let mut cmd = Command::new(&self.binary_path);
+        cmd.current_dir(dir).args(args);
+
+        for (key, value) in env_vars {
+            cmd.env(key, value);
+        }
+
+        let output = cmd.output().expect("Failed to execute CLI command");
+        eprintln!("Command completed with status: {}", output.status);
+        output
+    }
 }
 
 /// Helper for managing test projects
