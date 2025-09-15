@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -18,9 +18,9 @@ canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
 core = ["dep:icarus-core"]
 
 [dependencies]
-icarus-core = { version = "0.6.0", path = "crates/icarus-core", optional = true }
-icarus-derive = { version = "0.6.0", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.6.0", path = "crates/icarus-canister", optional = true }
+icarus-core = { version = "0.7.0", path = "crates/icarus-core", optional = true }
+icarus-derive = { version = "0.7.0", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.7.0", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
@@ -64,7 +64,7 @@ name = "common_operations"
 harness = false
 
 [workspace.package]
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -146,11 +146,11 @@ once_cell = "1"
 ring = "0.17"
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.6.0" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.6.0" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.6.0" }
-icarus-bridge = { path = "crates/icarus-bridge", version = "0.6.0" }
-icarus-dev = { path = "crates/icarus-dev", version = "0.6.0" }
+icarus-core = { path = "crates/icarus-core", version = "0.7.0" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.7.0" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.7.0" }
+icarus-bridge = { path = "crates/icarus-bridge", version = "0.7.0" }
+icarus-dev = { path = "crates/icarus-dev", version = "0.7.0" }
 
 [profile.release]
 opt-level = 3

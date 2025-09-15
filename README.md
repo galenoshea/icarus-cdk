@@ -74,10 +74,10 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.6.0"
+icarus = "0.7.0"
 
 # Or specify features explicitly
-icarus = { version = "0.6.0", features = ["canister"] }
+icarus = { version = "0.7.0", features = ["canister"] }
 
 # Other required dependencies for canister development
 ic-cdk = "0.18"
@@ -230,6 +230,35 @@ stable_storage! {
 
 ---
 
+## 🏗️ Architecture & Crates
+
+Icarus SDK is organized into focused crates for modularity and flexibility:
+
+### Core Crates
+- **[`icarus`](crates/icarus/)** - Main SDK with all features bundled
+- **[`icarus-core`](crates/icarus-core/)** - Core types, traits, and session management
+- **[`icarus-derive`](crates/icarus-derive/)** - Proc macros (`#[icarus_module]`, `#[icarus_tool]`)
+- **[`icarus-canister`](crates/icarus-canister/)** - ICP integration and stable storage
+
+### Infrastructure Crates
+- **[`icarus-bridge`](crates/icarus-bridge/)** - MCP-to-ICP bridge for AI client communication
+- **[`icarus-dev`](crates/icarus-dev/)** - Development tools, file watching, and project management
+- **[`icarus-mcp`](crates/icarus-mcp/)** - MCP protocol implementation and networking
+
+### Modular Usage
+
+```toml
+# Use the full SDK (recommended)
+icarus = "0.7.0"
+
+# Or pick specific crates for specialized use cases
+icarus-bridge = "0.7.0"   # For custom bridge implementations
+icarus-dev = "0.7.0"      # For development tooling
+icarus-mcp = "0.7.0"      # For MCP protocol work
+```
+
+---
+
 ## 📚 Examples
 
 Check out our [examples directory](examples/) for complete, deployable projects:
@@ -267,15 +296,21 @@ icarus logs <id>          # View canister logs
 
 ---
 
-## 🔄 Migration from 0.4.x to 0.5.0
+## 🔄 Migration from 0.6.x to 0.7.0
 
-**New Features**: HTTP outcalls and timers are now built-in! No breaking changes.
+**New Architecture**: Icarus has been refactored into focused crates for better modularity.
 
-To upgrade:
-1. Update your dependency: `icarus = "0.6.0"`
+### What's New in 0.7.0:
+- 🏗️ **Modular Architecture**: Split into 6 focused crates (`icarus-bridge`, `icarus-dev`, etc.)
+- 🧪 **Enhanced Testing**: 74+ new unit tests for improved reliability
+- 🛠️ **Better Development**: Enhanced dev tools and file watching
+- 🌉 **Improved Bridge**: More robust MCP-to-ICP communication
+
+### To upgrade:
+1. Update your dependency: `icarus = "0.7.0"`
 2. Redeploy: `icarus deploy` (builds automatically)
 
-The bridge will automatically use the new `list_tools()` endpoint. No code changes needed unless you were directly calling `get_metadata()`.
+**No breaking changes** - existing code continues to work unchanged. The modular architecture is internal - your application code remains the same.
 
 ---
 

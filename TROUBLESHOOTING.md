@@ -111,7 +111,7 @@ error: cannot find macro `stable_storage!` in this scope
 1. Add icarus-canister dependency:
    ```toml
    [dependencies]
-   icarus-canister = "0.6.0"
+   icarus-canister = "0.7.0"
    ```
 
 2. Use correct import:

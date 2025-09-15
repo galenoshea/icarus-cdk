@@ -2,10 +2,69 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
-## Migrating from 0.5.x to 0.6.0
+## Migrating from 0.6.x to 0.7.0
+
+Version 0.7.0 introduces a **modular architecture** with focused crates for better maintainability and development experience. This is a **non-breaking change** - existing applications continue to work without modification.
+
+### What's New in 0.7.0
+
+#### 🏗️ Modular Crate Architecture
+The SDK has been refactored into 6 focused crates:
+
+- **`icarus-bridge`** - MCP-to-ICP bridge functionality
+- **`icarus-dev`** - Development tools and file watching
+- **`icarus-core`** - Core types and session management
+- **`icarus-derive`** - Proc macros
+- **`icarus-canister`** - ICP integration and stable storage
+- **`icarus-mcp`** - MCP protocol implementation
+
+#### 🧪 Enhanced Testing
+- 74+ new unit tests across all crates
+- Comprehensive test coverage for bridge and dev functionality
+- Improved reliability and error handling
+
+### Migration Steps
+
+1. **Update your `Cargo.toml`**:
+   ```toml
+   [dependencies]
+   icarus = "0.7.0"  # No other changes needed
+   ```
+
+2. **Redeploy your canister**:
+   ```bash
+   icarus deploy
+   ```
+
+3. **Optional: Use modular dependencies** (for specialized use cases):
+   ```toml
+   [dependencies]
+   icarus-bridge = "0.7.0"   # For custom bridge implementations
+   icarus-dev = "0.7.0"      # For development tooling
+   icarus-core = "0.7.0"     # For core functionality only
+   ```
+
+### No Breaking Changes
+
+- **Existing APIs unchanged**: All your existing code continues to work
+- **Same functionality**: All features remain available
+- **Backward compatibility**: No migration of existing canisters needed
+
+### Benefits of 0.7.0
+
+- **Faster builds**: Modular compilation improves build times
+- **Better development**: Enhanced file watching and dev tools
+- **Improved reliability**: Comprehensive test coverage
+- **Future flexibility**: Easier to extend and maintain
+
+---
+
+## Migrating from 0.5.x to 0.6.0 (Historical)
+
+> **Note**: This is a historical migration guide for legacy versions.
 
 ### Overview
-Version 0.6.0 is a **breaking change** release that updates all dependencies to their latest stable versions and removes all deprecated code for production readiness.
+Version 0.6.0 was a **breaking change** release that updated all dependencies to their latest stable versions and removed all deprecated code for production readiness.
 
 ### Breaking Changes
 
@@ -34,7 +93,7 @@ Update your `Cargo.toml`:
 
 ```toml
 [dependencies]
-icarus = "0.6.0"
+icarus = "0.7.0"
 ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1.0", features = ["derive"] }
@@ -313,7 +372,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.6.0)**: Full support
+- **Current Version (0.7.0)**: Full support with modular architecture
 - **Previous Minor (0.5.8)**: Critical fixes only
 - **Previous Minor (0.4.x)**: Security updates only
 - **Older Versions**: No support, upgrade recommended

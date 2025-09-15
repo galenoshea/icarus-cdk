@@ -8,6 +8,8 @@ This guide will help you create your first MCP server using the Icarus SDK.
 - Icarus CLI installed (`cargo install icarus-cli`)
 - Basic familiarity with Rust
 
+> **Note**: Icarus 0.7.0 introduces a modular architecture with focused crates. The CLI and core functionality remain unchanged, but you now have more flexibility to use specific components.
+
 ## Creating Your First Project
 
 ### 1. Create a New Project

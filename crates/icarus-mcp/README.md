@@ -14,7 +14,7 @@ This crate provides several optional features for modular compilation and perfor
 
 ```toml
 [dependencies]
-icarus-mcp = "0.6.0"
+icarus-mcp = "0.7.0"
 ```
 
 Includes: `client`, `server`, `streaming`
@@ -41,19 +41,19 @@ Includes: `client`, `server`, `streaming`
 ```toml
 # Minimal client-only setup
 [dependencies]
-icarus-mcp = { version = "0.6.0", default-features = false, features = ["client"] }
+icarus-mcp = { version = "0.7.0", default-features = false, features = ["client"] }
 
 # Server with performance optimizations
 [dependencies]
-icarus-mcp = { version = "0.6.0", features = ["server", "streaming", "simd", "storage"] }
+icarus-mcp = { version = "0.7.0", features = ["server", "streaming", "simd", "storage"] }
 
 # Full feature set including CLI tools
 [dependencies]
-icarus-mcp = { version = "0.6.0", features = ["all"] }
+icarus-mcp = { version = "0.7.0", features = ["all"] }
 
 # Maximum performance configuration
 [dependencies]
-icarus-mcp = { version = "0.6.0", features = ["server", "streaming", "simd", "storage"] }
+icarus-mcp = { version = "0.7.0", features = ["server", "streaming", "simd", "storage"] }
 ```
 
 ## Performance Optimizations

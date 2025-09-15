@@ -31,8 +31,8 @@ check_version() {
     if [ -f "$file" ]; then
         # For migration guide, skip historical version references
         if [[ "$file" == *"migration-guide.md"* ]] && [ "$skip_historical" = "true" ]; then
-            # Only check lines that indicate current version
-            local lines_to_check=$(grep -n "$pattern" "$file" | grep -E "(Current Version|current version|Latest|latest)" | cut -d: -f1)
+            # Skip lines that contain historical markers
+            local lines_to_check=$(grep -n "$pattern" "$file" | grep -v -E "(Historical|legacy|was a)" | grep -E "(Current Version|current version|Latest|latest)" | cut -d: -f1)
             if [ -n "$lines_to_check" ]; then
                 for line_num in $lines_to_check; do
                     local line_content=$(sed -n "${line_num}p" "$file")

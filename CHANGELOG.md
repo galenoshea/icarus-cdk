@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2025-09-15
+
+### Added
+- **🏗️ Modular Architecture**: Complete refactoring into focused crates
+  - **`icarus-bridge`** - MCP-to-ICP bridge functionality with comprehensive authentication
+  - **`icarus-dev`** - Development tools including file watching and project management
+  - Existing crates: `icarus-core`, `icarus-derive`, `icarus-canister`, `icarus-mcp`
+- **🧪 Comprehensive Testing**: 74+ new unit tests across all new crates
+  - 28 tests for `icarus-bridge` covering auth, canister client, and protocol translation
+  - 46 tests for `icarus-dev` covering file watching, status monitoring, and utilities
+  - Full test coverage for parameter mapping, RMCP server, and development workflows
+- **📚 Enhanced Documentation**: Complete README files for all crates
+  - Detailed architecture documentation with component explanations
+  - Usage examples and integration guides for each crate
+  - Modular dependency configuration examples
+
+### Changed
+- **🔧 Improved Modularity**: Bridge and development functionality extracted from CLI
+  - CLI now uses `icarus-bridge` and `icarus-dev` as dependencies
+  - Better separation of concerns and more focused crate responsibilities
+  - Maintained backward compatibility - no breaking changes to user APIs
+- **🛠️ Enhanced Developer Experience**: Better error handling and type safety
+  - Improved parameter translation between MCP JSON and ICP Candid
+  - More robust canister client with connection pooling and retry logic
+  - Enhanced development tools with better project detection and monitoring
+
+### Fixed
+- **🐛 Dead Code Cleanup**: Removed unused fields and functions across codebase
+  - Eliminated `last_updated` field from `CanisterHealth` struct
+  - Removed `metrics_filter` field from `MonitoringDashboard` struct
+  - Clean compilation without dead code warnings
+- **✅ Test Infrastructure**: Resolved compilation issues and dependency conflicts
+  - Fixed test dependencies for `tokio-test` and `tempfile`
+  - Resolved ownership errors in file watching tests
+  - Updated test expectations to match actual implementation bounds
+
+### Internal
+- **⚡ Performance Improvements**: Better resource utilization and faster builds
+  - Parallel compilation of focused crates reduces build times
+  - More efficient memory usage with targeted dependencies
+  - Improved development workflow with enhanced file watching
+
 ### Added
 - **Multi-Client MCP Support**: Complete support for multiple AI clients
   - 🤖 **Claude Desktop** - Full configuration management with auto-detection
@@ -115,7 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Migration Notes
 This is a **breaking change** release. To upgrade from 0.5.x:
-1. Update your `Cargo.toml`: `icarus = "0.6.0"`
+1. Update your `Cargo.toml`: `icarus = "0.7.0"`
 2. Update peer dependencies: `ic-cdk = "0.18"`, `candid = "0.10"`
 3. Rebuild and redeploy your canisters
 4. No source code changes required - all breaking changes are internal to the SDK
