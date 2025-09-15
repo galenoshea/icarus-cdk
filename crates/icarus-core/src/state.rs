@@ -80,7 +80,9 @@ mod tests {
 
         fn from_bytes(bytes: &[u8]) -> Result<Self> {
             if bytes.len() != 8 {
-                return Err(crate::error::IcarusError::State("Invalid data length for TestCounter".to_string()));
+                return Err(crate::error::IcarusError::State(
+                    "Invalid data length for TestCounter".to_string(),
+                ));
             }
             let count = u64::from_le_bytes(bytes.try_into().unwrap());
             Ok(TestCounter { count })
@@ -138,7 +140,10 @@ mod tests {
                     // Current version, no migration needed
                     Self::from_bytes(data)
                 }
-                _ => Err(crate::error::IcarusError::State(format!("Unsupported version: {}", version))),
+                _ => Err(crate::error::IcarusError::State(format!(
+                    "Unsupported version: {}",
+                    version
+                ))),
             }
         }
     }

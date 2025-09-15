@@ -35,6 +35,10 @@ ciborium = { workspace = true }
 rmcp = { workspace = true, features = ["server"] }
 icarus-mcp = { version = "0.6.0", path = "../crates/icarus-mcp" }
 
+# Icarus crates
+icarus-bridge = { workspace = true }
+icarus-dev = { workspace = true }
+
 # Security and credentials
 rand = { workspace = true }
 
@@ -83,6 +87,9 @@ rustc_version = "0.4"
 futures = { workspace = true }
 futures-util = { workspace = true }
 tokio-tungstenite = { workspace = true }
+
+# File system watching
+notify = { workspace = true }
 
 [dev-dependencies]
 tempfile = { workspace = true }

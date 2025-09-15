@@ -222,7 +222,10 @@ mod tests {
 
         let result = validate_tool_function(&func, true, true);
         assert!(!result.is_valid);
-        assert!(result.errors.iter().any(|e| e.contains("either #[query] or #[update], not both")));
+        assert!(result
+            .errors
+            .iter()
+            .any(|e| e.contains("either #[query] or #[update], not both")));
     }
 
     #[test]
@@ -235,7 +238,10 @@ mod tests {
 
         let result = validate_tool_function(&func, false, false);
         assert!(!result.is_valid);
-        assert!(result.errors.iter().any(|e| e.contains("must have either #[query] or #[update]")));
+        assert!(result
+            .errors
+            .iter()
+            .any(|e| e.contains("must have either #[query] or #[update]")));
     }
 
     #[test]
@@ -248,7 +254,10 @@ mod tests {
 
         let result = validate_tool_function(&func, false, true);
         assert!(!result.is_valid);
-        assert!(result.errors.iter().any(|e| e.contains("cannot contain references")));
+        assert!(result
+            .errors
+            .iter()
+            .any(|e| e.contains("cannot contain references")));
     }
 
     #[test]
@@ -262,7 +271,10 @@ mod tests {
         let result = validate_tool_function(&func, false, true);
         // Should have warnings about complex patterns
         assert!(!result.warnings.is_empty());
-        assert!(result.warnings.iter().any(|w| w.contains("simple identifiers")));
+        assert!(result
+            .warnings
+            .iter()
+            .any(|w| w.contains("simple identifiers")));
     }
 
     #[test]
@@ -276,7 +288,10 @@ mod tests {
         let result = validate_tool_function(&func, false, true);
         // Should have warning about return type
         assert!(!result.warnings.is_empty());
-        assert!(result.warnings.iter().any(|w| w.contains("should return Result")));
+        assert!(result
+            .warnings
+            .iter()
+            .any(|w| w.contains("should return Result")));
     }
 
     #[test]
@@ -403,6 +418,9 @@ mod tests {
 
         let result = validate_tool_function(&func, false, true);
         assert!(!result.is_valid);
-        assert!(result.errors.iter().any(|e| e.contains("cannot contain references")));
+        assert!(result
+            .errors
+            .iter()
+            .any(|e| e.contains("cannot contain references")));
     }
 }

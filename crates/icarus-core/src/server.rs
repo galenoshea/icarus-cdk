@@ -35,11 +35,14 @@ impl Version {
             return Err("Version must be in format 'major.minor.patch'".to_string());
         }
 
-        let major = parts[0].parse::<u8>()
+        let major = parts[0]
+            .parse::<u8>()
             .map_err(|_| "Major version must be a valid u8".to_string())?;
-        let minor = parts[1].parse::<u8>()
+        let minor = parts[1]
+            .parse::<u8>()
             .map_err(|_| "Minor version must be a valid u8".to_string())?;
-        let patch = parts[2].parse::<u8>()
+        let patch = parts[2]
+            .parse::<u8>()
             .map_err(|_| "Patch version must be a valid u8".to_string())?;
 
         Ok(Self::new(major, minor, patch))
@@ -277,7 +280,10 @@ mod tests {
     fn test_version_parse_edge_cases() {
         // Test valid edge cases
         assert_eq!(Version::parse("0.0.0").unwrap(), Version::new(0, 0, 0));
-        assert_eq!(Version::parse("255.255.255").unwrap(), Version::new(255, 255, 255));
+        assert_eq!(
+            Version::parse("255.255.255").unwrap(),
+            Version::new(255, 255, 255)
+        );
 
         // Test parsing with spaces (should fail)
         assert!(Version::parse(" 1.2.3").is_err());

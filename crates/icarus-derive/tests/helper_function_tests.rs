@@ -10,7 +10,7 @@ use icarus_derive::*;
 fn test_parse_size_string_variations() {
     // Test exact values from parse_size_string function
     assert_eq!(1024 * 1024, 1048576); // 1MB in bytes
-    assert_eq!(512 * 1024, 524288);   // 512KB in bytes
+    assert_eq!(512 * 1024, 524288); // 512KB in bytes
     assert_eq!(2 * 1024 * 1024, 2097152); // 2MB in bytes
 }
 
@@ -29,9 +29,13 @@ fn test_rust_type_mapping_logic() {
     }
 
     for int_type in integer_types {
-        assert!(int_type.contains("i32") || int_type.contains("i64") ||
-                int_type.contains("u32") || int_type.contains("u64") ||
-                int_type.contains("usize"));
+        assert!(
+            int_type.contains("i32")
+                || int_type.contains("i64")
+                || int_type.contains("u32")
+                || int_type.contains("u64")
+                || int_type.contains("usize")
+        );
     }
 
     for float_type in float_types {
@@ -85,10 +89,10 @@ fn test_type_detection_logic() {
 #[test]
 fn test_size_calculation_logic() {
     // Test the math behind different size calculations
-    assert_eq!(1024, 1024);                    // 1KB
-    assert_eq!(1024 * 1024, 1048576);         // 1MB
-    assert_eq!(512 * 1024, 524288);           // 512KB
-    assert_eq!(2 * 1024 * 1024, 2097152);     // 2MB
+    assert_eq!(1024, 1024); // 1KB
+    assert_eq!(1024 * 1024, 1048576); // 1MB
+    assert_eq!(512 * 1024, 524288); // 512KB
+    assert_eq!(2 * 1024 * 1024, 2097152); // 2MB
     assert_eq!(1024 * 1024 * 1024, 1073741824); // 1GB (for context)
 }
 
@@ -154,9 +158,18 @@ fn test_bound_configuration_logic() {
     }
 
     let configs = vec![
-        BoundConfig { unbounded: true, max_size_bytes: 0 },
-        BoundConfig { unbounded: false, max_size_bytes: 1024 * 1024 },
-        BoundConfig { unbounded: false, max_size_bytes: 2 * 1024 * 1024 },
+        BoundConfig {
+            unbounded: true,
+            max_size_bytes: 0,
+        },
+        BoundConfig {
+            unbounded: false,
+            max_size_bytes: 1024 * 1024,
+        },
+        BoundConfig {
+            unbounded: false,
+            max_size_bytes: 2 * 1024 * 1024,
+        },
     ];
 
     for config in configs {
@@ -224,7 +237,10 @@ fn test_code_generation_patterns() {
 fn test_validation_logic_patterns() {
     // Test validation logic patterns from validation module
     let validation_patterns = vec![
-        ("Tool functions must have either #[query] or #[update]", "query"),
+        (
+            "Tool functions must have either #[query] or #[update]",
+            "query",
+        ),
         ("Tool functions cannot have self parameters", "self"),
         ("Tool parameters cannot contain references", "references"),
         ("Query functions cannot be async", "async"),

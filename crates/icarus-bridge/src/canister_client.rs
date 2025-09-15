@@ -11,7 +11,7 @@ use serde_json::{json, Value as JsonValue};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
-use crate::bridge::param_mapper::ParamMapper;
+use crate::param_mapper::ParamMapper;
 
 /// A memory entry stored in the canister
 #[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
@@ -521,5 +521,128 @@ impl CanisterClient {
                 ))
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use candid::Principal;
+
+    fn create_test_principal() -> Principal {
+        Principal::from_text("rdmx6-jaaaa-aaaaa-aaadq-cai").unwrap()
+    }
+
+    fn create_mock_agent() -> Agent {
+        // Create a mock agent for testing (will fail on actual calls)
+        Agent::builder()
+            .with_url("http://localhost:8000")
+            .build()
+            .unwrap()
+    }
+
+    #[test]
+    fn test_new_with_agent() {
+        let principal = create_test_principal();
+        let agent = create_mock_agent();
+
+        let client = CanisterClient::new_with_agent(principal, agent);
+
+        assert_eq!(client.canister_id, principal);
+    }
+
+    #[test]
+    fn test_memory_entry_creation() {
+        let entry = MemoryEntry {
+            id: "test-id".to_string(),
+            content: "test content".to_string(),
+            created_at: 123456789,
+            tags: vec!["tag1".to_string(), "tag2".to_string()],
+        };
+
+        assert_eq!(entry.id, "test-id");
+        assert_eq!(entry.content, "test content");
+        assert_eq!(entry.created_at, 123456789);
+        assert_eq!(entry.tags.len(), 2);
+    }
+
+    #[test]
+    fn test_memory_entry_serialization() {
+        let entry = MemoryEntry {
+            id: "test".to_string(),
+            content: "content".to_string(),
+            created_at: 123,
+            tags: vec!["tag".to_string()],
+        };
+
+        // Test that it can be serialized to JSON
+        let json = serde_json::to_string(&entry).unwrap();
+        assert!(json.contains("test"));
+        assert!(json.contains("content"));
+
+        // Test that it can be deserialized back
+        let deserialized: MemoryEntry = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.id, entry.id);
+        assert_eq!(deserialized.content, entry.content);
+    }
+
+    #[test]
+    fn test_principal_parsing() {
+        // Test that we can parse valid canister IDs
+        let valid_principal = Principal::from_text("rdmx6-jaaaa-aaaaa-aaadq-cai");
+        assert!(valid_principal.is_ok());
+
+        let invalid_principal = Principal::from_text("invalid-principal");
+        assert!(invalid_principal.is_err());
+    }
+
+    #[test]
+    fn test_client_with_different_principals() {
+        let agent = create_mock_agent();
+        let principal1 = Principal::from_text("rdmx6-jaaaa-aaaaa-aaadq-cai").unwrap();
+        let principal2 = Principal::from_text("rrkah-fqaaa-aaaaa-aaaaq-cai").unwrap();
+
+        let client1 = CanisterClient::new_with_agent(principal1, agent.clone());
+        let client2 = CanisterClient::new_with_agent(principal2, agent);
+
+        assert_eq!(client1.canister_id, principal1);
+        assert_eq!(client2.canister_id, principal2);
+        assert_ne!(client1.canister_id, client2.canister_id);
+    }
+
+    #[test]
+    fn test_memory_entry_tag_handling() {
+        let entry_with_tags = MemoryEntry {
+            id: "1".to_string(),
+            content: "content".to_string(),
+            created_at: 123,
+            tags: vec!["tag1".to_string(), "tag2".to_string()],
+        };
+
+        let entry_without_tags = MemoryEntry {
+            id: "2".to_string(),
+            content: "content".to_string(),
+            created_at: 123,
+            tags: vec![],
+        };
+
+        assert_eq!(entry_with_tags.tags.len(), 2);
+        assert_eq!(entry_without_tags.tags.len(), 0);
+        assert!(entry_with_tags.tags.contains(&"tag1".to_string()));
+    }
+
+    #[tokio::test]
+    async fn test_client_creation_without_network() {
+        // Test that client creation works without actual network calls
+        let principal = create_test_principal();
+        let agent = create_mock_agent();
+        let client = CanisterClient::new_with_agent(principal, agent);
+
+        // Verify client properties
+        assert_eq!(client.canister_id, principal);
+
+        // Test that param_mapper is initialized
+        let mapper = client.param_mapper.read().await;
+        assert!(mapper.is_none()); // Should be None initially
     }
 }

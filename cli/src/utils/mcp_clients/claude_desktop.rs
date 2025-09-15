@@ -46,7 +46,8 @@ impl ClaudeDesktopClient {
 
     /// Find the Claude directory based on the platform
     pub fn find_claude_directory() -> Result<PathBuf> {
-        let home = dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
+        let home =
+            dirs::home_dir().ok_or_else(|| anyhow::anyhow!("Could not find home directory"))?;
 
         // Check common locations for Claude directory
         let possible_paths = vec![
@@ -210,7 +211,12 @@ impl McpClient for ClaudeDesktopClient {
         Self::generate_claude_server_config(name, canister_id)
     }
 
-    fn update_config(&self, config_path: &PathBuf, server_name: &str, server_config: Value) -> Result<()> {
+    fn update_config(
+        &self,
+        config_path: &PathBuf,
+        server_name: &str,
+        server_config: Value,
+    ) -> Result<()> {
         Self::update_claude_config(config_path, server_name, server_config)
     }
 
@@ -249,7 +255,10 @@ mod tests {
 
     #[test]
     fn test_generate_claude_server_config() {
-        let config = ClaudeDesktopClient::generate_claude_server_config("test-server", "rdmx6-jaaaa-aaaah-qcaiq-cai");
+        let config = ClaudeDesktopClient::generate_claude_server_config(
+            "test-server",
+            "rdmx6-jaaaa-aaaah-qcaiq-cai",
+        );
 
         // Verify structure
         assert!(config.is_object());
@@ -289,7 +298,8 @@ mod tests {
             }
         });
 
-        let result = ClaudeDesktopClient::update_claude_config(&config_path, "test-server", server_config);
+        let result =
+            ClaudeDesktopClient::update_claude_config(&config_path, "test-server", server_config);
         assert!(result.is_ok());
 
         // Verify file was created and has correct content
@@ -315,7 +325,13 @@ mod tests {
                 }
             }
         });
-        temp_file.write_all(serde_json::to_string_pretty(&initial_config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(
+                serde_json::to_string_pretty(&initial_config)
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();
@@ -328,7 +344,8 @@ mod tests {
             }
         });
 
-        let result = ClaudeDesktopClient::update_claude_config(&config_path, "new-server", server_config);
+        let result =
+            ClaudeDesktopClient::update_claude_config(&config_path, "new-server", server_config);
         assert!(result.is_ok());
 
         // Verify both servers exist
@@ -351,7 +368,13 @@ mod tests {
                 "server2": {"command": "cmd2"}
             }
         });
-        temp_file.write_all(serde_json::to_string_pretty(&initial_config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(
+                serde_json::to_string_pretty(&initial_config)
+                    .unwrap()
+                    .as_bytes(),
+            )
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();
@@ -379,7 +402,9 @@ mod tests {
                 "server3": {"command": "cmd3"}
             }
         });
-        temp_file.write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes())
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();
@@ -398,7 +423,9 @@ mod tests {
         let config = serde_json::json!({
             "mcpServers": {}
         });
-        temp_file.write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes())
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();
@@ -416,7 +443,9 @@ mod tests {
                 "server1": {"command": "cmd1"}
             }
         });
-        temp_file.write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes())
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();
@@ -432,7 +461,9 @@ mod tests {
         let config = serde_json::json!({
             "otherField": "value"
         });
-        temp_file.write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes()).unwrap();
+        temp_file
+            .write_all(serde_json::to_string_pretty(&config).unwrap().as_bytes())
+            .unwrap();
         temp_file.flush().unwrap();
 
         let config_path = temp_file.path().to_path_buf();

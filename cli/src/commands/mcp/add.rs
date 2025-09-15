@@ -6,8 +6,7 @@ use std::collections::HashMap;
 
 use crate::utils::{
     mcp_clients::{ClientRegistry, ClientType, McpClient},
-    print_info, print_warning,
-    ui,
+    print_info, print_warning, ui,
 };
 
 /// Add MCP server to AI client configurations
@@ -84,7 +83,10 @@ pub async fn execute(
     } else {
         // Interactive client selection with beautiful UI
         let selections = ui::select_clients_interactive_beautiful(&installed_clients)?;
-        selections.into_iter().map(|i| installed_clients[i]).collect()
+        selections
+            .into_iter()
+            .map(|i| installed_clients[i])
+            .collect()
     };
 
     if clients_to_configure.is_empty() {
@@ -116,7 +118,8 @@ pub async fn execute(
             }
         };
 
-        println!("    {} {} {}",
+        println!(
+            "    {} {} {}",
             client_info.client_type.emoji(),
             client_info.client_type.display_name().bold(),
             format!("({})", preview_config_path).dimmed()
@@ -126,7 +129,8 @@ pub async fn execute(
         if let Some(command_obj) = server_config.get("command") {
             if let Some(command_arr) = command_obj.as_array() {
                 if let Some(first_cmd) = command_arr.first() {
-                    println!("      └── Command: {}",
+                    println!(
+                        "      └── Command: {}",
                         first_cmd.as_str().unwrap_or("").dimmed()
                     );
                 }
@@ -147,7 +151,8 @@ pub async fn execute(
 
     // Configure each selected client with progress tracking
     let mut results = HashMap::new();
-    let progress = ui::create_progress_bar(clients_to_configure.len() as u64, "Configuring clients");
+    let progress =
+        ui::create_progress_bar(clients_to_configure.len() as u64, "Configuring clients");
 
     for (i, client_info) in clients_to_configure.iter().enumerate() {
         let client = registry
@@ -165,8 +170,9 @@ pub async fn execute(
             &project_name,
             &canister_id,
             client_info,
-            config_path.as_ref()
-        ).await;
+            config_path.as_ref(),
+        )
+        .await;
         results.insert(client_info.client_type.clone(), result);
 
         progress.set_position(i as u64 + 1);
@@ -233,7 +239,6 @@ pub async fn execute(
     Ok(())
 }
 
-
 async fn configure_client(
     client: &dyn McpClient,
     project_name: &str,
@@ -254,10 +259,7 @@ async fn configure_client(
         }
     };
 
-    print_info(&format!(
-        "Using config path: {}",
-        config_path.display()
-    ));
+    print_info(&format!("Using config path: {}", config_path.display()));
 
     // Generate server configuration
     let server_config = client.generate_server_config(project_name, canister_id);

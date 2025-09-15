@@ -88,4 +88,3 @@ async fn start_daemon_mode(canister_id: candid::Principal) -> Result<()> {
 
     start_foreground_mode(canister_id).await
 }
-

@@ -12,7 +12,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput};
+use syn::{parse_macro_input, DeriveInput, parse2, Lit, Meta};
 
 mod server;
 mod tools;
@@ -455,8 +455,14 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input_fn = parse_macro_input!(item as syn::ItemFn);
 
     // Check for query/update attributes
-    let has_query = input_fn.attrs.iter().any(|attr| attr.path().is_ident("query"));
-    let has_update = input_fn.attrs.iter().any(|attr| attr.path().is_ident("update"));
+    let has_query = input_fn
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("query"));
+    let has_update = input_fn
+        .attrs
+        .iter()
+        .any(|attr| attr.path().is_ident("update"));
 
     // Validate the function signature
     let validation_result = validation::validate_tool_function(&input_fn, has_query, has_update);
@@ -470,18 +476,44 @@ pub fn icarus_tool(attr: TokenStream, item: TokenStream) -> TokenStream {
             .into();
     }
 
-    // Parse the description from the attribute
-    let description = if attr.is_empty() {
-        format!("{} tool", input_fn.sig.ident)
+    // Parse rich metadata from the attribute
+    let metadata = if attr.is_empty() {
+        ToolMetadata {
+            description: format!("{} tool", input_fn.sig.ident),
+            title: None,
+            examples: vec![],
+            errors: vec![],
+        }
     } else {
-        // TODO: Parse structured attributes properly
-        // For now, assume simple string description
-        format!("{} tool", input_fn.sig.ident)
+        let mut parsed = parse_tool_metadata(TokenStream2::from(attr));
+        if parsed.description.is_empty() {
+            parsed.description = format!("{} tool", input_fn.sig.ident);
+        }
+        parsed
     };
 
-    // Generate the function with metadata preservation
+    // Generate documentation from metadata
+    let mut doc_parts = vec![metadata.description.clone()];
+
+    if !metadata.examples.is_empty() {
+        doc_parts.push("\n\nExamples:".to_string());
+        for example in &metadata.examples {
+            doc_parts.push(format!("- {}", example));
+        }
+    }
+
+    if !metadata.errors.is_empty() {
+        doc_parts.push("\n\nErrors:".to_string());
+        for error in &metadata.errors {
+            doc_parts.push(format!("- {}", error));
+        }
+    }
+
+    let doc_string = doc_parts.join("\n");
+
+    // Generate the function with enhanced metadata preservation
     let expanded = quote! {
-        #[doc = #description]
+        #[doc = #doc_string]
         #[allow(dead_code)]
         #input_fn
     };
@@ -608,6 +640,71 @@ fn parse_size_string(size: &str) -> u32 {
     }
 }
 
+/// Metadata extracted from icarus_tool attribute
+#[derive(Debug, Default)]
+pub(crate) struct ToolMetadata {
+    pub description: String,
+    pub title: Option<String>,
+    pub examples: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+/// Parse tool metadata from icarus_tool attribute
+/// Supports both simple string and structured attribute formats:
+/// #[icarus_tool("Simple description")]
+/// #[icarus_tool(description = "Description", title = "Title", examples = ["example1"])]
+pub(crate) fn parse_tool_metadata(attr: TokenStream2) -> ToolMetadata {
+    let mut metadata = ToolMetadata::default();
+
+    // Try to parse as a simple string literal first
+    if let Ok(lit) = parse2::<Lit>(attr.clone()) {
+        if let Lit::Str(lit_str) = lit {
+            metadata.description = lit_str.value();
+            return metadata;
+        }
+    }
+
+    // Try to parse as structured meta attributes
+    if let Ok(meta) = parse2::<Meta>(attr) {
+        match meta {
+            Meta::NameValue(nv) if nv.path.is_ident("description") => {
+                if let syn::Expr::Lit(expr_lit) = &nv.value {
+                    if let Lit::Str(lit_str) = &expr_lit.lit {
+                        metadata.description = lit_str.value();
+                    }
+                }
+            }
+            Meta::List(list) => {
+                // Parse nested meta items like description = "...", title = "...", examples = [...]
+                parse_metadata_list(&mut metadata, list);
+            }
+            _ => {}
+        }
+    }
+
+    metadata
+}
+
+
+/// Parse structured metadata from a meta list
+fn parse_metadata_list(metadata: &mut ToolMetadata, list: syn::MetaList) {
+    // Parse the contents using parse_nested_meta which is the correct approach for proc macros
+    let _ = list.parse_nested_meta(|meta| {
+        if meta.path.is_ident("description") {
+            let lit: syn::LitStr = meta.value()?.parse()?;
+            metadata.description = lit.value();
+        } else if meta.path.is_ident("title") {
+            let lit: syn::LitStr = meta.value()?.parse()?;
+            metadata.title = Some(lit.value());
+        } else {
+            // For now, skip complex attributes like arrays (examples, errors)
+            // These can be added later when needed
+            let _ = meta.value()?; // consume the value to avoid parse errors
+        }
+        Ok(())
+    });
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -695,8 +792,6 @@ mod tests {
 
     // Note: Tests for derive_icarus_tool_impl cannot be run in unit tests
     // because they require the proc_macro::TokenStream context
-
-
 
     #[test]
     fn test_parse_size_string_edge_cases() {

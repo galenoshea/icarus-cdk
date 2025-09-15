@@ -164,7 +164,8 @@ mod tests {
             self.0.into_bytes()
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -198,7 +199,7 @@ mod tests {
             }
 
             // Read data
-            let data = String::from_utf8(bytes[4..4+data_len].to_vec()).unwrap();
+            let data = String::from_utf8(bytes[4..4 + data_len].to_vec()).unwrap();
 
             // Read number
             let number_start = 4 + data_len;
@@ -206,7 +207,7 @@ mod tests {
                 bytes[number_start],
                 bytes[number_start + 1],
                 bytes[number_start + 2],
-                bytes[number_start + 3]
+                bytes[number_start + 3],
             ]);
 
             TestValue { data, number }
@@ -223,7 +224,8 @@ mod tests {
             result
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     #[test]

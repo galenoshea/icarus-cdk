@@ -208,6 +208,11 @@ impl IcarusTool for BuiltTool {
             input_schema: schema,
             title: None,
             icons: None,
+            category: None,
+            tags: Vec::new(),
+            complexity: None,
+            usage_count: 0,
+            avg_execution_time: None,
         }
     }
 
@@ -715,7 +720,12 @@ mod tests {
             .description("Testing fluent interface")
             .parameter("param1", "string", "First param", true)
             .parameter_with_default("param2", "integer", "Second param", json!(42))
-            .enum_parameter("param3", "Third param", vec!["a".to_string(), "b".to_string()], false);
+            .enum_parameter(
+                "param3",
+                "Third param",
+                vec!["a".to_string(), "b".to_string()],
+                false,
+            );
 
         // Should be able to add handler and build
         let tool = builder
@@ -748,8 +758,14 @@ mod tests {
             .description("Tool that fails")
             .parameter("should_fail", "boolean", "Whether to fail", false)
             .handler(|args| async move {
-                if args.get("should_fail").and_then(|v| v.as_bool()).unwrap_or(false) {
-                    Err(IcarusError::Tool(crate::error::ToolError::operation_failed("Test failure")))
+                if args
+                    .get("should_fail")
+                    .and_then(|v| v.as_bool())
+                    .unwrap_or(false)
+                {
+                    Err(IcarusError::Tool(
+                        crate::error::ToolError::operation_failed("Test failure"),
+                    ))
                 } else {
                     Ok(json!({"success": true}))
                 }
@@ -782,7 +798,10 @@ mod tests {
         assert_eq!(spec.description, "Test parameter");
         assert!(spec.required);
         assert_eq!(spec.default, Some(json!("default_value")));
-        assert_eq!(spec.enum_values, Some(vec!["a".to_string(), "b".to_string()]));
+        assert_eq!(
+            spec.enum_values,
+            Some(vec!["a".to_string(), "b".to_string()])
+        );
     }
 
     #[test]
@@ -790,7 +809,10 @@ mod tests {
         let server = ServerBuilder::new("Test Server")
             .version("2.0.0")
             .description("A test server")
-            .metadata("custom_field", JsonValue::String("custom_value".to_string()))
+            .metadata(
+                "custom_field",
+                JsonValue::String("custom_value".to_string()),
+            )
             .build();
 
         assert_eq!(server.name, "Test Server");
@@ -851,9 +873,7 @@ mod tests {
 
         let tools: Vec<Box<dyn IcarusTool>> = vec![Box::new(tool1), Box::new(tool2)];
 
-        let server = ServerBuilder::new("Batch Server")
-            .add_tools(tools)
-            .build();
+        let server = ServerBuilder::new("Batch Server").add_tools(tools).build();
 
         assert_eq!(server.tools.len(), 2);
     }
@@ -888,9 +908,7 @@ mod tests {
             .build()
             .unwrap();
 
-        let server = ServerBuilder::new("Access Server")
-            .add_tool(tool)
-            .build();
+        let server = ServerBuilder::new("Access Server").add_tool(tool).build();
 
         let tools = server.tools();
         assert_eq!(tools.len(), 1);
@@ -964,7 +982,10 @@ mod tests {
         assert_eq!(storage.maps[0].key_type, std::any::type_name::<String>());
         assert_eq!(storage.maps[0].value_type, std::any::type_name::<u64>());
         assert_eq!(storage.maps[1].key_type, std::any::type_name::<u64>());
-        assert_eq!(storage.maps[1].value_type, std::any::type_name::<Vec<String>>());
+        assert_eq!(
+            storage.maps[1].value_type,
+            std::any::type_name::<Vec<String>>()
+        );
         assert_eq!(storage.cells[0].value_type, std::any::type_name::<bool>());
     }
 

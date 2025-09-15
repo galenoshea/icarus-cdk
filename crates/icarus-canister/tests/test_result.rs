@@ -1,7 +1,7 @@
 //! Tests for result types and error handling
 
-use icarus_canister::result::{IcarusError, IcarusResult, TrapExt};
 use candid::{decode_one, encode_one};
+use icarus_canister::result::{IcarusError, IcarusResult, TrapExt};
 
 /// Test IcarusError creation and formatting
 #[test]
@@ -15,7 +15,10 @@ fn test_icarus_error_creation() {
 
     // Test validation error
     let validation_error = IcarusError::validation("username", "must be at least 3 characters");
-    assert!(matches!(validation_error, IcarusError::ValidationError { .. }));
+    assert!(matches!(
+        validation_error,
+        IcarusError::ValidationError { .. }
+    ));
     if let IcarusError::ValidationError { field, message } = validation_error {
         assert_eq!(field, "username");
         assert_eq!(message, "must be at least 3 characters");
@@ -55,19 +58,31 @@ fn test_icarus_error_display() {
         field: "email".to_string(),
         message: "invalid format".to_string(),
     };
-    assert_eq!(format!("{}", validation_error), "Validation error on 'email': invalid format");
+    assert_eq!(
+        format!("{}", validation_error),
+        "Validation error on 'email': invalid format"
+    );
 
     // Test not found display
     let not_found_error = IcarusError::NotFound("Resource not found".to_string());
-    assert_eq!(format!("{}", not_found_error), "Not found: Resource not found");
+    assert_eq!(
+        format!("{}", not_found_error),
+        "Not found: Resource not found"
+    );
 
     // Test already exists display
     let exists_error = IcarusError::AlreadyExists("User already exists".to_string());
-    assert_eq!(format!("{}", exists_error), "Already exists: User already exists");
+    assert_eq!(
+        format!("{}", exists_error),
+        "Already exists: User already exists"
+    );
 
     // Test storage error display
     let storage_error = IcarusError::StorageError("Connection timeout".to_string());
-    assert_eq!(format!("{}", storage_error), "Storage error: Connection timeout");
+    assert_eq!(
+        format!("{}", storage_error),
+        "Storage error: Connection timeout"
+    );
 
     // Test other error display
     let other_error = IcarusError::Other("Custom error message".to_string());
@@ -153,11 +168,19 @@ fn test_icarus_error_candid_serialization() {
         // Verify the decoded error matches the original
         match (&error, &decoded) {
             (IcarusError::Unauthorized(a), IcarusError::Unauthorized(b)) => assert_eq!(a, b),
-            (IcarusError::ValidationError { field: f1, message: m1 },
-             IcarusError::ValidationError { field: f2, message: m2 }) => {
+            (
+                IcarusError::ValidationError {
+                    field: f1,
+                    message: m1,
+                },
+                IcarusError::ValidationError {
+                    field: f2,
+                    message: m2,
+                },
+            ) => {
                 assert_eq!(f1, f2);
                 assert_eq!(m1, m2);
-            },
+            }
             (IcarusError::NotFound(a), IcarusError::NotFound(b)) => assert_eq!(a, b),
             (IcarusError::AlreadyExists(a), IcarusError::AlreadyExists(b)) => assert_eq!(a, b),
             (IcarusError::StorageError(a), IcarusError::StorageError(b)) => assert_eq!(a, b),
@@ -182,7 +205,8 @@ fn test_icarus_error_json_serialization() {
     assert!(json.contains("too short"));
 
     // Test JSON deserialization
-    let deserialized: IcarusError = serde_json::from_str(&json).expect("Should deserialize from JSON");
+    let deserialized: IcarusError =
+        serde_json::from_str(&json).expect("Should deserialize from JSON");
     if let IcarusError::ValidationError { field, message } = deserialized {
         assert_eq!(field, "username");
         assert_eq!(message, "too short");
@@ -264,7 +288,10 @@ fn test_error_conversion_scenarios() {
     let field_name = "email";
     let validation_msg = format!("Invalid {} format", field_name);
     let validation_error = IcarusError::validation(field_name, validation_msg);
-    assert_eq!(format!("{}", validation_error), "Validation error on 'email': Invalid email format");
+    assert_eq!(
+        format!("{}", validation_error),
+        "Validation error on 'email': Invalid email format"
+    );
 }
 
 /// Test error message formatting edge cases
@@ -326,15 +353,15 @@ fn test_complex_validation_scenarios() {
                 0 => {
                     assert_eq!(field, "username");
                     assert!(message.contains("3 characters"));
-                },
+                }
                 1 => {
                     assert_eq!(field, "password");
                     assert!(message.contains("uppercase"));
-                },
+                }
                 2 => {
                     assert_eq!(field, "email");
                     assert!(message.contains("email format"));
-                },
+                }
                 _ => panic!("Unexpected error"),
             }
         } else {

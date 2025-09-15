@@ -1,0 +1,35 @@
+[package]
+name = "icarus-bridge"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+license-file.workspace = true
+repository.workspace = true
+documentation = "https://docs.rs/icarus-bridge"
+homepage.workspace = true
+description = "MCP-to-ICP bridge for the Icarus SDK - Enables Model Context Protocol servers on Internet Computer canisters"
+keywords = ["icp", "internet-computer", "mcp", "bridge", "canister"]
+categories = ["development-tools", "web-programming", "wasm"]
+
+[dependencies]
+# Core dependencies
+anyhow.workspace = true
+candid.workspace = true
+serde = { workspace = true, features = ["derive"] }
+serde_json.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tracing.workspace = true
+
+# ICP dependencies
+ic-agent.workspace = true
+
+# MCP dependencies
+rmcp.workspace = true
+
+# Utility dependencies
+futures-util.workspace = true
+which.workspace = true
+is-terminal.workspace = true
+
+[dev-dependencies]
+tokio-test = "0.4"

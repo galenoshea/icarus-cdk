@@ -237,8 +237,8 @@ mod tests {
     fn test_icarus_error_variants_coverage() {
         // Test all IcarusError variants
         let tool_error = ToolError::invalid_input("test");
-        let json_error = serde_json::from_str::<serde_json::Value>(r#"{"invalid": json"#)
-            .unwrap_err();
+        let json_error =
+            serde_json::from_str::<serde_json::Value>(r#"{"invalid": json"#).unwrap_err();
 
         let errors = vec![
             IcarusError::Mcp("mcp error".to_string()),

@@ -191,21 +191,30 @@ async fn test_typed_simple() {
     // Test string
     let string_key = "string_key";
     let string_value = "Hello, World!".to_string();
-    state.set_typed(string_key.to_string(), &string_value).await.unwrap();
+    state
+        .set_typed(string_key.to_string(), &string_value)
+        .await
+        .unwrap();
     let retrieved_string: String = state.get_typed(string_key).await.unwrap().unwrap();
     assert_eq!(retrieved_string, string_value);
 
     // Test number
     let number_key = "number_key";
     let number_value = 12345u64;
-    state.set_typed(number_key.to_string(), &number_value).await.unwrap();
+    state
+        .set_typed(number_key.to_string(), &number_value)
+        .await
+        .unwrap();
     let retrieved_number: u64 = state.get_typed(number_key).await.unwrap().unwrap();
     assert_eq!(retrieved_number, number_value);
 
     // Test boolean
     let bool_key = "bool_key";
     let bool_value = true;
-    state.set_typed(bool_key.to_string(), &bool_value).await.unwrap();
+    state
+        .set_typed(bool_key.to_string(), &bool_value)
+        .await
+        .unwrap();
     let retrieved_bool: bool = state.get_typed(bool_key).await.unwrap().unwrap();
     assert_eq!(retrieved_bool, bool_value);
 }
@@ -240,7 +249,10 @@ async fn test_typed_collections() {
     // Test Vec
     let vec_key = "vector_data";
     let vec_data = vec![1, 2, 3, 4, 5];
-    state.set_typed(vec_key.to_string(), &vec_data).await.unwrap();
+    state
+        .set_typed(vec_key.to_string(), &vec_data)
+        .await
+        .unwrap();
     let retrieved_vec: Vec<i32> = state.get_typed(vec_key).await.unwrap().unwrap();
     assert_eq!(retrieved_vec, vec_data);
 
@@ -249,8 +261,12 @@ async fn test_typed_collections() {
     let mut map_data = std::collections::HashMap::new();
     map_data.insert("key1".to_string(), 100);
     map_data.insert("key2".to_string(), 200);
-    state.set_typed(map_key.to_string(), &map_data).await.unwrap();
-    let retrieved_map: std::collections::HashMap<String, i32> = state.get_typed(map_key).await.unwrap().unwrap();
+    state
+        .set_typed(map_key.to_string(), &map_data)
+        .await
+        .unwrap();
+    let retrieved_map: std::collections::HashMap<String, i32> =
+        state.get_typed(map_key).await.unwrap().unwrap();
     assert_eq!(retrieved_map, map_data);
 }
 
@@ -262,14 +278,20 @@ async fn test_typed_options() {
     // Test Some value
     let some_key = "some_value";
     let some_data: Option<String> = Some("exists".to_string());
-    state.set_typed(some_key.to_string(), &some_data).await.unwrap();
+    state
+        .set_typed(some_key.to_string(), &some_data)
+        .await
+        .unwrap();
     let retrieved_some: Option<String> = state.get_typed(some_key).await.unwrap().unwrap();
     assert_eq!(retrieved_some, some_data);
 
     // Test None value
     let none_key = "none_value";
     let none_data: Option<String> = None;
-    state.set_typed(none_key.to_string(), &none_data).await.unwrap();
+    state
+        .set_typed(none_key.to_string(), &none_data)
+        .await
+        .unwrap();
     let retrieved_none: Option<String> = state.get_typed(none_key).await.unwrap().unwrap();
     assert_eq!(retrieved_none, none_data);
 }
@@ -306,13 +328,19 @@ async fn test_edge_cases() {
     // Test empty key
     let empty_key = "";
     let value = b"value_for_empty_key".to_vec();
-    state.set(empty_key.to_string(), value.clone()).await.unwrap();
+    state
+        .set(empty_key.to_string(), value.clone())
+        .await
+        .unwrap();
     assert_eq!(state.get(empty_key).await.unwrap(), Some(value));
 
     // Test empty value
     let key = "empty_value_key";
     let empty_value = Vec::new();
-    state.set(key.to_string(), empty_value.clone()).await.unwrap();
+    state
+        .set(key.to_string(), empty_value.clone())
+        .await
+        .unwrap();
     assert_eq!(state.get(key).await.unwrap(), Some(empty_value));
 
     // Test very long key
@@ -324,7 +352,10 @@ async fn test_edge_cases() {
     // Test very large value
     let key = "large_value_key";
     let large_value = vec![0u8; 10000]; // 10KB of zeros
-    state.set(key.to_string(), large_value.clone()).await.unwrap();
+    state
+        .set(key.to_string(), large_value.clone())
+        .await
+        .unwrap();
     assert_eq!(state.get(key).await.unwrap(), Some(large_value));
 }
 
@@ -392,8 +423,14 @@ async fn test_typed_nested() {
     }
 
     let mut metadata = std::collections::HashMap::new();
-    metadata.insert("permissions".to_string(), vec!["read".to_string(), "write".to_string()]);
-    metadata.insert("groups".to_string(), vec!["admin".to_string(), "user".to_string()]);
+    metadata.insert(
+        "permissions".to_string(),
+        vec!["read".to_string(), "write".to_string()],
+    );
+    metadata.insert(
+        "groups".to_string(),
+        vec!["admin".to_string(), "user".to_string()],
+    );
 
     let nested_data = NestedData {
         user: TestData {
@@ -411,7 +448,10 @@ async fn test_typed_nested() {
     };
 
     let key = "nested_data";
-    state.set_typed(key.to_string(), &nested_data).await.unwrap();
+    state
+        .set_typed(key.to_string(), &nested_data)
+        .await
+        .unwrap();
 
     let retrieved: NestedData = state.get_typed(key).await.unwrap().unwrap();
     assert_eq!(retrieved, nested_data);
@@ -426,7 +466,10 @@ async fn test_trait_implementation() {
     let _: &dyn IcarusPersistentState = &state;
 
     // Test all IcarusPersistentState methods are accessible
-    state.set("test".to_string(), b"data".to_vec()).await.unwrap();
+    state
+        .set("test".to_string(), b"data".to_vec())
+        .await
+        .unwrap();
     let _data = state.get("test").await.unwrap();
     state.delete("test").await.unwrap();
     let _keys = state.list_keys().await.unwrap();

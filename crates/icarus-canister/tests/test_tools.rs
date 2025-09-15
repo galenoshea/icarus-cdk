@@ -14,28 +14,29 @@ fn create_test_tool(result: Result<Value, ToolError>) -> ToolFunction {
 
 /// Create an echo tool that returns the input
 fn create_echo_tool() -> ToolFunction {
-    Box::new(move |args: Value| {
-        Box::pin(async move { Ok(args) })
-    })
+    Box::new(move |args: Value| Box::pin(async move { Ok(args) }))
 }
 
 /// Create a calculator tool for more complex testing
 fn create_calculator_tool() -> ToolFunction {
     Box::new(move |args: Value| {
         Box::pin(async move {
-            let obj = args.as_object().ok_or_else(|| {
-                ToolError::invalid_input("args must be an object")
-            })?;
+            let obj = args
+                .as_object()
+                .ok_or_else(|| ToolError::invalid_input("args must be an object"))?;
 
-            let a = obj.get("a")
+            let a = obj
+                .get("a")
                 .and_then(|v| v.as_f64())
                 .ok_or_else(|| ToolError::invalid_input("'a' must be a number"))?;
 
-            let b = obj.get("b")
+            let b = obj
+                .get("b")
                 .and_then(|v| v.as_f64())
                 .ok_or_else(|| ToolError::invalid_input("'b' must be a number"))?;
 
-            let operation = obj.get("operation")
+            let operation = obj
+                .get("operation")
                 .and_then(|v| v.as_str())
                 .ok_or_else(|| ToolError::invalid_input("'operation' must be a string"))?;
 
@@ -48,7 +49,7 @@ fn create_calculator_tool() -> ToolFunction {
                         return Err(ToolError::invalid_input("Cannot divide by zero"));
                     }
                     a / b
-                },
+                }
                 _ => return Err(ToolError::invalid_input("Unknown operation")),
             };
 
@@ -163,7 +164,9 @@ async fn test_tool_execution_not_found() {
     let result = registry.execute("nonexistent_tool", json!({})).await;
     assert!(result.is_err());
     let error = result.unwrap_err();
-    assert!(error.to_string().contains("Tool 'nonexistent_tool' not found"));
+    assert!(error
+        .to_string()
+        .contains("Tool 'nonexistent_tool' not found"));
 }
 
 /// Test echo tool functionality

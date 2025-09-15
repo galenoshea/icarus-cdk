@@ -810,7 +810,12 @@ mod tests {
         // Test that all public types can be constructed and have expected traits
 
         // AuthRole coverage
-        let roles = [AuthRole::Owner, AuthRole::Admin, AuthRole::User, AuthRole::ReadOnly];
+        let roles = [
+            AuthRole::Owner,
+            AuthRole::Admin,
+            AuthRole::User,
+            AuthRole::ReadOnly,
+        ];
         for role in &roles {
             let cloned = role.clone();
             let _debug = format!("{:?}", role);

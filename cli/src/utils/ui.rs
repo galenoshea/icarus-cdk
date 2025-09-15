@@ -56,9 +56,7 @@ pub fn display_section(title: &str) {
 }
 
 /// Create interactive client selection with rich UI
-pub fn select_clients_interactive_beautiful(
-    client_infos: &[&ClientInfo],
-) -> Result<Vec<usize>> {
+pub fn select_clients_interactive_beautiful(client_infos: &[&ClientInfo]) -> Result<Vec<usize>> {
     if client_infos.is_empty() {
         println!("{} No AI clients detected on this system.", "⚠️".yellow());
         return Ok(vec![]);
@@ -124,17 +122,17 @@ pub fn select_clients_interactive_beautiful(
         }
     } else {
         println!("Select AI clients to configure:");
-        println!("{}", "Use Space to select, Enter to confirm, A for all".dimmed());
+        println!(
+            "{}",
+            "Use Space to select, Enter to confirm, A for all".dimmed()
+        );
         println!();
 
-        let selections = MultiSelect::with_theme(&theme)
-            .items(&options)
-            .interact()?;
+        let selections = MultiSelect::with_theme(&theme).items(&options).interact()?;
 
         Ok(selections)
     }
 }
-
 
 /// Display a beautiful confirmation dialog
 pub fn confirm_beautiful(message: &str) -> Result<bool> {
@@ -147,7 +145,6 @@ pub fn confirm_beautiful(message: &str) -> Result<bool> {
         .interact()
         .map_err(Into::into)
 }
-
 
 /// Display success message with animation
 pub fn display_success_animated(message: &str) {
@@ -177,7 +174,6 @@ pub fn display_warning_styled(message: &str) {
 pub fn display_info_styled(message: &str) {
     println!("{} {}", "ℹ️".blue(), message);
 }
-
 
 /// Display a progress bar for batch operations
 pub fn create_progress_bar(len: u64, message: &str) -> ProgressBar {
@@ -214,7 +210,11 @@ pub fn display_config_tree(client_infos: &[(ClientType, bool, Vec<String>)]) {
         for (j, server) in servers.iter().enumerate() {
             let is_last_server = j == servers.len() - 1;
             let prefix = if is_last { "    " } else { "│   " };
-            let server_char = if is_last_server { "└── " } else { "├── " };
+            let server_char = if is_last_server {
+                "└── "
+            } else {
+                "├── "
+            };
 
             println!(
                 "{}{}{} {}",
@@ -239,5 +239,4 @@ pub fn display_config_tree(client_infos: &[(ClientType, bool, Vec<String>)]) {
 }
 
 #[cfg(test)]
-mod tests {
-}
+mod tests {}

@@ -7,9 +7,9 @@ use anyhow::Result;
 use serde_json::Value;
 use std::path::PathBuf;
 
-pub mod claude_desktop;
 pub mod chatgpt_desktop;
 pub mod claude_code;
+pub mod claude_desktop;
 pub mod client_detector;
 
 /// Represents an AI client that can be configured with MCP servers
@@ -39,7 +39,6 @@ impl ClientType {
         }
     }
 
-
     /// Get all available client types
     pub fn all() -> Vec<ClientType> {
         vec![
@@ -63,7 +62,6 @@ pub trait McpClient {
     /// Get the client type
     fn client_type(&self) -> ClientType;
 
-
     /// Detect if this client is installed on the system
     fn detect_installation(&self) -> Result<ClientInfo>;
 
@@ -74,7 +72,12 @@ pub trait McpClient {
     fn generate_server_config(&self, name: &str, canister_id: &str) -> Value;
 
     /// Update the client configuration with new MCP server
-    fn update_config(&self, config_path: &PathBuf, server_name: &str, server_config: Value) -> Result<()>;
+    fn update_config(
+        &self,
+        config_path: &PathBuf,
+        server_name: &str,
+        server_config: Value,
+    ) -> Result<()>;
 
     /// Remove an MCP server from the client configuration
     fn remove_config(&self, config_path: &PathBuf, server_name: &str) -> Result<()>;
@@ -103,14 +106,12 @@ impl ClientRegistry {
         }
     }
 
-
     /// Get a specific client by type
     pub fn get_client(&self, client_type: ClientType) -> Option<&Box<dyn McpClient>> {
         self.clients
             .iter()
             .find(|client| client.client_type() == client_type)
     }
-
 
     /// Get all available clients (installed or not)
     pub fn get_all_client_info(&self) -> Vec<ClientInfo> {
@@ -166,15 +167,24 @@ mod tests {
 
         let claude_client = registry.get_client(ClientType::ClaudeDesktop);
         assert!(claude_client.is_some());
-        assert_eq!(claude_client.unwrap().client_type(), ClientType::ClaudeDesktop);
+        assert_eq!(
+            claude_client.unwrap().client_type(),
+            ClientType::ClaudeDesktop
+        );
 
         let chatgpt_client = registry.get_client(ClientType::ChatGptDesktop);
         assert!(chatgpt_client.is_some());
-        assert_eq!(chatgpt_client.unwrap().client_type(), ClientType::ChatGptDesktop);
+        assert_eq!(
+            chatgpt_client.unwrap().client_type(),
+            ClientType::ChatGptDesktop
+        );
 
         let claude_code_client = registry.get_client(ClientType::ClaudeCode);
         assert!(claude_code_client.is_some());
-        assert_eq!(claude_code_client.unwrap().client_type(), ClientType::ClaudeCode);
+        assert_eq!(
+            claude_code_client.unwrap().client_type(),
+            ClientType::ClaudeCode
+        );
     }
 
     #[test]
@@ -186,7 +196,10 @@ mod tests {
         assert_eq!(all_info.len(), 3);
 
         // Verify we have all client types
-        let client_types: Vec<ClientType> = all_info.iter().map(|info| info.client_type.clone()).collect();
+        let client_types: Vec<ClientType> = all_info
+            .iter()
+            .map(|info| info.client_type.clone())
+            .collect();
         assert!(client_types.contains(&ClientType::ClaudeDesktop));
         assert!(client_types.contains(&ClientType::ChatGptDesktop));
         assert!(client_types.contains(&ClientType::ClaudeCode));

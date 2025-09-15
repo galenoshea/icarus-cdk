@@ -171,7 +171,8 @@ mod tests {
             self.0.into_bytes()
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -194,13 +195,13 @@ mod tests {
         fn from_bytes(bytes: Cow<[u8]>) -> Self {
             let bytes = bytes.as_ref();
             let data_len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-            let data = String::from_utf8(bytes[4..4+data_len].to_vec()).unwrap();
+            let data = String::from_utf8(bytes[4..4 + data_len].to_vec()).unwrap();
             let number_start = 4 + data_len;
             let number = u32::from_le_bytes([
                 bytes[number_start],
                 bytes[number_start + 1],
                 bytes[number_start + 2],
-                bytes[number_start + 3]
+                bytes[number_start + 3],
             ]);
             TestValue { data, number }
         }
@@ -215,7 +216,8 @@ mod tests {
             result
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     #[derive(Debug, Clone, PartialEq, Default)]
@@ -244,13 +246,13 @@ mod tests {
             if bytes.len() < 4 + value_len + 4 {
                 return TestCellValue::default();
             }
-            let value = String::from_utf8(bytes[4..4+value_len].to_vec()).unwrap_or_default();
+            let value = String::from_utf8(bytes[4..4 + value_len].to_vec()).unwrap_or_default();
             let count_start = 4 + value_len;
             let count = u32::from_le_bytes([
                 bytes[count_start],
                 bytes[count_start + 1],
                 bytes[count_start + 2],
-                bytes[count_start + 3]
+                bytes[count_start + 3],
             ]);
             TestCellValue { value, count }
         }
@@ -265,7 +267,8 @@ mod tests {
             result
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     // StableBTreeMapExt tests
@@ -430,10 +433,13 @@ mod tests {
 
     #[test]
     fn test_stable_cell_ext_update() {
-        let cell = RefCell::new(StableCell::init(get_memory(81), TestCellValue {
-            value: "initial".to_string(),
-            count: 0,
-        }));
+        let cell = RefCell::new(StableCell::init(
+            get_memory(81),
+            TestCellValue {
+                value: "initial".to_string(),
+                count: 0,
+            },
+        ));
 
         // Update the value using closure
         let updated_value = cell.update(|val| {
@@ -451,10 +457,13 @@ mod tests {
 
     #[test]
     fn test_stable_cell_ext_update_multiple_times() {
-        let cell = RefCell::new(StableCell::init(get_memory(82), TestCellValue {
-            value: "start".to_string(),
-            count: 1,
-        }));
+        let cell = RefCell::new(StableCell::init(
+            get_memory(82),
+            TestCellValue {
+                value: "start".to_string(),
+                count: 1,
+            },
+        ));
 
         // First update
         cell.update(|val| {
@@ -507,8 +516,14 @@ mod tests {
 
         // Operate on different instances
         let key = TestKey("same_key".to_string());
-        let value1 = TestValue { data: "map1".to_string(), number: 1 };
-        let value2 = TestValue { data: "map2".to_string(), number: 2 };
+        let value1 = TestValue {
+            data: "map1".to_string(),
+            number: 1,
+        };
+        let value2 = TestValue {
+            data: "map2".to_string(),
+            number: 2,
+        };
 
         map1.insert(key.clone(), value1.clone());
         map2.insert(key.clone(), value2.clone());
@@ -520,8 +535,14 @@ mod tests {
         assert_eq!(map2.len(), 1);
 
         // Cells should be independent
-        let cell_value1 = TestCellValue { value: "cell1".to_string(), count: 10 };
-        let cell_value2 = TestCellValue { value: "cell2".to_string(), count: 20 };
+        let cell_value1 = TestCellValue {
+            value: "cell1".to_string(),
+            count: 10,
+        };
+        let cell_value2 = TestCellValue {
+            value: "cell2".to_string(),
+            count: 20,
+        };
 
         cell1.set(cell_value1.clone()).unwrap();
         cell2.set(cell_value2.clone()).unwrap();
@@ -535,8 +556,14 @@ mod tests {
         let map = RefCell::new(StableBTreeMap::init(get_memory(95)));
         let key = TestKey("test_key".to_string());
 
-        let value1 = TestValue { data: "first".to_string(), number: 1 };
-        let value2 = TestValue { data: "second".to_string(), number: 2 };
+        let value1 = TestValue {
+            data: "first".to_string(),
+            number: 1,
+        };
+        let value2 = TestValue {
+            data: "second".to_string(),
+            number: 2,
+        };
 
         // First insert should return None
         let old_value1 = map.insert(key.clone(), value1.clone());

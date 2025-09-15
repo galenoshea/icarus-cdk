@@ -41,6 +41,8 @@ members = [
     "crates/icarus-derive",
     "crates/icarus-canister",
     "crates/icarus-mcp",
+    "crates/icarus-bridge",
+    "crates/icarus-dev",
     "cli",
 ]
 resolver = "2"
@@ -67,6 +69,7 @@ authors = ["Icarus SDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
 repository = "https://github.com/galenoshea/icarus-sdk"
+homepage = "https://github.com/galenoshea/icarus-sdk"
 
 [workspace.dependencies]
 # External dependencies
@@ -132,6 +135,7 @@ tokio-tungstenite = { version = "0.27", features = ["native-tls"] }
 comfy-table = "7.1"        # Beautiful table formatting
 crossterm = "0.27"         # Better terminal control
 unicode-width = "0.2"      # Proper text width calculation
+notify = "6.1"             # File system events
 
 # Test dependencies
 pocket-ic = "9"
@@ -145,6 +149,8 @@ ring = "0.17"
 icarus-core = { path = "crates/icarus-core", version = "0.6.0" }
 icarus-derive = { path = "crates/icarus-derive", version = "0.6.0" }
 icarus-canister = { path = "crates/icarus-canister", version = "0.6.0" }
+icarus-bridge = { path = "crates/icarus-bridge", version = "0.6.0" }
+icarus-dev = { path = "crates/icarus-dev", version = "0.6.0" }
 
 [profile.release]
 opt-level = 3

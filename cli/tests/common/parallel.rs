@@ -64,7 +64,6 @@ pub fn get_test_project_dir(test_name: &str) -> PathBuf {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;

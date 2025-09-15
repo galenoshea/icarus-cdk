@@ -97,7 +97,8 @@ fn test_timer_info_json_serialization() {
     assert!(json.contains("180"));
 
     // Test deserialization
-    let deserialized: TimerInfo = serde_json::from_str(&json).expect("Should deserialize from JSON");
+    let deserialized: TimerInfo =
+        serde_json::from_str(&json).expect("Should deserialize from JSON");
     assert_eq!(deserialized.id, info.id);
     assert_eq!(deserialized.name, info.name);
     assert!(matches!(deserialized.timer_type, TimerType::Periodic));
@@ -119,8 +120,10 @@ fn test_timer_type_json_serialization() {
     assert_eq!(periodic_json, "\"Periodic\"");
 
     // Test deserialization
-    let once_deserialized: TimerType = serde_json::from_str(&once_json).expect("Should deserialize Once");
-    let periodic_deserialized: TimerType = serde_json::from_str(&periodic_json).expect("Should deserialize Periodic");
+    let once_deserialized: TimerType =
+        serde_json::from_str(&once_json).expect("Should deserialize Once");
+    let periodic_deserialized: TimerType =
+        serde_json::from_str(&periodic_json).expect("Should deserialize Periodic");
 
     assert!(matches!(once_deserialized, TimerType::Once));
     assert!(matches!(periodic_deserialized, TimerType::Periodic));
@@ -130,7 +133,10 @@ fn test_timer_type_json_serialization() {
 #[test]
 fn test_timer_error_types() {
     // Test TooManyTimers error
-    let too_many = TimerError::TooManyTimers { max: 100, current: 100 };
+    let too_many = TimerError::TooManyTimers {
+        max: 100,
+        current: 100,
+    };
     assert_eq!(format!("{}", too_many), "Too many timers: 100/100");
 
     // Test TimerNotFound error
@@ -139,13 +145,19 @@ fn test_timer_error_types() {
 
     // Test InvalidInterval error
     let invalid_interval = TimerError::InvalidInterval(0);
-    assert_eq!(format!("{}", invalid_interval), "Invalid interval: 0 seconds");
+    assert_eq!(
+        format!("{}", invalid_interval),
+        "Invalid interval: 0 seconds"
+    );
 }
 
 /// Test TimerError debug formatting
 #[test]
 fn test_timer_error_debug() {
-    let error = TimerError::TooManyTimers { max: 50, current: 45 };
+    let error = TimerError::TooManyTimers {
+        max: 50,
+        current: 45,
+    };
     let debug_str = format!("{:?}", error);
     assert!(debug_str.contains("TooManyTimers"));
     assert!(debug_str.contains("50"));
@@ -180,7 +192,8 @@ fn test_timer_info_none_interval() {
     let json = serde_json::to_string(&info).expect("Should serialize with None interval");
     assert!(json.contains("null"));
 
-    let deserialized: TimerInfo = serde_json::from_str(&json).expect("Should deserialize with None interval");
+    let deserialized: TimerInfo =
+        serde_json::from_str(&json).expect("Should deserialize with None interval");
     assert_eq!(deserialized.interval_secs, None);
 }
 
@@ -221,7 +234,10 @@ fn test_timer_info_edge_cases() {
 fn test_timer_error_comprehensive() {
     let errors = vec![
         TimerError::TooManyTimers { max: 1, current: 1 },
-        TimerError::TooManyTimers { max: 100, current: 99 },
+        TimerError::TooManyTimers {
+            max: 100,
+            current: 99,
+        },
         TimerError::TimerNotFound("".to_string()),
         TimerError::TimerNotFound("very_long_timer_name_that_exceeds_normal_length".to_string()),
         TimerError::InvalidInterval(0),
@@ -257,8 +273,8 @@ fn test_timer_info_special_characters() {
         "timer\twith\ttabs",
         "timer🚀with🎯emojis",
         "タイマー", // Japanese
-        "계시기", // Korean
-        "定时器", // Chinese
+        "계시기",   // Korean
+        "定时器",   // Chinese
     ];
 
     for name in special_names {
@@ -272,7 +288,8 @@ fn test_timer_info_special_characters() {
 
         // Should be able to serialize and deserialize
         let json = serde_json::to_string(&info).expect("Should serialize special characters");
-        let deserialized: TimerInfo = serde_json::from_str(&json).expect("Should deserialize special characters");
+        let deserialized: TimerInfo =
+            serde_json::from_str(&json).expect("Should deserialize special characters");
         assert_eq!(deserialized.name, name);
     }
 }
@@ -301,7 +318,11 @@ fn test_timer_info_large_scale() {
         let info = TimerInfo {
             id: i,
             name: format!("timer_{}", i),
-            timer_type: if i % 2 == 0 { TimerType::Once } else { TimerType::Periodic },
+            timer_type: if i % 2 == 0 {
+                TimerType::Once
+            } else {
+                TimerType::Periodic
+            },
             created_at: 1640995200000000000 + i,
             interval_secs: Some(60 + i),
         };
@@ -315,7 +336,8 @@ fn test_timer_info_large_scale() {
     assert!(json.len() > 10000); // Should be substantial
 
     // Test that we can deserialize all of them
-    let deserialized: Vec<TimerInfo> = serde_json::from_str(&json).expect("Should deserialize large vector");
+    let deserialized: Vec<TimerInfo> =
+        serde_json::from_str(&json).expect("Should deserialize large vector");
     assert_eq!(deserialized.len(), 1000);
 
     // Spot check some values
@@ -464,9 +486,9 @@ fn test_high_precision_timestamps() {
     // Test with nanosecond precision timestamps (as used by ic_cdk::api::time())
     let timestamps = vec![
         0,
-        1_000_000_000,          // 1 second in nanoseconds
+        1_000_000_000,             // 1 second in nanoseconds
         1_640_995_200_000_000_000, // Jan 1, 2022 in nanoseconds
-        u64::MAX,               // Maximum timestamp
+        u64::MAX,                  // Maximum timestamp
     ];
 
     for timestamp in timestamps {
@@ -482,7 +504,8 @@ fn test_high_precision_timestamps() {
 
         // Should serialize/deserialize correctly
         let json = serde_json::to_string(&info).expect("Should serialize timestamp");
-        let deserialized: TimerInfo = serde_json::from_str(&json).expect("Should deserialize timestamp");
+        let deserialized: TimerInfo =
+            serde_json::from_str(&json).expect("Should deserialize timestamp");
         assert_eq!(deserialized.created_at, timestamp);
     }
 }

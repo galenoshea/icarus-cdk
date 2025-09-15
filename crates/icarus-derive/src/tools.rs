@@ -3,11 +3,13 @@
 //! Generates Candid methods from tool definitions
 
 use proc_macro2::TokenStream;
-use quote::quote;
+use quote::{quote, ToTokens};
 use syn::{
     parse::Parse, parse::ParseStream, File, FnArg, ImplItem, Item, ItemFn, ItemImpl, ItemMod, Pat,
     Type,
 };
+
+use crate::parse_tool_metadata;
 
 pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
     let self_ty = &input.self_ty;
@@ -77,6 +79,8 @@ pub fn expand_icarus_tools(_attr: TokenStream, input: ItemImpl) -> TokenStream {
                                         enabled: true,
                                         call_count: 0,
                                         is_query: #is_query,
+                                        description: format!("{} tool", #tool_name), // Default description
+                                        parameters: vec![], // TODO: Extract parameters from function signature
                                     }
                                 );
                             }
@@ -257,47 +261,21 @@ fn extract_is_query(attr: &syn::Attribute) -> Option<bool> {
 }
 
 fn extract_tool_description(attr: &syn::Attribute) -> Option<String> {
-    // Parse #[icarus_tool("description")] to extract the description string
+    // Parse #[icarus_tool("description")] using enhanced metadata parsing
     if attr.path().is_ident("icarus_tool") {
-        // Try to parse as a single string literal
-        if let Ok(lit_str) = attr.parse_args::<syn::LitStr>() {
-            return Some(lit_str.value());
+        let metadata = parse_tool_metadata(attr.meta.to_token_stream());
+        if !metadata.description.is_empty() {
+            return Some(metadata.description);
         }
-
-        // Try to parse as named parameters (for future extensibility)
-        let mut description = None;
-        let _ = attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("description") {
-                if let Ok(value) = meta.value() {
-                    if let Ok(lit_str) = value.parse::<syn::LitStr>() {
-                        description = Some(lit_str.value());
-                    }
-                }
-            }
-            Ok(())
-        });
-
-        description
-    } else {
-        None
     }
+    None
 }
 
 fn extract_tool_title(attr: &syn::Attribute) -> Option<String> {
-    // Parse #[icarus_tool] to extract title parameter
+    // Parse #[icarus_tool] to extract title parameter using enhanced metadata parsing
     if attr.path().is_ident("icarus_tool") {
-        let mut title = None;
-        let _ = attr.parse_nested_meta(|meta| {
-            if meta.path.is_ident("title") {
-                if let Ok(value) = meta.value() {
-                    if let Ok(lit_str) = value.parse::<syn::LitStr>() {
-                        title = Some(lit_str.value());
-                    }
-                }
-            }
-            Ok(())
-        });
-        title
+        let metadata = parse_tool_metadata(attr.meta.to_token_stream());
+        metadata.title
     } else {
         None
     }

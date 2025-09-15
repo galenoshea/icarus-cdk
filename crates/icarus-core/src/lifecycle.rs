@@ -105,15 +105,21 @@ mod tests {
     #[async_trait]
     impl IcarusServerLifecycle for ErrorServer {
         async fn on_initialize(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State("Initialization failed".to_string()))
+            Err(crate::error::IcarusError::State(
+                "Initialization failed".to_string(),
+            ))
         }
 
         async fn on_pre_upgrade(&self) -> Result<()> {
-            Err(crate::error::IcarusError::State("Pre-upgrade failed".to_string()))
+            Err(crate::error::IcarusError::State(
+                "Pre-upgrade failed".to_string(),
+            ))
         }
 
         async fn on_post_upgrade(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State("Post-upgrade failed".to_string()))
+            Err(crate::error::IcarusError::State(
+                "Post-upgrade failed".to_string(),
+            ))
         }
 
         async fn on_stop(&self) -> Result<()> {
@@ -121,7 +127,9 @@ mod tests {
         }
 
         async fn on_heartbeat(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State("Heartbeat failed".to_string()))
+            Err(crate::error::IcarusError::State(
+                "Heartbeat failed".to_string(),
+            ))
         }
     }
 

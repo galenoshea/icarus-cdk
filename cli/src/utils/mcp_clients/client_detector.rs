@@ -3,7 +3,6 @@
 use anyhow::Result;
 use std::path::PathBuf;
 
-
 /// Get the application support directory for the current platform
 pub fn get_app_support_dir() -> Result<PathBuf> {
     #[cfg(target_os = "macos")]
@@ -20,8 +19,7 @@ pub fn get_app_support_dir() -> Result<PathBuf> {
     }
     #[cfg(target_os = "linux")]
     {
-        dirs::config_dir()
-            .ok_or_else(|| anyhow::anyhow!("Could not find config directory"))
+        dirs::config_dir().ok_or_else(|| anyhow::anyhow!("Could not find config directory"))
     }
 }
 
@@ -46,7 +44,6 @@ pub fn get_vscode_extensions_dir() -> Result<PathBuf> {
             .ok_or_else(|| anyhow::anyhow!("Could not find VS Code extensions directory"))
     }
 }
-
 
 /// Check if an application is installed by looking for it in common locations
 pub fn check_app_installed(app_name: &str) -> bool {
@@ -85,12 +82,7 @@ pub fn check_app_installed(app_name: &str) -> bool {
     #[cfg(target_os = "linux")]
     {
         // Check common installation directories
-        let common_dirs = vec![
-            "/usr/bin",
-            "/usr/local/bin",
-            "/opt",
-            "/snap/bin",
-        ];
+        let common_dirs = vec!["/usr/bin", "/usr/local/bin", "/opt", "/snap/bin"];
 
         for dir in common_dirs {
             let app_path = PathBuf::from(dir).join(app_name);
@@ -102,7 +94,6 @@ pub fn check_app_installed(app_name: &str) -> bool {
 
     false
 }
-
 
 #[cfg(test)]
 mod tests {

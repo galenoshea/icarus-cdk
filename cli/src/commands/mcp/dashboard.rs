@@ -27,11 +27,17 @@ pub async fn execute() -> Result<()> {
     let total_clients = all_client_info.len();
 
     // Progress bar for health checks
-    let installed_client_infos: Vec<_> = all_client_info.iter().filter(|info| info.is_installed).collect();
+    let installed_client_infos: Vec<_> = all_client_info
+        .iter()
+        .filter(|info| info.is_installed)
+        .collect();
     let installed_clients = installed_client_infos.len();
 
     if !installed_client_infos.is_empty() {
-        let progress = ui::create_progress_bar(installed_client_infos.len() as u64, "Performing health checks");
+        let progress = ui::create_progress_bar(
+            installed_client_infos.len() as u64,
+            "Performing health checks",
+        );
 
         for (i, client_info) in installed_client_infos.iter().enumerate() {
             progress.set_message(format!(
@@ -55,7 +61,10 @@ pub async fn execute() -> Result<()> {
                 Err(_) => vec![],
             };
 
-            status_data.insert(client_info.client_type.clone(), (true, servers, client_info.config_path.clone()));
+            status_data.insert(
+                client_info.client_type.clone(),
+                (true, servers, client_info.config_path.clone()),
+            );
             progress.set_position(i as u64 + 1);
         }
 
@@ -65,17 +74,30 @@ pub async fn execute() -> Result<()> {
     // Add uninstalled clients to status data
     for client_info in &all_client_info {
         if !client_info.is_installed {
-            status_data.entry(client_info.client_type.clone())
+            status_data
+                .entry(client_info.client_type.clone())
                 .or_insert((false, vec![], client_info.config_path.clone()));
         }
     }
 
     // Display comprehensive status overview
     ui::display_section("System Overview");
-    println!("  📊 Total AI Clients: {}", total_clients.to_string().cyan().bold());
-    println!("  ✅ Installed Clients: {}", installed_clients.to_string().green().bold());
-    println!("  🎯 Active Clients: {}", active_clients.to_string().blue().bold());
-    println!("  🚀 Total MCP Servers: {}", total_servers.to_string().yellow().bold());
+    println!(
+        "  📊 Total AI Clients: {}",
+        total_clients.to_string().cyan().bold()
+    );
+    println!(
+        "  ✅ Installed Clients: {}",
+        installed_clients.to_string().green().bold()
+    );
+    println!(
+        "  🎯 Active Clients: {}",
+        active_clients.to_string().blue().bold()
+    );
+    println!(
+        "  🚀 Total MCP Servers: {}",
+        total_servers.to_string().yellow().bold()
+    );
 
     // Calculate health score
     let health_score = if total_clients > 0 {
@@ -84,14 +106,16 @@ pub async fn execute() -> Result<()> {
         0
     };
 
-    let (health_emoji, health_color): (&str, fn(&str) -> colored::ColoredString) = match health_score {
-        90..=100 => ("🟢", |s| s.green()),
-        70..=89 => ("🟡", |s| s.yellow()),
-        50..=69 => ("🟠", |s| s.truecolor(255, 165, 0)),
-        _ => ("🔴", |s| s.red()),
-    };
+    let (health_emoji, health_color): (&str, fn(&str) -> colored::ColoredString) =
+        match health_score {
+            90..=100 => ("🟢", |s| s.green()),
+            70..=89 => ("🟡", |s| s.yellow()),
+            50..=69 => ("🟠", |s| s.truecolor(255, 165, 0)),
+            _ => ("🔴", |s| s.red()),
+        };
 
-    println!("  {} System Health: {}",
+    println!(
+        "  {} System Health: {}",
         health_emoji,
         health_color(&format!("{}%", health_score)).bold()
     );
@@ -103,12 +127,12 @@ pub async fn execute() -> Result<()> {
         if let Some((is_installed, servers, config_path)) = status_data.get(&client_type) {
             let status_emoji = if *is_installed {
                 if servers.is_empty() {
-                    "🟡"  // Installed but no servers
+                    "🟡" // Installed but no servers
                 } else {
-                    "🟢"  // Installed with servers
+                    "🟢" // Installed with servers
                 }
             } else {
-                "⚫"  // Not installed
+                "⚫" // Not installed
             };
 
             let status_text = if *is_installed {
@@ -121,7 +145,8 @@ pub async fn execute() -> Result<()> {
                 "Not installed".dimmed()
             };
 
-            println!("  {} {} {} {}",
+            println!(
+                "  {} {} {} {}",
                 status_emoji,
                 client_type.emoji(),
                 client_type.display_name().bold(),
@@ -130,12 +155,17 @@ pub async fn execute() -> Result<()> {
 
             // Show servers if any
             for (i, server) in servers.iter().enumerate() {
-                let server_prefix = if i == servers.len() - 1 { "    └──" } else { "    ├──" };
+                let server_prefix = if i == servers.len() - 1 {
+                    "    └──"
+                } else {
+                    "    ├──"
+                };
                 println!("{} 🚀 {}", server_prefix.dimmed(), server.cyan());
             }
 
             // Show config path
-            println!("    {} Config: {}",
+            println!(
+                "    {} Config: {}",
                 "📁".dimmed(),
                 config_path.display().to_string().dimmed()
             );
@@ -148,7 +178,9 @@ pub async fn execute() -> Result<()> {
 
     if installed_clients == 0 {
         ui::display_warning_styled("⚠️ No AI clients are installed on this system");
-        ui::display_info_styled("💡 Install Claude Desktop, ChatGPT Desktop, or Claude Code to get started");
+        ui::display_info_styled(
+            "💡 Install Claude Desktop, ChatGPT Desktop, or Claude Code to get started",
+        );
     } else if active_clients == 0 {
         ui::display_info_styled("💡 No MCP servers are configured");
         ui::display_info_styled("💡 Use 'icarus mcp add <canister-id>' to add an MCP server");
@@ -166,9 +198,21 @@ pub async fn execute() -> Result<()> {
 
     // Quick actions
     ui::display_section("Quick Actions");
-    println!("  {} Add MCP server:     {}", "⚡".yellow(), "icarus mcp add <canister-id>".cyan());
-    println!("  {} List configurations: {}", "📋".blue(), "icarus mcp list".cyan());
-    println!("  {} Remove server:      {}", "🗑️".red(), "icarus mcp remove <server-name>".cyan());
+    println!(
+        "  {} Add MCP server:     {}",
+        "⚡".yellow(),
+        "icarus mcp add <canister-id>".cyan()
+    );
+    println!(
+        "  {} List configurations: {}",
+        "📋".blue(),
+        "icarus mcp list".cyan()
+    );
+    println!(
+        "  {} Remove server:      {}",
+        "🗑️".red(),
+        "icarus mcp remove <server-name>".cyan()
+    );
 
     Ok(())
 }

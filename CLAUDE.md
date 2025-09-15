@@ -108,7 +108,10 @@ icarus-sdk/
 ├── crates/
 │   ├── icarus-core/      # Core protocol types, traits, and session management
 │   ├── icarus-derive/     # Proc macros (#[icarus_module], #[icarus_tool])
-│   └── icarus-canister/   # ICP integration, stable memory, storage macros
+│   ├── icarus-canister/   # ICP integration, stable memory, storage macros
+│   ├── icarus-mcp/        # MCP protocol implementation
+│   ├── icarus-bridge/     # MCP-to-ICP bridge for canister communication
+│   └── icarus-dev/        # Development tools (watch, status, monitoring)
 ├── cli/                   # Command-line tool for project management
 ├── examples/              # Example MCP servers
 └── scripts/               # Development and release automation
@@ -127,20 +130,27 @@ icarus-sdk/
 - Memory IDs allocate separate memory regions (0-254)
 - Supports StableBTreeMap, StableVec, StableCell
 
-#### 3. **Bridge Architecture** (`cli/src/bridge/`)
+#### 3. **Bridge Architecture** (`icarus-bridge`)
 - `rmcp_server.rs`: Translates between MCP protocol and canister calls with dynamic identity switching
 - `canister_client.rs`: Handles IC agent and canister communication
-- `auth.rs`: Simplified authentication helpers
+- `auth.rs`: Simplified authentication helpers with dfx identity detection
 - Bridge runs as subprocess that Claude Desktop connects to
 - **Dynamic Identity**: Bridge checks current dfx identity before each canister call
 - **No Session Binding**: Identity can be switched without restarting bridge
 
-#### 4. **Tool Registration** (`icarus-core`)
+#### 4. **Development Tools** (`icarus-dev`)
+- `watch.rs`: File watching with intelligent debouncing and auto-rebuild
+- `status.rs`: Development environment status checking and health monitoring
+- `init.rs`: Interactive development environment setup and configuration
+- `start.rs`: Development server startup with hot-reload capabilities
+- `reset.rs`: Environment cleanup and reset utilities
+
+#### 5. **Tool Registration** (`icarus-core`)
 - Tools self-register via `linkme` crate sections
 - `TOOL_REGISTRY` collects all tools at compile time
 - `list_tools()` query endpoint exposes tools to MCP clients
 
-#### 5. **Session Management**
+#### 6. **Session Management**
 - Sessions stored in canister stable memory
 - Each session has unique ID and persistence
 - Session cleanup on disconnect

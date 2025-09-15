@@ -17,7 +17,10 @@ pub async fn execute(
     all_clients: bool,
     config_path: Option<String>,
 ) -> Result<()> {
-    print_info(&format!("Removing MCP server '{}' from AI clients...", server_name));
+    print_info(&format!(
+        "Removing MCP server '{}' from AI clients...",
+        server_name
+    ));
 
     let registry = ClientRegistry::new();
     let all_client_info = registry.get_all_client_info();
@@ -70,7 +73,10 @@ pub async fn execute(
     };
 
     if clients_to_check.is_empty() {
-        print_warning(&format!("Server '{}' not found in any client configuration.", server_name));
+        print_warning(&format!(
+            "Server '{}' not found in any client configuration.",
+            server_name
+        ));
         return Ok(());
     }
 
@@ -90,8 +96,9 @@ pub async fn execute(
             client.as_ref(),
             &server_name,
             client_info,
-            config_path.as_ref()
-        ).await;
+            config_path.as_ref(),
+        )
+        .await;
         results.insert(client_info.client_type.clone(), result);
     }
 
@@ -185,7 +192,10 @@ async fn find_clients_with_server<'a>(
     } else {
         // Multiple clients have it, show selection menu
         println!();
-        print_info(&format!("Found server '{}' in multiple clients:", server_name));
+        print_info(&format!(
+            "Found server '{}' in multiple clients:",
+            server_name
+        ));
 
         let client_options: Vec<String> = clients_with_server
             .iter()
@@ -208,7 +218,9 @@ async fn find_clients_with_server<'a>(
         } else {
             // Select specific clients
             let selections = MultiSelect::with_theme(&theme)
-                .with_prompt("Select clients to remove from (use space to select, enter to confirm)")
+                .with_prompt(
+                    "Select clients to remove from (use space to select, enter to confirm)",
+                )
                 .items(&client_options)
                 .interact()?;
 
@@ -241,10 +253,7 @@ async fn remove_from_client(
         }
     };
 
-    print_info(&format!(
-        "Using config path: {}",
-        config_path.display()
-    ));
+    print_info(&format!("Using config path: {}", config_path.display()));
 
     // Remove the server configuration
     client

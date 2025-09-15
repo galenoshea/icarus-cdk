@@ -69,7 +69,6 @@ impl EnvironmentInfo {
 pub mod utils {
     use super::*;
 
-
     /// Calculate performance metrics from a collection of response times
     pub fn calculate_metrics(
         response_times: &[Duration],

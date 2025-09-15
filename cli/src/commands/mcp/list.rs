@@ -13,7 +13,8 @@ use crate::utils::{
 pub async fn execute(client_filter: Option<String>) -> Result<()> {
     ui::display_header("🚀 MCP Server Configuration Overview");
 
-    let spinner = ui::create_beautiful_spinner("Scanning AI clients for MCP server configurations...");
+    let spinner =
+        ui::create_beautiful_spinner("Scanning AI clients for MCP server configurations...");
 
     let registry = ClientRegistry::new();
     let all_client_info = registry.get_all_client_info();
@@ -31,7 +32,11 @@ pub async fn execute(client_filter: Option<String>) -> Result<()> {
         };
 
         if let Some(ct) = client_type {
-            all_client_info.iter().filter(|info| info.client_type == ct).cloned().collect()
+            all_client_info
+                .iter()
+                .filter(|info| info.client_type == ct)
+                .cloned()
+                .collect()
         } else {
             vec![]
         }
@@ -45,10 +50,16 @@ pub async fn execute(client_filter: Option<String>) -> Result<()> {
     let mut client_results: HashMap<ClientType, Vec<String>> = HashMap::new();
 
     // Check each client for configured servers with progress tracking
-    let installed_clients: Vec<_> = clients_to_check.iter().filter(|info| info.is_installed).collect();
+    let installed_clients: Vec<_> = clients_to_check
+        .iter()
+        .filter(|info| info.is_installed)
+        .collect();
 
     if !installed_clients.is_empty() {
-        let progress = ui::create_progress_bar(installed_clients.len() as u64, "Checking client configurations");
+        let progress = ui::create_progress_bar(
+            installed_clients.len() as u64,
+            "Checking client configurations",
+        );
 
         for (i, client_info) in installed_clients.iter().enumerate() {
             progress.set_message(format!(
@@ -84,7 +95,6 @@ pub async fn execute(client_filter: Option<String>) -> Result<()> {
         progress.finish_and_clear();
     }
 
-
     // Display results using beautiful tree visualization
     let tree_data: Vec<_> = client_results
         .iter()
@@ -109,12 +119,14 @@ pub async fn execute(client_filter: Option<String>) -> Result<()> {
         ui::display_section("Client Installation Status");
 
         for client_info in unconfigured_clients {
-            let (emoji, status_msg, color_fn): (&str, &str, fn(&str) -> colored::ColoredString) = if client_info.is_installed {
-                ("✅", "installed, no servers configured", |s| s.yellow())
-            } else {
-                ("❌", "not installed", |s| s.red())
-            };
-            println!("  {} {} {} ({})",
+            let (emoji, status_msg, color_fn): (&str, &str, fn(&str) -> colored::ColoredString) =
+                if client_info.is_installed {
+                    ("✅", "installed, no servers configured", |s| s.yellow())
+                } else {
+                    ("❌", "not installed", |s| s.red())
+                };
+            println!(
+                "  {} {} {} ({})",
                 emoji,
                 client_info.client_type.emoji(),
                 client_info.client_type.display_name(),
@@ -129,7 +141,10 @@ pub async fn execute(client_filter: Option<String>) -> Result<()> {
         ui::display_info_styled("💡 No MCP servers are currently configured.");
         ui::display_info_styled("💡 Use 'icarus mcp add <canister-id>' to add an MCP server.");
     } else {
-        let active_clients = client_results.iter().filter(|(_, servers)| !servers.is_empty()).count();
+        let active_clients = client_results
+            .iter()
+            .filter(|(_, servers)| !servers.is_empty())
+            .count();
         ui::display_success_animated(&format!(
             "Found MCP servers in {} client(s)! 🎉",
             active_clients

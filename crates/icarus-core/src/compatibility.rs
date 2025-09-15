@@ -349,8 +349,8 @@ mod tests {
     impl IcarusTool for InvalidAsyncQueryTool {
         type Input = String;
         type Output = Result<String, String>;
-        const IS_QUERY: bool = true;  // Query...
-        const IS_ASYNC: bool = true;  // ...but async (invalid)
+        const IS_QUERY: bool = true; // Query...
+        const IS_ASYNC: bool = true; // ...but async (invalid)
     }
 
     #[test]
@@ -358,7 +358,9 @@ mod tests {
         // This should fail validation
         let result = InvalidAsyncQueryTool::validate_signature();
         assert!(result.is_err());
-        assert!(result.unwrap_err().contains("Query functions cannot be async"));
+        assert!(result
+            .unwrap_err()
+            .contains("Query functions cannot be async"));
     }
 
     #[test]

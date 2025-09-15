@@ -160,9 +160,8 @@ impl McpClient for ClaudeCodeClient {
 
         // Try to find config path
         let config_path = if is_installed {
-            Self::find_claude_code_config_path().unwrap_or_else(|_| {
-                PathBuf::from("~/.vscode/extensions/saoudrizwan.claude-dev")
-            })
+            Self::find_claude_code_config_path()
+                .unwrap_or_else(|_| PathBuf::from("~/.vscode/extensions/saoudrizwan.claude-dev"))
         } else {
             PathBuf::from("~/.vscode/extensions/saoudrizwan.claude-dev")
         };
@@ -182,7 +181,12 @@ impl McpClient for ClaudeCodeClient {
         Self::generate_claude_code_server_config(name, canister_id)
     }
 
-    fn update_config(&self, config_path: &PathBuf, server_name: &str, server_config: Value) -> Result<()> {
+    fn update_config(
+        &self,
+        config_path: &PathBuf,
+        server_name: &str,
+        server_config: Value,
+    ) -> Result<()> {
         Self::update_claude_code_config(config_path, server_name, server_config)
     }
 

@@ -83,9 +83,15 @@ async fn tool_builder_example() -> std::result::Result<(), Box<dyn std::error::E
             true,
         )
         .handler(|args| async move {
-            let a = args["a"].as_f64().ok_or(IcarusError::Other("Invalid number for 'a'".to_string()))?;
-            let b = args["b"].as_f64().ok_or(IcarusError::Other("Invalid number for 'b'".to_string()))?;
-            let op = args["operation"].as_str().ok_or(IcarusError::Other("Invalid operation".to_string()))?;
+            let a = args["a"]
+                .as_f64()
+                .ok_or(IcarusError::Other("Invalid number for 'a'".to_string()))?;
+            let b = args["b"]
+                .as_f64()
+                .ok_or(IcarusError::Other("Invalid number for 'b'".to_string()))?;
+            let op = args["operation"]
+                .as_str()
+                .ok_or(IcarusError::Other("Invalid operation".to_string()))?;
 
             let result = match op {
                 "add" => a + b,

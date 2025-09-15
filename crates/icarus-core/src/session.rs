@@ -406,9 +406,18 @@ mod tests {
         let config = SessionConfig::default();
         let mut manager = MemorySessionManager::new(config);
 
-        let mut session1 = manager.create_session(Some("p1".to_string())).await.unwrap();
-        let session2 = manager.create_session(Some("p2".to_string())).await.unwrap();
-        let mut session3 = manager.create_session(Some("p3".to_string())).await.unwrap();
+        let mut session1 = manager
+            .create_session(Some("p1".to_string()))
+            .await
+            .unwrap();
+        let session2 = manager
+            .create_session(Some("p2".to_string()))
+            .await
+            .unwrap();
+        let mut session3 = manager
+            .create_session(Some("p3".to_string()))
+            .await
+            .unwrap();
 
         // Make session1 and session3 inactive
         session1.active = false;
@@ -430,13 +439,22 @@ mod tests {
         manager.set_mock_time(base_time);
 
         // Create sessions at different times
-        let session1 = manager.create_session(Some("p1".to_string())).await.unwrap();
+        let session1 = manager
+            .create_session(Some("p1".to_string()))
+            .await
+            .unwrap();
 
         manager.set_mock_time(base_time + 2_000_000_000); // +2 seconds
-        let session2 = manager.create_session(Some("p2".to_string())).await.unwrap();
+        let session2 = manager
+            .create_session(Some("p2".to_string()))
+            .await
+            .unwrap();
 
         manager.set_mock_time(base_time + 4_000_000_000); // +4 seconds
-        let session3 = manager.create_session(Some("p3".to_string())).await.unwrap();
+        let session3 = manager
+            .create_session(Some("p3".to_string()))
+            .await
+            .unwrap();
 
         // Move to +7 seconds and cleanup sessions older than 3 seconds
         // This means anything with last_activity < (7000000000 - 3000000000) = 4000000000 should be cleaned
@@ -526,7 +544,9 @@ mod tests {
         let mut context = SessionContext::new(session, true);
 
         // Set various types of metadata
-        context.set_metadata("string_val".to_string(), "hello").unwrap();
+        context
+            .set_metadata("string_val".to_string(), "hello")
+            .unwrap();
         context.set_metadata("number_val".to_string(), 42).unwrap();
         context.set_metadata("bool_val".to_string(), true).unwrap();
         context

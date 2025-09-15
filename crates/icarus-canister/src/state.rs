@@ -29,6 +29,17 @@ pub struct ToolState {
     pub enabled: bool,
     pub call_count: u64,
     pub is_query: bool,
+    pub description: String,
+    pub parameters: Vec<ToolParameter>,
+}
+
+/// Parameter information for tools
+#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
+pub struct ToolParameter {
+    pub name: String,
+    pub param_type: String,
+    pub description: String,
+    pub required: bool,
 }
 
 /// State for individual resources
@@ -59,6 +70,26 @@ impl Storable for ServerConfig {
 }
 
 impl Storable for ToolState {
+    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
+        std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
+    }
+
+    fn into_bytes(self) -> Vec<u8> {
+        candid::encode_one(&self).unwrap()
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
+        candid::decode_one(&bytes).unwrap()
+    }
+
+    const BOUND: ic_stable_structures::storable::Bound =
+        ic_stable_structures::storable::Bound::Bounded {
+            max_size: 2048, // Increased to accommodate description and parameters
+            is_fixed_size: false,
+        };
+}
+
+impl Storable for ToolParameter {
     fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
         std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
     }
@@ -209,6 +240,8 @@ mod tests {
             enabled: true,
             call_count: 42,
             is_query: false,
+            description: "Test tool for testing".to_string(),
+            parameters: vec![],
         }
     }
 
@@ -320,9 +353,7 @@ mod tests {
         let config = create_test_config();
         IcarusCanisterState::init(config);
 
-        let result = IcarusCanisterState::with(|state| {
-            state.config.get().name.clone()
-        });
+        let result = IcarusCanisterState::with(|state| state.config.get().name.clone());
 
         assert_eq!(result, "Test Server");
     }
@@ -366,7 +397,9 @@ mod tests {
         let resource = create_test_resource_state();
         IcarusCanisterState::with_mut(|state| {
             // Add a resource
-            state.resources.insert("test_resource".to_string(), resource.clone());
+            state
+                .resources
+                .insert("test_resource".to_string(), resource.clone());
         });
 
         IcarusCanisterState::with(|state| {
@@ -391,6 +424,8 @@ mod tests {
                     enabled: i % 2 == 0,
                     call_count: i * 10,
                     is_query: i % 3 == 0,
+                    description: format!("Test tool {}", i),
+                    parameters: vec![],
                 };
                 state.tools.insert(format!("tool_{}", i), tool);
             }
@@ -498,22 +533,37 @@ mod tests {
     fn test_storable_bounds_are_reasonable() {
         // Test that the bounds are reasonable for the data structures
         match ServerConfig::BOUND {
-            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => assert_eq!(max_size, 1024),
+            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => {
+                assert_eq!(max_size, 1024)
+            }
             _ => panic!("Expected bounded"),
         }
         match ToolState::BOUND {
-            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => assert_eq!(max_size, 512),
+            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => {
+                assert_eq!(max_size, 512)
+            }
             _ => panic!("Expected bounded"),
         }
         match ResourceState::BOUND {
-            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => assert_eq!(max_size, 512),
+            ic_stable_structures::storable::Bound::Bounded { max_size, .. } => {
+                assert_eq!(max_size, 512)
+            }
             _ => panic!("Expected bounded"),
         }
 
         // Verify that they're all bounded (not unbounded)
-        assert!(matches!(ServerConfig::BOUND, ic_stable_structures::storable::Bound::Bounded { .. }));
-        assert!(matches!(ToolState::BOUND, ic_stable_structures::storable::Bound::Bounded { .. }));
-        assert!(matches!(ResourceState::BOUND, ic_stable_structures::storable::Bound::Bounded { .. }));
+        assert!(matches!(
+            ServerConfig::BOUND,
+            ic_stable_structures::storable::Bound::Bounded { .. }
+        ));
+        assert!(matches!(
+            ToolState::BOUND,
+            ic_stable_structures::storable::Bound::Bounded { .. }
+        ));
+        assert!(matches!(
+            ResourceState::BOUND,
+            ic_stable_structures::storable::Bound::Bounded { .. }
+        ));
     }
 
     #[test]
@@ -542,6 +592,8 @@ mod tests {
             enabled: true,
             call_count: u64::MAX,
             is_query: false,
+            description: "Special test tool with emojis and symbols".to_string(),
+            parameters: vec![],
         };
 
         let bytes = tool.to_bytes();

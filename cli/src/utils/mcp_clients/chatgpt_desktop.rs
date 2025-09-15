@@ -158,13 +158,11 @@ impl McpClient for ChatGptDesktopClient {
 
         // Try to find config path
         let config_path = if is_installed {
-            Self::find_chatgpt_config_path().unwrap_or_else(|_| {
-                PathBuf::from("/Applications/ChatGPT.app")
-            })
+            Self::find_chatgpt_config_path()
+                .unwrap_or_else(|_| PathBuf::from("/Applications/ChatGPT.app"))
         } else {
             PathBuf::from("/Applications/ChatGPT.app")
         };
-
 
         Ok(ClientInfo {
             client_type: ClientType::ChatGptDesktop,
@@ -181,7 +179,12 @@ impl McpClient for ChatGptDesktopClient {
         Self::generate_chatgpt_server_config(name, canister_id)
     }
 
-    fn update_config(&self, config_path: &PathBuf, server_name: &str, server_config: Value) -> Result<()> {
+    fn update_config(
+        &self,
+        config_path: &PathBuf,
+        server_name: &str,
+        server_config: Value,
+    ) -> Result<()> {
         Self::update_chatgpt_config(config_path, server_name, server_config)
     }
 

@@ -1,8 +1,8 @@
 //! Integration tests for endpoints module
 
+use candid::Principal;
 use icarus_canister::endpoints::{HttpRequest, HttpResponse};
 use icarus_core::protocol::{IcarusMetadata, ToolMetadata};
-use candid::Principal;
 
 /// Test icarus_metadata function structure
 #[test]
@@ -25,7 +25,7 @@ fn test_icarus_metadata_structure() {
                 is_query: false,
                 description: "update_tool tool".to_string(),
                 parameters: vec![],
-            }
+            },
         ],
     };
 
@@ -34,7 +34,11 @@ fn test_icarus_metadata_structure() {
     assert_eq!(metadata.tools.len(), 2);
 
     // Check first tool
-    let test_tool = metadata.tools.iter().find(|t| t.name == "test_tool").unwrap();
+    let test_tool = metadata
+        .tools
+        .iter()
+        .find(|t| t.name == "test_tool")
+        .unwrap();
     assert_eq!(test_tool.name, "test_tool");
     assert_eq!(test_tool.candid_method, "test_tool");
     assert_eq!(test_tool.is_query, true);
@@ -42,7 +46,11 @@ fn test_icarus_metadata_structure() {
     assert_eq!(test_tool.parameters.len(), 0);
 
     // Check second tool
-    let update_tool = metadata.tools.iter().find(|t| t.name == "update_tool").unwrap();
+    let update_tool = metadata
+        .tools
+        .iter()
+        .find(|t| t.name == "update_tool")
+        .unwrap();
     assert_eq!(update_tool.name, "update_tool");
     assert_eq!(update_tool.candid_method, "update_tool");
     assert_eq!(update_tool.is_query, false);
@@ -82,15 +90,13 @@ fn test_http_request_get() {
     let metadata = IcarusMetadata {
         version: "1.0.0".to_string(),
         canister_id: Principal::anonymous(),
-        tools: vec![
-            ToolMetadata {
-                name: "test_tool".to_string(),
-                candid_method: "test_tool".to_string(),
-                is_query: true,
-                description: "A test tool".to_string(),
-                parameters: vec![],
-            }
-        ],
+        tools: vec![ToolMetadata {
+            name: "test_tool".to_string(),
+            candid_method: "test_tool".to_string(),
+            is_query: true,
+            description: "A test tool".to_string(),
+            parameters: vec![],
+        }],
     };
 
     // Test HTML generation logic
@@ -237,9 +243,7 @@ fn test_http_request_post() {
     let _request = HttpRequest {
         method: "POST".to_string(),
         url: "/api/tools".to_string(),
-        headers: vec![
-            ("Content-Type".to_string(), "application/json".to_string()),
-        ],
+        headers: vec![("Content-Type".to_string(), "application/json".to_string())],
         body: b"{\"test\": \"data\"}".to_vec(),
     };
 
@@ -265,7 +269,7 @@ fn test_http_request_post() {
 /// Test HTTP request structs serialization/deserialization
 #[test]
 fn test_http_request_serialization() {
-    use candid::{encode_one, decode_one};
+    use candid::{decode_one, encode_one};
 
     let request = HttpRequest {
         method: "GET".to_string(),
@@ -285,8 +289,14 @@ fn test_http_request_serialization() {
     assert_eq!(decoded.method, "GET");
     assert_eq!(decoded.url, "/health");
     assert_eq!(decoded.headers.len(), 2);
-    assert_eq!(decoded.headers[0], ("Authorization".to_string(), "Bearer token123".to_string()));
-    assert_eq!(decoded.headers[1], ("Accept".to_string(), "application/json".to_string()));
+    assert_eq!(
+        decoded.headers[0],
+        ("Authorization".to_string(), "Bearer token123".to_string())
+    );
+    assert_eq!(
+        decoded.headers[1],
+        ("Accept".to_string(), "application/json".to_string())
+    );
     assert_eq!(decoded.body, b"test body".to_vec());
 }
 
@@ -319,9 +329,7 @@ fn test_http_error_responses() {
     // Test 404 response
     let not_found = HttpResponse {
         status_code: 404,
-        headers: vec![
-            ("Content-Type".to_string(), "text/plain".to_string()),
-        ],
+        headers: vec![("Content-Type".to_string(), "text/plain".to_string())],
         body: b"Not Found".to_vec(),
     };
 
@@ -331,9 +339,7 @@ fn test_http_error_responses() {
     // Test 500 response
     let server_error = HttpResponse {
         status_code: 500,
-        headers: vec![
-            ("Content-Type".to_string(), "application/json".to_string()),
-        ],
+        headers: vec![("Content-Type".to_string(), "application/json".to_string())],
         body: b"{\"error\": \"Internal Server Error\"}".to_vec(),
     };
 
@@ -417,7 +423,11 @@ fn test_html_injection_prevention() {
                 <br><small>{}</small>
             </div>"#,
         malicious_tool.name,
-        if malicious_tool.is_query { "query" } else { "update" },
+        if malicious_tool.is_query {
+            "query"
+        } else {
+            "update"
+        },
         malicious_tool.description
     );
 

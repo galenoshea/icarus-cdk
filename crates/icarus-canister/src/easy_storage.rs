@@ -283,7 +283,8 @@ mod tests {
             self.0.into_bytes()
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     #[derive(Debug, Clone, PartialEq)]
@@ -306,13 +307,13 @@ mod tests {
         fn from_bytes(bytes: Cow<[u8]>) -> Self {
             let bytes = bytes.as_ref();
             let data_len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
-            let data = String::from_utf8(bytes[4..4+data_len].to_vec()).unwrap();
+            let data = String::from_utf8(bytes[4..4 + data_len].to_vec()).unwrap();
             let number_start = 4 + data_len;
             let number = u32::from_le_bytes([
                 bytes[number_start],
                 bytes[number_start + 1],
                 bytes[number_start + 2],
-                bytes[number_start + 3]
+                bytes[number_start + 3],
             ]);
             TestValue { data, number }
         }
@@ -327,7 +328,8 @@ mod tests {
             result
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     // Test type for StorageCell
@@ -357,13 +359,13 @@ mod tests {
             if bytes.len() < 4 + value_len + 4 {
                 return TestCellValue::default();
             }
-            let value = String::from_utf8(bytes[4..4+value_len].to_vec()).unwrap_or_default();
+            let value = String::from_utf8(bytes[4..4 + value_len].to_vec()).unwrap_or_default();
             let count_start = 4 + value_len;
             let count = u32::from_le_bytes([
                 bytes[count_start],
                 bytes[count_start + 1],
                 bytes[count_start + 2],
-                bytes[count_start + 3]
+                bytes[count_start + 3],
             ]);
             TestCellValue { value, count }
         }
@@ -378,7 +380,8 @@ mod tests {
             result
         }
 
-        const BOUND: ic_stable_structures::storable::Bound = ic_stable_structures::storable::Bound::Unbounded;
+        const BOUND: ic_stable_structures::storable::Bound =
+            ic_stable_structures::storable::Bound::Unbounded;
     }
 
     // StorageMap tests

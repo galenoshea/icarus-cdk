@@ -15,6 +15,38 @@ pub struct IconInfo {
     pub data: Option<String>,
 }
 
+/// Semantic category for tools
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ToolCategory {
+    /// Data manipulation and storage
+    Data,
+    /// User interface and interaction
+    Interface,
+    /// Analysis and computation
+    Analysis,
+    /// Communication and external services
+    Communication,
+    /// System administration and monitoring
+    System,
+    /// Authentication and security
+    Security,
+    /// Utility and helper functions
+    Utility,
+    /// Custom category
+    Custom(String),
+}
+
+/// Usage complexity indicator for tools
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum ComplexityLevel {
+    /// Simple, single-parameter operations
+    Simple,
+    /// Moderate complexity with multiple parameters
+    Moderate,
+    /// Complex operations requiring careful configuration
+    Complex,
+}
+
 /// Information about a tool
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolInfo {
@@ -25,6 +57,16 @@ pub struct ToolInfo {
     pub title: Option<String>,
     /// Optional icons for tool display
     pub icons: Option<Vec<IconInfo>>,
+    /// Semantic category for discovery
+    pub category: Option<ToolCategory>,
+    /// Searchable tags for better discovery
+    pub tags: Vec<String>,
+    /// Complexity indicator for user guidance
+    pub complexity: Option<ComplexityLevel>,
+    /// Usage frequency counter (for suggestions)
+    pub usage_count: u64,
+    /// Average execution time in milliseconds
+    pub avg_execution_time: Option<u64>,
 }
 
 /// Storage requirements for a tool

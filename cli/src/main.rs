@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 
 mod commands;
 mod config;
+mod interactive;
 mod utils;
 
 #[derive(Parser)]
@@ -25,6 +26,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    #[command(about = "🧙 Interactive wizard for guided operations")]
+    Wizard,
+
     #[command(about = "Create a new Icarus MCP server project")]
     New {
         #[arg(help = "Name of the project")]
@@ -91,6 +95,30 @@ enum Commands {
         #[command(subcommand)]
         command: ProfileCommands,
     },
+
+    #[command(about = "Local development mode with enhanced tooling")]
+    Dev {
+        #[command(subcommand)]
+        command: DevCommands,
+    },
+
+    #[command(about = "Monitor canister health and performance")]
+    Monitor {
+        #[arg(long, help = "Canister ID to monitor")]
+        canister_id: Option<String>,
+
+        #[arg(long, default_value = "5", help = "Refresh interval in seconds")]
+        interval: u64,
+
+        #[arg(long, help = "Show detailed metrics")]
+        detailed: bool,
+
+        #[arg(long, default_value = "table", help = "Output format (table, json)")]
+        format: String,
+
+        #[arg(long, value_delimiter = ',', help = "Monitor specific metrics only")]
+        metrics: Vec<String>,
+    },
 }
 
 #[derive(Subcommand)]
@@ -137,6 +165,60 @@ enum ProfileCommands {
 
         #[arg(long, help = "Show instruction count analysis")]
         instructions: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum DevCommands {
+    #[command(about = "Start development server with auto-reload")]
+    Start {
+        #[arg(long, help = "Port for development server", default_value = "8080")]
+        port: u16,
+
+        #[arg(long, help = "Enable hot reload on file changes")]
+        hot_reload: bool,
+
+        #[arg(long, help = "Skip initial deployment")]
+        skip_deploy: bool,
+
+        #[arg(long, help = "Enable debug logging")]
+        debug: bool,
+    },
+
+    #[command(about = "Initialize development environment")]
+    Init {
+        #[arg(long, help = "Skip dependency checks")]
+        skip_checks: bool,
+
+        #[arg(long, help = "Force reinitialize existing environment")]
+        force: bool,
+    },
+
+    #[command(about = "Watch files and auto-redeploy on changes")]
+    Watch {
+        #[arg(long, help = "File patterns to watch (glob)", value_delimiter = ',')]
+        patterns: Option<Vec<String>>,
+
+        #[arg(long, help = "Delay before triggering redeploy (ms)", default_value = "500")]
+        delay: u64,
+
+        #[arg(long, help = "Enable verbose file watching output")]
+        verbose: bool,
+    },
+
+    #[command(about = "Show development environment status")]
+    Status {
+        #[arg(long, help = "Include detailed canister information")]
+        detailed: bool,
+    },
+
+    #[command(about = "Reset development environment")]
+    Reset {
+        #[arg(long, help = "Remove all canisters")]
+        clean: bool,
+
+        #[arg(long, help = "Skip confirmation prompt")]
+        yes: bool,
     },
 }
 
@@ -276,6 +358,11 @@ async fn main() -> Result<()> {
     }
 
     match cli.command {
+        Commands::Wizard => {
+            info!("Starting interactive wizard");
+            let wizard = interactive::InteractiveWizard::new();
+            wizard.run().await?;
+        }
         Commands::New {
             name,
             path,
@@ -378,6 +465,55 @@ async fn main() -> Result<()> {
                 info!("Analyzing WASM performance");
                 commands::profile::analyze::execute(wasm_path, memory, instructions).await?;
             }
+        },
+        Commands::Dev { command } => match command {
+            DevCommands::Start {
+                port,
+                hot_reload,
+                skip_deploy,
+                debug,
+            } => {
+                info!("Starting development server");
+                icarus_dev::start::execute(port, hot_reload, skip_deploy, debug).await?;
+            }
+            DevCommands::Init { skip_checks, force } => {
+                info!("Initializing development environment");
+                icarus_dev::init::execute(skip_checks, force).await?;
+            }
+            DevCommands::Watch {
+                patterns,
+                delay,
+                verbose,
+            } => {
+                info!("Starting file watcher");
+                icarus_dev::watch::execute(patterns.clone(), delay, verbose).await?;
+            }
+            DevCommands::Status { detailed } => {
+                info!("Showing development status");
+                icarus_dev::status::execute(detailed).await?;
+            }
+            DevCommands::Reset { clean, yes } => {
+                info!("Resetting development environment");
+                icarus_dev::reset::execute(clean, yes).await?;
+            }
+        },
+
+        Commands::Monitor {
+            canister_id,
+            interval,
+            detailed,
+            format,
+            metrics,
+        } => {
+            info!("Starting monitoring dashboard");
+            let monitor_cmd = commands::monitor::MonitorCommand {
+                canister_id,
+                interval,
+                detailed,
+                format,
+                metrics,
+            };
+            monitor_cmd.run().await?;
         },
     }
 
