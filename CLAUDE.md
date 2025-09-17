@@ -44,6 +44,11 @@ cargo build --all
 
 # Build specific targets
 cargo build --package icarus-cli --bin icarus --release
+
+# WASI-Native architecture (default)
+cargo build --target wasm32-wasip1 --release
+
+# Pure WASM (advanced users only)
 cargo build --target wasm32-unknown-unknown --release
 
 # Run CI checks locally before pushing
@@ -88,7 +93,8 @@ cargo build --release
 
 # Run CLI commands from source
 cargo run -- new my-project
-cargo run -- build
+cargo run -- build                    # Uses WASI-Native by default
+cargo run -- build --pure-wasm        # Uses pure WASM (advanced)
 cargo run -- deploy --network local
 
 # Install CLI locally
@@ -154,6 +160,32 @@ icarus-sdk/
 - Sessions stored in canister stable memory
 - Each session has unique ID and persistence
 - Session cleanup on disconnect
+
+#### 7. **WASI-Native Architecture** (`build_utils.rs`)
+The Icarus SDK uses a WASI-Native architecture for maximum ecosystem compatibility:
+
+- **Default Target**: `wasm32-wasip1` (WASI) for all projects
+- **Automatic Conversion**: WASI WASM automatically converted to IC-compatible WASM using `wasi2ic`
+- **Library Compatibility**: Enables modern Rust libraries (rmcp, Candle ML, etc.) that require system interfaces
+- **Performance Caching**: Intelligent caching system based on file hashes to avoid redundant conversions
+- **Override Option**: Use `--pure-wasm` flag for advanced users who need direct `wasm32-unknown-unknown` compilation
+
+**Build Process Flow**:
+1. **Compile**: `cargo build --target wasm32-wasip1 --release`
+2. **Convert**: `wasi2ic input.wasm output.wasm` (cached based on input hash)
+3. **Deploy**: Use converted IC-compatible WASM for canister deployment
+
+**Benefits**:
+- **Ecosystem Compatibility**: Works with any Rust library that compiles to WASI
+- **Zero Configuration**: Developers don't need to worry about WASM compatibility
+- **Performance**: Caching eliminates redundant conversions
+- **Flexibility**: Still supports pure WASM when needed
+
+**Configuration Options**:
+```toml
+[package.metadata.icarus]
+wasi_mode = "never"  # Force pure WASM compilation
+```
 
 ### Testing Strategy
 

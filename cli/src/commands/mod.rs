@@ -1,4 +1,5 @@
 pub mod analyze;
+pub mod build;
 pub mod deploy;
 pub mod mcp;
 pub mod monitor;

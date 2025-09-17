@@ -13,6 +13,7 @@ pub mod auth;
 pub mod auth_tools;
 pub mod easy_storage;
 pub mod endpoints;
+pub mod extensions;
 pub mod http;
 pub mod lifecycle;
 pub mod macros;
@@ -33,6 +34,7 @@ pub use auth::{
 pub use endpoints::{
     get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest, HttpResponse,
 };
+pub use extensions::{WasiConfig, WasiExtension};
 pub use lifecycle::{init, post_upgrade, pre_upgrade};
 pub use stable_ext::{StableBTreeMapExt, StableCellExt};
 pub use state::{assert_owner, get_owner, is_owner, IcarusCanisterState};
@@ -85,6 +87,9 @@ pub mod prelude {
             HttpResponse,
         },
 
+        // Extensions for advanced initialization
+        extensions::{WasiConfig, WasiExtension},
+
         // HTTP outcalls for external data
         http,
 
@@ -114,6 +119,13 @@ pub mod prelude {
         IcarusStorable,
         IcarusStorage,
         IcarusType,
+    };
+
+    // Re-export core traits for convenience
+    pub use icarus_core::{
+        AuthConfig, ErrorConfig, ExtensionProvider, GenerateServiceMetadata, IcarusToolMethod,
+        IcarusToolProvider, InitError, InitRequirements, InitializationExtension, ServiceConfig,
+        ServiceMetadata, ToolMethodMetadata,
     };
 
     // Common type aliases

@@ -63,13 +63,15 @@ pub use icarus_canister as canister;
 
 // Re-export commonly used items
 #[cfg(feature = "canister")]
-pub use icarus_derive::{icarus_module, icarus_tool};
+pub use icarus_derive::{icarus_module, icarus_tool, icarus_tools, tool};
 
 /// Prelude module for convenient imports
 #[cfg(feature = "canister")]
 pub mod prelude {
     pub use crate::canister::prelude::*;
-    pub use crate::derive::{icarus_module, icarus_tool};
+    // Don't glob import core prelude to avoid ambiguous re-exports
+    // canister::prelude already includes the core types we need
+    pub use crate::derive::{icarus_module, icarus_tool, icarus_tools, tool};
 }
 
 // Provide a minimal prelude when only core is enabled

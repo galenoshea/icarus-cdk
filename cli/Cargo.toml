@@ -41,6 +41,7 @@ icarus-dev = { workspace = true }
 
 # Security and credentials
 rand = { workspace = true }
+sha2 = { workspace = true }
 
 # User interaction
 indicatif = { workspace = true }
@@ -125,3 +126,7 @@ path = "tests/e2e/test_authentication.rs"
 [[test]]
 name = "test_mcp_commands"
 path = "tests/e2e/test_mcp_commands.rs"
+
+[[test]]
+name = "test_wasi_native"
+path = "tests/e2e/test_wasi_native.rs"

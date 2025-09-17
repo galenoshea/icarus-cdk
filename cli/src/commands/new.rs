@@ -141,7 +141,7 @@ fn create_project_structure(
 fn create_lib_template(target: &Path) -> Result<()> {
     // Create the default lib.rs template for new projects
     let content = r#"//! Basic Memory Server
-//! 
+//!
 //! A simple MCP server that stores and retrieves text memories.
 
 use icarus::prelude::*;
@@ -175,15 +175,17 @@ fn generate_id() -> String {
     })
 }
 
-/// MCP module containing all tool functions
-#[icarus_module]
-mod tools {
-    use super::*;
+/// Memory service implementing Icarus tools
+pub struct MemoryService;
+
+/// MCP tools implementation using the new trait-based approach
+#[icarus_tools]
+impl IcarusToolProvider for MemoryService {
 
     /// Store a new memory with optional tags
+    #[tool("Store a new memory with optional tags")]
     #[update]
-    #[icarus_tool("Store a new memory with optional tags")]
-    pub fn memorize(content: String, tags: Option<Vec<String>>) -> Result<String, String> {
+    async fn memorize(content: String, tags: Option<Vec<String>>) -> Result<String, String> {
         if content.is_empty() {
             return Err("Content cannot be empty".to_string());
         }
@@ -204,9 +206,9 @@ mod tools {
     }
 
     /// Retrieve a specific memory by ID
+    #[tool("Retrieve a specific memory by ID")]
     #[query]
-    #[icarus_tool("Retrieve a specific memory by ID")]
-    pub fn recall(id: String) -> Result<MemoryEntry, String> {
+    async fn recall(id: String) -> Result<MemoryEntry, String> {
         MEMORIES.with(|m| {
             m.borrow()
                 .get(&id)
@@ -215,37 +217,37 @@ mod tools {
     }
 
     /// List all stored memories with optional limit
+    #[tool("List all stored memories with optional limit")]
     #[query]
-    #[icarus_tool("List all stored memories with optional limit")]
-    pub fn list(limit: Option<u64>) -> Result<Vec<MemoryEntry>, String> {
+    async fn list(limit: Option<u64>) -> Result<Vec<MemoryEntry>, String> {
         Ok(MEMORIES.with(|m| {
             let memories = m.borrow();
             let iter = memories.iter();
-            
+
             match limit {
-                Some(n) => iter.take(n as usize).map(|(_, v)| v).collect(),
-                None => iter.map(|(_, v)| v).collect(),
+                Some(n) => iter.take(n as usize).map(|(_, v)| v.clone()).collect(),
+                None => iter.map(|(_, v)| v.clone()).collect(),
             }
         }))
     }
 
     /// Search memories by tag
+    #[tool("Search memories by tag")]
     #[query]
-    #[icarus_tool("Search memories by tag")]
-    pub fn search_by_tag(tag: String) -> Result<Vec<MemoryEntry>, String> {
+    async fn search_by_tag(tag: String) -> Result<Vec<MemoryEntry>, String> {
         Ok(MEMORIES.with(|m| {
             m.borrow()
                 .iter()
                 .filter(|(_, memory)| memory.tags.contains(&tag))
-                .map(|(_, v)| v)
+                .map(|(_, v)| v.clone())
                 .collect()
         }))
     }
 
     /// Delete a memory by ID
+    #[tool("Delete a memory by ID")]
     #[update]
-    #[icarus_tool("Delete a memory by ID")]
-    pub fn forget(id: String) -> Result<bool, String> {
+    async fn forget(id: String) -> Result<bool, String> {
         MEMORIES.with(|m| {
             match m.borrow_mut().remove(&id) {
                 Some(_) => Ok(true),
@@ -255,16 +257,14 @@ mod tools {
     }
 
     /// Get total number of stored memories
+    #[tool("Get total number of stored memories")]
     #[query]
-    #[icarus_tool("Get total number of stored memories")]
-    pub fn count() -> Result<u64, String> {
+    async fn count() -> Result<u64, String> {
         Ok(MEMORIES.with(|m| m.borrow().len()))
     }
 }
 
-// Export the Candid interface for the canister
-// This embeds the interface in the WASM for extraction with generate-did
-ic_cdk::export_candid!();
+// Candid interface is automatically exported by the #[icarus_tools] macro
 "#;
 
     fs::write(target, content)?;

@@ -44,6 +44,18 @@ enum Commands {
         with_tests: bool,
     },
 
+    #[command(about = "Build the MCP server WASM")]
+    Build {
+        #[arg(
+            long,
+            help = "Use pure WASM (advanced users only, disables WASI-Native compatibility)"
+        )]
+        pure_wasm: bool,
+
+        #[arg(long, help = "Skip WASM optimization")]
+        skip_optimize: bool,
+    },
+
     #[command(about = "Analyze WASM binary size and optimization opportunities")]
     Analyze {
         #[arg(long, help = "Show top N size contributors", default_value = "20")]
@@ -375,6 +387,13 @@ async fn main() -> Result<()> {
         } => {
             info!("Creating new project: {}", name);
             commands::new::execute(name, path, local_sdk, with_tests).await?;
+        }
+        Commands::Build {
+            pure_wasm,
+            skip_optimize,
+        } => {
+            info!("Building MCP server WASM");
+            commands::build::execute(pure_wasm, skip_optimize).await?;
         }
         Commands::Analyze { top, compressed } => {
             info!("Analyzing WASM binary");

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2025-09-17
+
+### Changed
+- **🧹 Simplified IcarusToolProvider Trait**: Removed unused `service_name()` and `service_description()` methods
+  - Service metadata now comes entirely from `CARGO_PKG_NAME` and `CARGO_PKG_VERSION`
+  - Reduced boilerplate by ~10 lines per implementation
+  - Zero breaking changes - full MCP compatibility maintained
+  - Updated all implementations, tests, and documentation examples
+- **⚡ WASI-Native Architecture Support**: Complete WASI integration for maximum ML ecosystem compatibility
+  - Support for Candle ML framework and other WASI libraries
+  - Automatic WASI-to-IC conversion during build process
+  - Enhanced `icarus build` command with intelligent target detection
+- **🔧 Multi-Client MCP Support**: Extended MCP configuration system
+  - Support for Claude Desktop, ChatGPT Desktop, and Claude Code
+  - Unified `icarus mcp` command for cross-client configuration
+  - Automatic deployment integration with MCP setup
+- **⚙️ Enhanced Build System**: Improved deployment workflow
+  - Auto-upgrade deployment behavior (like `dfx deploy`)
+  - Intelligent build caching and optimization
+  - Better error handling and user feedback
+
+### Deprecated
+- **ServiceRegistry**: Service registration no longer needed since tools are discovered via `list_tools()`
+
+### Fixed
+- **MCP Protocol Compliance**: Fixed "missing field name" error in MCP server responses
+- **Build Performance**: Improved build times with better caching strategies
+- **Error Messages**: More helpful error messages throughout the CLI
+
 ## [0.7.0] - 2025-09-15
 
 ### Added

@@ -14,6 +14,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{parse2, parse_macro_input, DeriveInput, Lit, Meta};
 
+mod icarus_tools;
 mod server;
 mod tools;
 mod validation;
@@ -435,12 +436,62 @@ pub fn derive_icarus_storable(input: TokenStream) -> TokenStream {
     TokenStream::from(expanded)
 }
 
-/// Attribute macro for marking impl blocks that contain tool methods
+/// Attribute macro for trait-based tool providers (Rust 2025 idiomatic approach)
+///
+/// Apply to trait implementations that implement IcarusToolProvider:
+///
+/// ```rust
+/// #[icarus_tools]
+/// impl IcarusToolProvider for MyService {
+///     #[tool("Do something useful")]
+///     #[update]
+///     async fn my_tool(&self, input: String) -> Result<String, String> {
+///         Ok(format!("Processed: {}", input))
+///     }
+/// }
+/// ```
 #[proc_macro_attribute]
-pub fn icarus_tools(attr: TokenStream, item: TokenStream) -> TokenStream {
-    let attr = TokenStream2::from(attr);
-    let input = parse_macro_input!(item as syn::ItemImpl);
-    tools::expand_icarus_tools(attr, input).into()
+pub fn icarus_tools(args: TokenStream, input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as syn::ItemImpl);
+
+    // Create a synthetic attribute from the macro arguments to pass to the expansion function
+    let attrs = if args.is_empty() {
+        Vec::new()
+    } else {
+        // Create a synthetic attribute that mimics #[icarus_tools(...)]
+        // We'll parse this in the expand_icarus_tools function directly from the args
+        let meta = syn::parse_macro_input!(args as syn::Meta);
+        let attr = syn::Attribute {
+            pound_token: syn::token::Pound::default(),
+            style: syn::AttrStyle::Outer,
+            bracket_token: syn::token::Bracket::default(),
+            meta,
+        };
+        vec![attr]
+    };
+
+    match icarus_tools::expand_icarus_tools(attrs, input) {
+        Ok(tokens) => tokens.into(),
+        Err(error) => error.to_compile_error().into(),
+    }
+}
+
+/// Attribute macro for marking individual tool methods in trait implementations
+///
+/// Used within #[icarus_tools] impl blocks:
+///
+/// ```rust
+/// #[tool("Tool description")]
+/// #[update]  // or #[query]
+/// async fn my_tool(input: String) -> Result<String, String> {
+///     // implementation
+/// }
+/// ```
+#[proc_macro_attribute]
+pub fn tool(_args: TokenStream, input: TokenStream) -> TokenStream {
+    // This macro just passes through the function unchanged
+    // The actual processing is done by #[icarus_tools] on the impl block
+    input
 }
 
 /// Attribute macro for individual tool methods

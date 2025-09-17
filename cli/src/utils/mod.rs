@@ -1,3 +1,4 @@
+pub mod build_utils;
 pub mod claude_desktop;
 pub mod dfx;
 pub mod mcp_clients;

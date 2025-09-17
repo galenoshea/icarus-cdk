@@ -85,6 +85,7 @@ ic-cdk-macros = "0.18"
 ic-cdk-timers = "0.12"
 ic-stable-structures = "0.7"
 ic-management-canister-types = "0.3"
+ic-wasi-polyfill = "0.11"
 candid = { version = "0.10", features = ["value"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
@@ -102,6 +103,9 @@ linkme = "0.3"
 rustc-hash = "2.0"  # Faster HashMap for small keys
 smallvec = "1.13"   # Stack allocation for small collections
 bytes = "1.7"       # Efficient buffer management
+
+# Cryptography
+sha2 = "0.10"         # For WASI conversion caching
 
 # CLI-specific dependencies
 anyhow = "1.0"

@@ -5,13 +5,12 @@ use std::path::Path;
 
 use crate::config::cargo_config;
 use crate::utils::{
-    claude_desktop::{
-        find_claude_config_path, generate_claude_server_config, update_claude_config,
-    },
+    build_utils::{build_canister_wasi_native, get_project_name},
+    claude_desktop::generate_claude_server_config,
     print_info, print_success, print_warning, run_command, run_command_interactive,
 };
 
-pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> Result<()> {
+pub async fn execute(network: String, force: bool, _upgrade: Option<String>) -> Result<()> {
     // Validate network
     if !["local", "ic"].contains(&network.as_str()) {
         anyhow::bail!("Invalid network. Use 'local' or 'ic'");
@@ -31,21 +30,39 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
         project_name, network
     ));
 
-    // Build the WASM first (with visible output)
-    print_info("Building WASM...");
+    // Build with WASI-Native architecture (auto-handles conversion)
+    print_info("Building WASM with WASI-Native architecture...");
+
+    // Step 1: Compile (WASI by default, pure WASM if configured)
+    let target = "wasm32-wasip1"; // WASI-Native default
+
     run_command_interactive(
         "cargo",
-        &["build", "--target", "wasm32-unknown-unknown", "--release"],
+        &["build", "--target", target, "--release"],
         Some(&current_dir),
     )
     .await?;
 
-    // Optimize WASM with ic-wasm if available
-    optimize_wasm(&current_dir, &project_name).await?;
+    // Step 2: Check if manual .did file exists (for WASI projects that can't use export_candid!)
+    let did_path = current_dir
+        .join("src")
+        .join(format!("{}.did", project_name));
+    if did_path.exists() {
+        print_info("Using existing manual .did file (WASI-compatible approach)");
+    } else {
+        // Step 2a: Extract Candid interface BEFORE WASI conversion (for non-WASI projects)
+        let pre_conversion_wasm_path =
+            crate::utils::build_utils::get_wasm_path(&current_dir, &project_name, target);
+        print_info("Extracting Candid interface from WASM...");
+        update_candid_from_wasm_at_path(&current_dir, &project_name, &pre_conversion_wasm_path)
+            .await?;
+    }
 
-    // Extract and update the Candid interface from the built WASM
-    print_info("Updating Candid interface from WASM...");
-    update_candid_from_wasm(&current_dir, &project_name).await?;
+    // Step 3: Convert to IC-compatible WASM using WASI-Native pipeline
+    let final_wasm_path = build_canister_wasi_native(&current_dir, false).await?;
+
+    // Optimize WASM with ic-wasm if available
+    optimize_wasm_at_path(&final_wasm_path).await?;
 
     // Get the current principal to use as the init argument
     let principal_output =
@@ -56,31 +73,8 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
     // Build args with owned strings for the init argument
     let init_arg = format!("(principal \"{}\")", principal);
 
-    // Build the command args as owned strings
-    let mut cmd_args = vec![
-        "deploy".to_string(),
-        project_name.clone(),
-        "--network".to_string(),
-        network.clone(),
-        "--argument".to_string(),
-        init_arg,
-    ];
-
-    if let Some(canister_id) = &upgrade {
-        cmd_args.push("--upgrade-unchanged".to_string());
-        print_info(&format!("Upgrading canister {}", canister_id));
-    }
-
-    if force {
-        cmd_args.push("--yes".to_string());
-        print_info("Force deploying (will delete existing canister if present)");
-    }
-
-    // Convert to &str for run_command
-    let args: Vec<&str> = cmd_args.iter().map(|s| s.as_str()).collect();
-
-    // Run dfx deploy with visible output and interactive prompts
-    run_command_interactive("dfx", &args, Some(&current_dir)).await?;
+    // Deploy via dfx (leverages dfx's battle-tested deployment logic)
+    deploy_with_dfx(&current_dir, &project_name, &network, &init_arg, force).await?;
 
     // Get the canister ID after deployment
     let canister_id_output = run_command(
@@ -99,8 +93,8 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
     // Save canister ID for future reference
     save_canister_id(&current_dir, &network, &canister_id)?;
 
-    // Handle Claude Desktop configuration
-    handle_claude_desktop_config(&current_dir, &project_name, &canister_id).await?;
+    // Handle MCP client configuration using existing MCP command infrastructure
+    handle_mcp_client_config(&current_dir, &project_name, &canister_id).await?;
 
     if network == "ic" {
         println!();
@@ -125,18 +119,6 @@ pub async fn execute(network: String, force: bool, upgrade: Option<String>) -> R
 
 fn is_icarus_project(path: &Path) -> bool {
     path.join("Cargo.toml").exists() && path.join("dfx.json").exists()
-}
-
-fn get_project_name(project_dir: &Path) -> Result<String> {
-    let cargo_toml = project_dir.join("Cargo.toml");
-    let content = std::fs::read_to_string(&cargo_toml)?;
-    let toml: toml::Value = toml::from_str(&content)?;
-
-    toml.get("package")
-        .and_then(|p| p.get("name"))
-        .and_then(|n| n.as_str())
-        .map(|s| s.to_string())
-        .ok_or_else(|| anyhow::anyhow!("Could not find package name in Cargo.toml"))
 }
 
 fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Result<()> {
@@ -169,7 +151,7 @@ fn save_canister_id(project_dir: &Path, network: &str, canister_id: &str) -> Res
     Ok(())
 }
 
-async fn optimize_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
+async fn optimize_wasm_at_path(wasm_path: &Path) -> Result<()> {
     use std::fs;
 
     // Check if ic-wasm is available
@@ -180,29 +162,21 @@ async fn optimize_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
         return Ok(());
     }
 
-    // Construct WASM path
-    let wasm_name = project_name.replace('-', "_");
-    let wasm_path = project_dir
-        .join("target")
-        .join("wasm32-unknown-unknown")
-        .join("release")
-        .join(format!("{}.wasm", wasm_name));
-
     if !wasm_path.exists() {
-        // WASM doesn't exist yet, skip optimization
+        print_warning("WASM file not found, skipping optimization");
         return Ok(());
     }
 
     // Get original size
-    let original_size = fs::metadata(&wasm_path)?.len();
+    let original_size = fs::metadata(wasm_path)?.len();
 
     print_info("Optimizing WASM with ic-wasm...");
 
     // Run ic-wasm shrink
     let result = tokio::process::Command::new("ic-wasm")
-        .arg(&wasm_path)
+        .arg(wasm_path)
         .arg("-o")
-        .arg(&wasm_path)
+        .arg(wasm_path)
         .arg("shrink")
         .output()
         .await;
@@ -210,7 +184,7 @@ async fn optimize_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
     match result {
         Ok(output) if output.status.success() => {
             // Get new size
-            let new_size = fs::metadata(&wasm_path)?.len();
+            let new_size = fs::metadata(wasm_path)?.len();
             let reduction = ((original_size - new_size) as f64 / original_size as f64) * 100.0;
 
             print_success(&format!(
@@ -249,16 +223,12 @@ fn format_size(bytes: u64) -> String {
     }
 }
 
-async fn update_candid_from_wasm(project_dir: &Path, project_name: &str) -> Result<()> {
+async fn update_candid_from_wasm_at_path(
+    project_dir: &Path,
+    project_name: &str,
+    wasm_path: &Path,
+) -> Result<()> {
     use std::fs;
-
-    // Construct paths
-    let wasm_name = project_name.replace('-', "_");
-    let wasm_path = project_dir
-        .join("target")
-        .join("wasm32-unknown-unknown")
-        .join("release")
-        .join(format!("{}.wasm", wasm_name));
 
     let did_path = project_dir
         .join("src")
@@ -281,7 +251,7 @@ async fn update_candid_from_wasm(project_dir: &Path, project_name: &str) -> Resu
 
     // Extract Candid from WASM
     let output = tokio::process::Command::new("candid-extractor")
-        .arg(&wasm_path)
+        .arg(wasm_path)
         .output()
         .await?;
 
@@ -306,114 +276,127 @@ async fn update_candid_from_wasm(project_dir: &Path, project_name: &str) -> Resu
     Ok(())
 }
 
-async fn handle_claude_desktop_config(
+async fn handle_mcp_client_config(
     project_dir: &Path,
     project_name: &str,
     canister_id: &str,
 ) -> Result<()> {
-    // Check for Cargo.toml metadata and handle Claude Desktop configuration
-    let mut claude_auto_updated = false;
+    // Check for Cargo.toml metadata and handle MCP client auto-configuration
     if let Some(icarus_metadata) = cargo_config::load_from_cargo_toml(project_dir)? {
+        let mut clients_to_update = Vec::new();
+
+        // Check which clients have auto_update enabled
         if icarus_metadata.claude_desktop.auto_update {
+            clients_to_update.push("claude".to_string());
+        }
+        if icarus_metadata.chatgpt_desktop.auto_update {
+            clients_to_update.push("chatgpt".to_string());
+        }
+        if icarus_metadata.claude_code.auto_update {
+            clients_to_update.push("claude-code".to_string());
+        }
+
+        if !clients_to_update.is_empty() {
             println!();
-            print_info("Auto-updating Claude Desktop configuration...");
+            print_info(&format!(
+                "Auto-updating MCP client configurations: {}",
+                clients_to_update.join(", ")
+            ));
 
-            // Determine config path
-            let claude_config_path = if let Some(custom_path) =
-                cargo_config::get_claude_config_path(&icarus_metadata, project_dir)
+            // Use the existing MCP add command for all enabled clients
+            match crate::commands::mcp::add::execute(
+                canister_id.to_string(),
+                Some(project_name.to_string()),
+                Some(clients_to_update),
+                false, // not all clients
+                None,  // no custom config path
+            )
+            .await
             {
-                custom_path
-            } else {
-                find_claude_config_path()?
-            };
-
-            // Generate and update config
-            let mut server_config = generate_claude_server_config(project_name, canister_id);
-
-            // Update the command to use full path
-            if let Some(servers) = server_config.as_object_mut() {
-                if let Some(server) = servers.get_mut(project_name) {
-                    if let Some(server_obj) = server.as_object_mut() {
-                        // Get the full path to icarus binary
-                        let icarus_path = which::which("icarus")
-                            .map(|p| p.to_string_lossy().to_string())
-                            .unwrap_or_else(|_| "icarus".to_string());
-                        server_obj.insert(
-                            "command".to_string(),
-                            serde_json::Value::String(icarus_path),
-                        );
-                    }
-                }
-            }
-
-            match update_claude_config(&claude_config_path, project_name, server_config) {
                 Ok(_) => {
-                    println!();
-                    print_success(&format!(
-                        "✨ Canister '{}' automatically connected to Claude Desktop!",
-                        project_name
-                    ));
-                    print_info(&format!("Canister ID: {}", canister_id));
-                    print_info("Restart Claude Desktop to load the new MCP server");
-                    claude_auto_updated = true;
+                    print_success(
+                        "✨ MCP server automatically configured for all enabled clients!",
+                    );
                 }
                 Err(e) => {
-                    print_warning(&format!("Could not update Claude Desktop config: {}", e));
+                    print_warning(&format!("Could not auto-configure MCP clients: {}", e));
                     print_info("Manual configuration required - see instructions below");
+                    show_manual_mcp_instructions(project_name, canister_id)?;
                 }
             }
+        } else {
+            show_manual_mcp_instructions(project_name, canister_id)?;
         }
-    }
-
-    // Only show manual configuration if auto-update didn't happen or failed
-    if !claude_auto_updated {
-        // Claude Desktop integration section
-        println!();
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
-        );
-        println!("{}", "🔌 Claude Desktop Integration".bold().cyan());
-        println!(
-            "{}",
-            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
-        );
-        println!();
-
-        // Generate Claude Desktop configuration
-        let claude_config = generate_claude_desktop_config(project_name, canister_id);
-
-        println!("Add this to your Claude Desktop configuration:");
-        println!();
-        println!(
-            "{}",
-            serde_json::to_string_pretty(&claude_config)?.bright_blue()
-        );
-        println!();
-
-        println!("Or use the connect command for guided setup:");
-        println!(
-            "  {}",
-            format!("icarus connect --canister-id {}", canister_id).bright_yellow()
-        );
+    } else {
+        show_manual_mcp_instructions(project_name, canister_id)?;
     }
 
     Ok(())
 }
 
-fn generate_claude_desktop_config(project_name: &str, canister_id: &str) -> serde_json::Value {
-    // Get the full path to icarus binary
-    let icarus_path = which::which("icarus")
-        .map(|p| p.to_string_lossy().to_string())
-        .unwrap_or_else(|_| "icarus".to_string());
+fn show_manual_mcp_instructions(project_name: &str, canister_id: &str) -> Result<()> {
+    // Show manual configuration instructions
+    println!();
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
+    );
+    println!("{}", "🔌 MCP Client Integration".bold().cyan());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".cyan()
+    );
+    println!();
 
-    json!({
-        "mcpServers": {
-            project_name: {
-                "command": icarus_path,
-                "args": ["bridge", "start", "--canister-id", canister_id],
-                "env": {}
-            }
-        }
-    })
+    // Generate configuration for all supported clients
+    let server_config = generate_claude_server_config(project_name, canister_id);
+    let claude_config = json!({
+        "mcpServers": server_config
+    });
+
+    println!("Configure your AI clients:");
+    println!();
+    println!("📋 Claude Desktop configuration:");
+    println!(
+        "{}",
+        serde_json::to_string_pretty(&claude_config)?.bright_blue()
+    );
+    println!();
+
+    println!("Or use the MCP command for guided setup:");
+    println!(
+        "  {}",
+        format!("icarus mcp add {} --name {}", canister_id, project_name).bright_yellow()
+    );
+
+    Ok(())
+}
+
+async fn deploy_with_dfx(
+    current_dir: &Path,
+    project_name: &str,
+    network: &str,
+    init_arg: &str,
+    force: bool,
+) -> Result<()> {
+    print_info("Deploying via dfx (leverages dfx's smart upgrade logic)...");
+
+    let mut args = vec!["deploy", project_name, "--network", network];
+
+    // Add init argument for new canisters
+    args.push("--argument");
+    args.push(init_arg);
+
+    // Use auto mode for smart install/upgrade logic
+    if force {
+        args.push("--mode");
+        args.push("reinstall");
+        args.push("--yes"); // Auto-approve reinstalls
+    } else {
+        args.push("--mode");
+        args.push("auto"); // Auto-detect install vs upgrade
+    }
+
+    run_command_interactive("dfx", &args, Some(current_dir)).await?;
+    Ok(())
 }
