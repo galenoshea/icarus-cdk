@@ -22,19 +22,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **🔧 Multi-Client MCP Support**: Extended MCP configuration system
   - Support for Claude Desktop, ChatGPT Desktop, and Claude Code
   - Unified `icarus mcp` command for cross-client configuration
-  - Automatic deployment integration with MCP setup
+  - Automatic deployment integration MCP setup
 - **⚙️ Enhanced Build System**: Improved deployment workflow
   - Auto-upgrade deployment behavior (like `dfx deploy`)
   - Intelligent build caching and optimization
   - Better error handling and user feedback
 
-### Deprecated
-- **ServiceRegistry**: Service registration no longer needed since tools are discovered via `list_tools()`
+### Removed
+- **🧹 Dead Code Cleanup**: Comprehensive removal of deprecated and unused code
+  - Removed deprecated `ServiceRegistry` implementation (~40 lines)
+  - Eliminated unused dependency: `tracing` in `icarus-core`
+  - Removed 3 unused functions in CLI Claude Desktop utilities (~80 lines)
+  - Fixed ambiguous re-export warnings in main library
+  - Zero compilation warnings after cleanup
+  - Improved build performance with cleaner dependency tree
 
 ### Fixed
 - **MCP Protocol Compliance**: Fixed "missing field name" error in MCP server responses
 - **Build Performance**: Improved build times with better caching strategies
 - **Error Messages**: More helpful error messages throughout the CLI
+- **Code Quality**: Eliminated all clippy warnings and dead code warnings
 
 ## [0.7.0] - 2025-09-15
 
