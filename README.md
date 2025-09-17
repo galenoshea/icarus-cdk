@@ -74,7 +74,7 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.7.0"
+icarus = "0.8.0"
 
 # Or specify features explicitly
 icarus = { version = "0.7.0", features = ["canister"] }
@@ -249,7 +249,7 @@ Icarus SDK is organized into focused crates for modularity and flexibility:
 
 ```toml
 # Use the full SDK (recommended)
-icarus = "0.7.0"
+icarus = "0.8.0"
 
 # Or pick specific crates for specialized use cases
 icarus-bridge = "0.7.0"   # For custom bridge implementations
@@ -307,7 +307,7 @@ icarus logs <id>          # View canister logs
 - 🌉 **Improved Bridge**: More robust MCP-to-ICP communication
 
 ### To upgrade:
-1. Update your dependency: `icarus = "0.7.0"`
+1. Update your dependency: `icarus = "0.8.0"`
 2. Redeploy: `icarus deploy` (builds automatically)
 
 **No breaking changes** - existing code continues to work unchanged. The modular architecture is internal - your application code remains the same.

@@ -33,7 +33,7 @@ ciborium = { workspace = true }
 
 # MCP Protocol
 rmcp = { workspace = true, features = ["server"] }
-icarus-mcp = { version = "0.7.0", path = "../crates/icarus-mcp" }
+icarus-mcp = { version = "0.8.0", path = "../crates/icarus-mcp" }
 
 # Icarus crates
 icarus-bridge = { workspace = true }

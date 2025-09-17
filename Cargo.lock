@@ -1990,7 +1990,7 @@ dependencies = [
 
 [[package]]
 name = "icarus"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "candid",
  "criterion",
@@ -2005,7 +2005,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-bridge"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "candid",
@@ -2023,7 +2023,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-canister"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-trait",
  "candid",
@@ -2045,7 +2045,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-cli"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2103,7 +2103,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-core"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "async-trait",
  "candid",
@@ -2117,7 +2117,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-derive"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "candid",
  "ic-cdk",
@@ -2132,7 +2132,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-dev"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "chrono",
@@ -2151,7 +2151,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-mcp"
-version = "0.7.0"
+version = "0.8.0"
 dependencies = [
  "anyhow",
  "async-trait",
