@@ -21,7 +21,7 @@ impl ChatGptDesktopClient {
         #[cfg(target_os = "macos")]
         {
             let chatgpt_dir = app_support.join("ChatGPT");
-            return Ok(chatgpt_dir);
+            Ok(chatgpt_dir)
         }
 
         #[cfg(not(target_os = "macos"))]

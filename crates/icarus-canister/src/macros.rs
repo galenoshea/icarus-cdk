@@ -253,17 +253,14 @@ mod tests {
 
         // For unit testing, we just verify the macro syntax is correct
         // by ensuring the module compiles successfully
-        assert!(
-            true,
-            "wasi_init! macro should expand without compilation errors"
-        );
+        // If this test compiles and runs, the macro syntax is correct
     }
 
     // Test the conditional compilation attributes
     #[test]
     fn test_wasi_init_conditional_compilation() {
         // The wasi_init macro is dependency-free and should compile on all targets
-        assert!(true, "WASI init macro should compile without errors");
+        // If this test compiles and runs, the macro works correctly
     }
 
     // Test thread_local! usage in the macro
@@ -273,14 +270,14 @@ mod tests {
 
         // Test the thread_local pattern used in the macro
         thread_local! {
-            static TEST_WASI_INITIALIZED: Cell<bool> = Cell::new(false);
+            static TEST_WASI_INITIALIZED: Cell<bool> = const { Cell::new(false) };
         }
 
         // Verify we can access and modify the thread local
         TEST_WASI_INITIALIZED.with(|initialized| {
-            assert_eq!(initialized.get(), false);
+            assert!(!initialized.get());
             initialized.set(true);
-            assert_eq!(initialized.get(), true);
+            assert!(initialized.get());
         });
     }
 
@@ -291,7 +288,7 @@ mod tests {
 
         // Simulate the lazy initialization pattern from the macro
         thread_local! {
-            static TEST_INITIALIZED: Cell<bool> = Cell::new(false);
+            static TEST_INITIALIZED: Cell<bool> = const { Cell::new(false) };
         }
 
         fn ensure_test_init() {
@@ -304,14 +301,14 @@ mod tests {
         }
 
         // Test lazy initialization
-        assert_eq!(TEST_INITIALIZED.with(|i| i.get()), false);
+        assert!(!TEST_INITIALIZED.with(|i| i.get()));
 
         ensure_test_init();
-        assert_eq!(TEST_INITIALIZED.with(|i| i.get()), true);
+        assert!(TEST_INITIALIZED.with(|i| i.get()));
 
         // Call again - should not re-initialize
         ensure_test_init();
-        assert_eq!(TEST_INITIALIZED.with(|i| i.get()), true);
+        assert!(TEST_INITIALIZED.with(|i| i.get()));
     }
 
     // Test that macro generates expected function signatures
@@ -332,7 +329,7 @@ mod tests {
 
         // Function should exist regardless of target
         mock_ensure_wasi_init();
-        assert!(true, "Conditional compilation should work correctly");
+        // If this test compiles and runs, conditional compilation works correctly
     }
 
     // Test integration with ic-cdk-macros patterns
@@ -354,10 +351,7 @@ mod tests {
         mock_pre_upgrade_hook();
         mock_query_hook();
 
-        assert!(
-            true,
-            "Hook pattern should integrate correctly with ic-cdk-macros"
-        );
+        // If this test compiles and runs, hook patterns integrate correctly
     }
 
     // Test no-op behavior when WASI is disabled
@@ -372,6 +366,6 @@ mod tests {
 
         ensure_wasi_init_noop();
 
-        assert!(true, "WASI initialization should be no-op when not enabled");
+        // If this test compiles and runs, WASI initialization is properly no-op
     }
 }

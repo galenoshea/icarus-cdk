@@ -22,6 +22,8 @@ impl CliRunner {
         let binary_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
+            .parent()
+            .unwrap()
             .join("target")
             .join("release")
             .join("icarus");
@@ -38,7 +40,7 @@ impl CliRunner {
                 .env_remove("CARGO_LLVM_COV_TARGET_DIR");
 
             let output = cmd
-                .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap())
+                .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap())
                 .args([
                     "build",
                     "--package",

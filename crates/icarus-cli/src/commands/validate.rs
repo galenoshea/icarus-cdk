@@ -376,7 +376,7 @@ async fn deploy_and_verify_candid_preservation(
 
     // Create canister first
     let create_output = tokio::process::Command::new("dfx")
-        .args(&["canister", "create", "test", "--network", "local"])
+        .args(["canister", "create", "test", "--network", "local"])
         .current_dir(&temp_dir)
         .output()
         .await?;
@@ -384,7 +384,7 @@ async fn deploy_and_verify_candid_preservation(
     if !create_output.status.success() {
         // Try to clean up any existing test canister
         tokio::process::Command::new("dfx")
-            .args(&["canister", "delete", "test", "--network", "local", "--yes"])
+            .args(["canister", "delete", "test", "--network", "local", "--yes"])
             .current_dir(&temp_dir)
             .output()
             .await
@@ -392,7 +392,7 @@ async fn deploy_and_verify_candid_preservation(
 
         // Retry creation
         let retry_output = tokio::process::Command::new("dfx")
-            .args(&["canister", "create", "test", "--network", "local"])
+            .args(["canister", "create", "test", "--network", "local"])
             .current_dir(&temp_dir)
             .output()
             .await?;
@@ -404,7 +404,7 @@ async fn deploy_and_verify_candid_preservation(
 
     // Get the canister ID
     let id_output = tokio::process::Command::new("dfx")
-        .args(&["canister", "id", "test", "--network", "local"])
+        .args(["canister", "id", "test", "--network", "local"])
         .current_dir(&temp_dir)
         .output()
         .await?;
@@ -424,7 +424,7 @@ async fn deploy_and_verify_candid_preservation(
 
     // Get the current principal to use as the test owner
     let whoami_output = tokio::process::Command::new("dfx")
-        .args(&["identity", "whoami"])
+        .args(["identity", "whoami"])
         .output()
         .await?;
 
@@ -434,7 +434,7 @@ async fn deploy_and_verify_candid_preservation(
 
     // Get the principal for the current identity
     let principal_output = tokio::process::Command::new("dfx")
-        .args(&["identity", "get-principal"])
+        .args(["identity", "get-principal"])
         .output()
         .await?;
 
@@ -453,7 +453,7 @@ async fn deploy_and_verify_candid_preservation(
     // The init argument is the principal in Candid format
     let init_arg = format!("(principal \"{}\")", test_principal);
     let install_output = tokio::process::Command::new("dfx")
-        .args(&[
+        .args([
             "canister",
             "install",
             "test",
@@ -534,7 +534,7 @@ async fn deploy_and_verify_candid_preservation(
 async fn retrieve_candid_from_canister(canister_id: &str) -> Result<String> {
     // First, try to get metadata directly from the canister
     let metadata_output = tokio::process::Command::new("dfx")
-        .args(&[
+        .args([
             "canister",
             "metadata",
             canister_id,
@@ -557,7 +557,7 @@ async fn retrieve_candid_from_canister(canister_id: &str) -> Result<String> {
     if which::which("ic-wasm").is_ok() {
         // First get the WASM module from the canister
         let _wasm_output = tokio::process::Command::new("dfx")
-            .args(&["canister", "info", canister_id, "--network", "local"])
+            .args(["canister", "info", canister_id, "--network", "local"])
             .output()
             .await?;
 
@@ -567,7 +567,7 @@ async fn retrieve_candid_from_canister(canister_id: &str) -> Result<String> {
 
     // Method 2: Try the __get_candid_interface_tmp_hack method (for canisters that expose it)
     let hack_output = tokio::process::Command::new("dfx")
-        .args(&[
+        .args([
             "canister",
             "call",
             canister_id,
@@ -590,7 +590,7 @@ async fn retrieve_candid_from_canister(canister_id: &str) -> Result<String> {
 
     // Method 3: If the canister has a get_candid method (common pattern)
     let get_candid_output = tokio::process::Command::new("dfx")
-        .args(&[
+        .args([
             "canister",
             "call",
             canister_id,
@@ -648,7 +648,7 @@ async fn cleanup_test_canister(canister_id: &str) -> Result<()> {
     print_info("Cleaning up test canister...");
 
     let output = tokio::process::Command::new("dfx")
-        .args(&[
+        .args([
             "canister",
             "delete",
             canister_id,

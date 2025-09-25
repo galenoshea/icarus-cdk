@@ -226,7 +226,7 @@ impl MonitoringDashboard {
         // This would call a hypothetical metrics endpoint on the canister
         // For now, return empty since this endpoint doesn't exist yet
         // In a real implementation, this would query canister state for tool metrics
-        let _metrics_call = format!("Would query canister metrics here");
+        let _metrics_call = "Would query canister metrics here".to_string();
 
         Ok(vec![])
     }

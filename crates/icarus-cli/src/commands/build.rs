@@ -274,9 +274,8 @@ serde = "1.0"
 "#;
         fs::write(&cargo_toml_path, content).unwrap();
 
-        assert_eq!(
+        assert!(
             detect_wasi_features(temp_dir.path()).unwrap(),
-            true,
             "Should detect WASI when ic-wasi-polyfill is in dependencies"
         );
     }
@@ -301,9 +300,8 @@ wasi = ["ic-wasi-polyfill"]
 "#;
         fs::write(&cargo_toml_path, content).unwrap();
 
-        assert_eq!(
+        assert!(
             detect_wasi_features(temp_dir.path()).unwrap(),
-            true,
             "Should detect WASI when wasi feature is in default features"
         );
     }
@@ -328,9 +326,8 @@ wasi = ["ic-wasi-polyfill"]
 "#;
         fs::write(&cargo_toml_path, content).unwrap();
 
-        assert_eq!(
-            detect_wasi_features(temp_dir.path()).unwrap(),
-            false,
+        assert!(
+            !detect_wasi_features(temp_dir.path()).unwrap(),
             "Should NOT detect WASI when wasi feature exists but is not in default"
         );
     }
@@ -351,9 +348,8 @@ ic-cdk = "0.18"
 "#;
         fs::write(&cargo_toml_path, content).unwrap();
 
-        assert_eq!(
-            detect_wasi_features(temp_dir.path()).unwrap(),
-            false,
+        assert!(
+            !detect_wasi_features(temp_dir.path()).unwrap(),
             "Should NOT detect WASI for projects without WASI dependencies"
         );
     }
@@ -363,9 +359,8 @@ ic-cdk = "0.18"
         let temp_dir = TempDir::new().unwrap();
         // No Cargo.toml file created
 
-        assert_eq!(
-            detect_wasi_features(temp_dir.path()).unwrap(),
-            false,
+        assert!(
+            !detect_wasi_features(temp_dir.path()).unwrap(),
             "Should return false when Cargo.toml doesn't exist"
         );
     }
@@ -390,9 +385,8 @@ ic-cdk = "0.18"
         fs::write(temp_dir.path().join("Cargo.toml"), "").unwrap();
         fs::write(temp_dir.path().join("dfx.json"), "").unwrap();
 
-        assert_eq!(
+        assert!(
             is_icarus_project(temp_dir.path()),
-            true,
             "Should recognize project with both Cargo.toml and dfx.json"
         );
     }
@@ -402,9 +396,8 @@ ic-cdk = "0.18"
         let temp_dir = TempDir::new().unwrap();
         fs::write(temp_dir.path().join("dfx.json"), "").unwrap();
 
-        assert_eq!(
-            is_icarus_project(temp_dir.path()),
-            false,
+        assert!(
+            !is_icarus_project(temp_dir.path()),
             "Should NOT recognize project missing Cargo.toml"
         );
     }
@@ -414,9 +407,8 @@ ic-cdk = "0.18"
         let temp_dir = TempDir::new().unwrap();
         fs::write(temp_dir.path().join("Cargo.toml"), "").unwrap();
 
-        assert_eq!(
-            is_icarus_project(temp_dir.path()),
-            false,
+        assert!(
+            !is_icarus_project(temp_dir.path()),
             "Should NOT recognize project missing dfx.json"
         );
     }
@@ -425,9 +417,8 @@ ic-cdk = "0.18"
     fn test_is_icarus_project_empty_directory() {
         let temp_dir = TempDir::new().unwrap();
 
-        assert_eq!(
-            is_icarus_project(temp_dir.path()),
-            false,
+        assert!(
+            !is_icarus_project(temp_dir.path()),
             "Should NOT recognize empty directory as Icarus project"
         );
     }

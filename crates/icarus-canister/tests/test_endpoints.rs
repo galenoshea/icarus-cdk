@@ -41,7 +41,7 @@ fn test_icarus_metadata_structure() {
         .unwrap();
     assert_eq!(test_tool.name, "test_tool");
     assert_eq!(test_tool.candid_method, "test_tool");
-    assert_eq!(test_tool.is_query, true);
+    assert!(test_tool.is_query);
     assert_eq!(test_tool.description, "test_tool tool");
     assert_eq!(test_tool.parameters.len(), 0);
 
@@ -53,7 +53,7 @@ fn test_icarus_metadata_structure() {
         .unwrap();
     assert_eq!(update_tool.name, "update_tool");
     assert_eq!(update_tool.candid_method, "update_tool");
-    assert_eq!(update_tool.is_query, false);
+    assert!(!update_tool.is_query);
     assert_eq!(update_tool.description, "update_tool tool");
     assert_eq!(update_tool.parameters.len(), 0);
 }
@@ -251,13 +251,11 @@ fn test_http_request_post() {
     // (since it's designed for browser viewing, not API usage)
 
     // Test that we would get the same response structure
-    let response_headers = vec![
-        (
+    let response_headers = [(
             "Content-Type".to_string(),
             "text/html; charset=UTF-8".to_string(),
         ),
-        ("Cache-Control".to_string(), "no-cache".to_string()),
-    ];
+        ("Cache-Control".to_string(), "no-cache".to_string())];
 
     assert_eq!(response_headers.len(), 2);
     assert_eq!(response_headers[0].0, "Content-Type");
@@ -283,7 +281,7 @@ fn test_http_request_serialization() {
 
     // Test Candid serialization
     let encoded = encode_one(&request).expect("Should serialize HttpRequest");
-    assert!(encoded.len() > 0);
+    assert!(!encoded.is_empty());
 
     let decoded: HttpRequest = decode_one(&encoded).expect("Should deserialize HttpRequest");
     assert_eq!(decoded.method, "GET");

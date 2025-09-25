@@ -160,7 +160,7 @@ fn test_icarus_error_candid_serialization() {
     for error in errors {
         // Test encoding
         let encoded = encode_one(&error).expect("Should encode successfully");
-        assert!(encoded.len() > 0);
+        assert!(!encoded.is_empty());
 
         // Test decoding
         let decoded: IcarusError = decode_one(&encoded).expect("Should decode successfully");
@@ -219,9 +219,12 @@ fn test_icarus_error_json_serialization() {
 #[test]
 fn test_icarus_result_type() {
     // Test successful result
-    let success: IcarusResult<String> = Ok("test".to_string());
-    assert!(success.is_ok());
-    assert_eq!(success.unwrap(), "test");
+    let success = "test".to_string();
+    let success_result: IcarusResult<String> = Ok(success.clone());
+    assert!(success_result.is_ok());
+    if let Ok(value) = success_result {
+        assert_eq!(value, success);
+    }
 
     // Test error result
     let error: IcarusResult<String> = Err(IcarusError::not_found("item"));
@@ -341,11 +344,9 @@ fn test_error_equality() {
 #[test]
 fn test_complex_validation_scenarios() {
     // Multiple field validation
-    let errors = vec![
-        IcarusError::validation("username", "must be at least 3 characters"),
+    let errors = [IcarusError::validation("username", "must be at least 3 characters"),
         IcarusError::validation("password", "must contain at least one uppercase letter"),
-        IcarusError::validation("email", "invalid email format"),
-    ];
+        IcarusError::validation("email", "invalid email format")];
 
     for (i, error) in errors.iter().enumerate() {
         if let IcarusError::ValidationError { field, message } = error {

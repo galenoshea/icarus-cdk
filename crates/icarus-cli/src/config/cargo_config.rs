@@ -9,6 +9,7 @@ use toml::Value;
 
 /// Claude Desktop integration configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default)]
 pub struct ClaudeDesktopConfig {
     /// Automatically update Claude Desktop config on deploy
     #[serde(default)]
@@ -21,6 +22,7 @@ pub struct ClaudeDesktopConfig {
 
 /// ChatGPT Desktop integration configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default)]
 pub struct ChatGptDesktopConfig {
     /// Automatically update ChatGPT Desktop config on deploy
     #[serde(default)]
@@ -33,6 +35,7 @@ pub struct ChatGptDesktopConfig {
 
 /// Claude Code integration configuration
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default)]
 pub struct ClaudeCodeConfig {
     /// Automatically update Claude Code config on deploy
     #[serde(default)]
@@ -45,6 +48,7 @@ pub struct ClaudeCodeConfig {
 
 /// Icarus metadata configuration in Cargo.toml
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Default)]
 pub struct IcarusMetadata {
     #[serde(default)]
     pub claude_desktop: ClaudeDesktopConfig,
@@ -56,42 +60,9 @@ pub struct IcarusMetadata {
     pub claude_code: ClaudeCodeConfig,
 }
 
-impl Default for ClaudeDesktopConfig {
-    fn default() -> Self {
-        Self {
-            auto_update: false,
-            config_path: String::new(),
-        }
-    }
-}
 
-impl Default for ChatGptDesktopConfig {
-    fn default() -> Self {
-        Self {
-            auto_update: false,
-            config_path: String::new(),
-        }
-    }
-}
 
-impl Default for ClaudeCodeConfig {
-    fn default() -> Self {
-        Self {
-            auto_update: false,
-            config_path: String::new(),
-        }
-    }
-}
 
-impl Default for IcarusMetadata {
-    fn default() -> Self {
-        Self {
-            claude_desktop: ClaudeDesktopConfig::default(),
-            chatgpt_desktop: ChatGptDesktopConfig::default(),
-            claude_code: ClaudeCodeConfig::default(),
-        }
-    }
-}
 
 /// Load Icarus configuration from Cargo.toml
 pub fn load_from_cargo_toml(project_dir: &Path) -> Result<Option<IcarusMetadata>> {

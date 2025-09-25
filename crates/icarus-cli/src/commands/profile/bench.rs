@@ -4,7 +4,7 @@ use super::*;
 use anyhow::{anyhow, Result};
 use colored::Colorize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 /// Execute benchmark command
@@ -103,8 +103,8 @@ pub async fn execute(filter: Option<String>, output: Option<String>, html: bool)
 }
 
 /// Find the target directory for build artifacts
-fn find_target_directory(start_dir: &PathBuf) -> Result<PathBuf> {
-    let mut current = start_dir.clone();
+fn find_target_directory(start_dir: &Path) -> Result<PathBuf> {
+    let mut current = start_dir.to_path_buf();
 
     loop {
         let target = current.join("target");

@@ -97,7 +97,7 @@ fn is_valid_project_name(name: &str) -> bool {
 }
 
 fn create_project_structure(
-    project_path: &PathBuf,
+    project_path: &Path,
     name: &str,
     with_tests: bool,
     wasi: bool,
@@ -383,11 +383,7 @@ tokio = {{ version = "{}", features = ["full"] }}
         "".to_string()
     };
 
-    let features_section = if wasi {
-        "" // icarus-wasi handles everything automatically, no features needed
-    } else {
-        ""
-    };
+    let features_section = ""; // No features needed - icarus-wasi handles automatically
 
     Ok(format!(
         r#"[package]

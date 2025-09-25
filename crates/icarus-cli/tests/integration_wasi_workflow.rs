@@ -16,7 +16,7 @@ fn test_wasi_project_creation_end_to_end() {
     // Run icarus new with --wasi flag
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-e2e", "--wasi", "--silent"],
+        &["new", "test-wasi-e2e", "--wasi"],
     );
 
     // Verify command succeeded
@@ -80,7 +80,7 @@ fn test_wasi_project_builds_correctly() {
     // Create WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-build", "--wasi", "--silent"],
+        &["new", "test-wasi-build", "--wasi"],
     );
     assert_success(&output);
 
@@ -116,14 +116,14 @@ fn test_wasi_vs_non_wasi_project_differences() {
     // Create WASI project
     let wasi_output = runner.run_in(
         wasi_project.path(),
-        &["new", "test-wasi-comparison", "--wasi", "--silent"],
+        &["new", "test-wasi-comparison", "--wasi"],
     );
     assert_success(&wasi_output);
 
     // Create non-WASI project
     let non_wasi_output = runner.run_in(
         non_wasi_project.path(),
-        &["new", "test-non-wasi-comparison", "--silent"],
+        &["new", "test-non-wasi-comparison"],
     );
     assert_success(&non_wasi_output);
 
@@ -188,7 +188,7 @@ fn test_wasi_feature_detection() {
     // Create WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-detection", "--wasi", "--silent"],
+        &["new", "test-wasi-detection", "--wasi"],
     );
     assert_success(&output);
 
@@ -211,7 +211,7 @@ fn test_wasi_ecosystem_libraries_setup() {
     // Create WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-ecosystem", "--wasi", "--silent"],
+        &["new", "test-wasi-ecosystem", "--wasi"],
     );
     assert_success(&output);
 
@@ -341,7 +341,7 @@ fn test_wasi_project_flag_combinations() {
     let project_no_tests = TestProject::new("test-wasi-flags-no-tests");
     let output = runner.run_in(
         project_no_tests.path(),
-        &["new", "test-wasi-flags-no-tests", "--wasi", "--silent"],
+        &["new", "test-wasi-flags-no-tests", "--wasi"],
     );
     assert_success(&output);
 
@@ -366,7 +366,7 @@ fn test_wasi_project_error_handling() {
 
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-errors", "--wasi", "--silent"],
+        &["new", "test-wasi-errors", "--wasi"],
     );
 
     // Command should handle the existing directory gracefully
@@ -394,7 +394,7 @@ fn test_wasi_build_system_integration() {
     // Create WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-build-integration", "--wasi", "--silent"],
+        &["new", "test-wasi-build-integration", "--wasi"],
     );
     assert_success(&output);
 
@@ -429,7 +429,7 @@ fn test_wasi_project_validation() {
     // Create WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-wasi-validation", "--wasi", "--silent"],
+        &["new", "test-wasi-validation", "--wasi"],
     );
     assert_success(&output);
 

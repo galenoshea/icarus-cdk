@@ -607,7 +607,7 @@ impl InteractiveWizard {
         println!("\n{} Checking dfx installation...", "🔍".bright_blue());
 
         match tokio::process::Command::new("dfx")
-            .args(&["--version"])
+            .args(["--version"])
             .output()
             .await
         {
@@ -637,7 +637,7 @@ impl InteractiveWizard {
 
         // Check if dfx is running locally
         match tokio::process::Command::new("dfx")
-            .args(&["ping", "local"])
+            .args(["ping", "local"])
             .output()
             .await
         {
@@ -659,7 +659,7 @@ impl InteractiveWizard {
 
         // Check if project builds
         match tokio::process::Command::new("cargo")
-            .args(&["check", "--quiet"])
+            .args(["check", "--quiet"])
             .output()
             .await
         {
@@ -738,7 +738,7 @@ impl InteractiveWizard {
 
         // Check dfx availability
         let dfx_available = tokio::process::Command::new("dfx")
-            .args(&["--version"])
+            .args(["--version"])
             .output()
             .await
             .map(|output| output.status.success())
@@ -754,7 +754,7 @@ impl InteractiveWizard {
         // Check if local replica is running
         if dfx_available {
             let replica_running = tokio::process::Command::new("dfx")
-                .args(&["ping", "local"])
+                .args(["ping", "local"])
                 .output()
                 .await
                 .map(|output| output.status.success())
@@ -782,6 +782,7 @@ mod tests {
 
     // Mock for testing interactive wizard without actual user input
     #[derive(Debug)]
+    #[allow(dead_code)]
     struct MockDialoguer {
         confirm_responses: Vec<bool>,
         input_responses: Vec<String>,
@@ -789,6 +790,7 @@ mod tests {
         call_count: std::cell::RefCell<usize>,
     }
 
+    #[allow(dead_code)]
     impl MockDialoguer {
         fn new() -> Self {
             Self {
@@ -855,8 +857,8 @@ mod tests {
 
         // In the actual code at line 138: .default(false)
         let expected_wasi_default = false;
-        assert_eq!(
-            expected_wasi_default, false,
+        assert!(
+            !expected_wasi_default,
             "WASI support should default to false for conservative behavior"
         );
     }
@@ -914,10 +916,7 @@ mod tests {
         let _: bool = with_tests;
         let _: bool = with_wasi;
 
-        assert!(
-            true,
-            "Parameter types match expected execute function signature"
-        );
+        // If this test compiles and runs, parameter types match correctly
     }
 
     #[test]
@@ -969,15 +968,15 @@ mod tests {
 
         // Verify parameter structure for WASI enabled case
         let params_wasi_enabled = (project_name, project_path, with_tests, with_wasi_enabled);
-        assert_eq!(
-            params_wasi_enabled.3, true,
+        assert!(
+            params_wasi_enabled.3,
             "WASI should be enabled when user selects true"
         );
 
         // Verify parameter structure for WASI disabled case
         let params_wasi_disabled = (project_name, project_path, with_tests, with_wasi_disabled);
-        assert_eq!(
-            params_wasi_disabled.3, false,
+        assert!(
+            !params_wasi_disabled.3,
             "WASI should be disabled when user selects false"
         );
     }

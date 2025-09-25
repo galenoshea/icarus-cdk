@@ -315,8 +315,8 @@ mod tests {
     // Mock stable storage for testing
     thread_local! {
         static MOCK_USERS: RefCell<HashMap<Principal, User>> = RefCell::new(HashMap::new());
-        static MOCK_TIME: RefCell<u64> = RefCell::new(1000000000000);
-        static MOCK_CALLER: RefCell<Principal> = RefCell::new(Principal::anonymous());
+        static MOCK_TIME: RefCell<u64> = const { RefCell::new(1000000000000) };
+        static MOCK_CALLER: RefCell<Principal> = const { RefCell::new(Principal::anonymous()) };
     }
 
     fn create_test_principal(text: &str) -> Principal {

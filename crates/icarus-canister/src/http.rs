@@ -291,9 +291,9 @@ mod tests {
 
     fn validate_url(url: &str) -> Result<(), HttpError> {
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            Err(HttpError::InvalidUrl(format!(
-                "URL must start with http:// or https://"
-            )))
+            Err(HttpError::InvalidUrl(
+                "URL must start with http:// or https://".to_string()
+            ))
         } else {
             Ok(())
         }

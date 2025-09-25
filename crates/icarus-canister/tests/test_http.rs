@@ -9,7 +9,7 @@ fn test_url_validation() {
     // Test helper function that mimics internal validation
     fn validate_url(url: &str) -> Result<(), String> {
         if !url.starts_with("http://") && !url.starts_with("https://") {
-            Err(format!("URL must start with http:// or https://"))
+            Err("URL must start with http:// or https://".to_string())
         } else {
             Ok(())
         }
@@ -95,7 +95,7 @@ fn test_json_body_preparation() {
     // Test various JSON structures
     let simple = json!({"key": "value"});
     let simple_bytes = serde_json::to_vec(&simple).unwrap();
-    assert!(simple_bytes.len() > 0);
+    assert!(!simple_bytes.is_empty());
 
     let complex = json!({
         "user": {

@@ -197,11 +197,12 @@ mod tests {
     #[test]
     fn test_result_type_alias() {
         // Test that our Result type alias works correctly
-        let success: Result<i32> = Ok(42);
+        let value = 42;
+        let success: Result<i32> = Ok(value);
         let failure: Result<i32> = Err(IcarusError::Other("failed".to_string()));
 
         assert!(success.is_ok());
-        assert_eq!(success.unwrap(), 42);
+        assert_eq!(success.unwrap(), value);
 
         assert!(failure.is_err());
         assert_eq!(failure.unwrap_err().to_string(), "failed");

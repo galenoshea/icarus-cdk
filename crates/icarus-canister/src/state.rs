@@ -447,7 +447,7 @@ mod tests {
             let tool_2 = state.tools.get(&"tool_2".to_string()).unwrap();
             assert_eq!(tool_2.name, "tool_2");
             assert_eq!(tool_2.call_count, 20);
-            assert_eq!(tool_2.enabled, true);
+            assert!(tool_2.enabled);
 
             let resource_1 = state.resources.get(&"resource_1".to_string()).unwrap();
             assert_eq!(resource_1.uri, "https://example.com/resource_1");
@@ -463,9 +463,9 @@ mod tests {
 
         IcarusCanisterState::init(config);
 
-        assert_eq!(is_owner(owner), true);
-        assert_eq!(is_owner(non_owner), false);
-        assert_eq!(is_owner(Principal::anonymous()), false);
+        assert!(is_owner(owner));
+        assert!(!is_owner(non_owner));
+        assert!(!is_owner(Principal::anonymous()));
     }
 
     #[test]

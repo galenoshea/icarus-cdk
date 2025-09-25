@@ -13,7 +13,7 @@ fn test_non_wasi_project_creation_end_to_end() {
     let project = TestProject::new("test-non-wasi-e2e");
 
     // Run icarus new WITHOUT --wasi flag (default behavior)
-    let output = runner.run_in(project.path(), &["new", "test-non-wasi-e2e", "--silent"]);
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-e2e"]);
 
     // Verify command succeeded
     assert_success(&output);
@@ -69,7 +69,7 @@ fn test_non_wasi_project_builds_pure_wasm() {
     let project = TestProject::new("test-non-wasi-build");
 
     // Create non-WASI project
-    let output = runner.run_in(project.path(), &["new", "test-non-wasi-build", "--silent"]);
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-build"]);
     assert_success(&output);
 
     // Create cargo config override to use local dependencies
@@ -109,7 +109,7 @@ fn test_non_wasi_project_structure() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-structure", "--silent"],
+        &["new", "test-non-wasi-structure"],
     );
     assert_success(&output);
 
@@ -174,7 +174,7 @@ fn test_non_wasi_project_with_tests() {
     // Create non-WASI project with tests
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-tests", "--with-tests", "--silent"],
+        &["new", "test-non-wasi-tests", "--with-tests"],
     );
     assert_success(&output);
 
@@ -204,7 +204,7 @@ fn test_non_wasi_project_optimization() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-optimization", "--silent"],
+        &["new", "test-non-wasi-optimization"],
     );
     assert_success(&output);
 
@@ -243,7 +243,7 @@ fn test_non_wasi_project_deployment() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-deployment", "--silent"],
+        &["new", "test-non-wasi-deployment"],
     );
     assert_success(&output);
 
@@ -274,7 +274,7 @@ fn test_non_wasi_project_error_handling() {
     // Test with invalid project name
     let output = runner.run_in(
         project.path(),
-        &["new", "invalid-name-with-special@chars", "--silent"],
+        &["new", "invalid-name-with-special@chars"],
     );
 
     // Should fail with informative error
@@ -298,12 +298,12 @@ fn test_non_wasi_project_consistency() {
 
     // Create multiple non-WASI projects with different settings
     let scenarios = vec![
-        ("basic", vec!["new", "basic", "--silent"]),
+        ("basic", vec!["new", "basic"]),
         (
             "with-tests",
-            vec!["new", "with-tests", "--with-tests", "--silent"],
+            vec!["new", "with-tests", "--with-tests"],
         ),
-        ("no-tests", vec!["new", "no-tests", "--silent"]),
+        ("no-tests", vec!["new", "no-tests"]),
     ];
 
     for (name, args) in scenarios {
@@ -349,7 +349,7 @@ fn test_non_wasi_build_configuration() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-build-config", "--silent"],
+        &["new", "test-non-wasi-build-config"],
     );
     assert_success(&output);
 
@@ -390,7 +390,7 @@ fn test_non_wasi_project_validation() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-validation", "--silent"],
+        &["new", "test-non-wasi-validation"],
     );
     assert_success(&output);
 
@@ -477,7 +477,7 @@ fn test_non_wasi_project_performance() {
     // Create non-WASI project
     let output = runner.run_in(
         project.path(),
-        &["new", "test-non-wasi-performance", "--silent"],
+        &["new", "test-non-wasi-performance"],
     );
     assert_success(&output);
 

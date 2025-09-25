@@ -39,14 +39,13 @@ async fn stop_all_mcp_servers() -> Result<()> {
                     && cmd_strings.iter().any(|a| a == "mcp"))
         });
 
-        if is_mcp_server {
-            if stop_process(
+        if is_mcp_server
+            && stop_process(
                 process.pid().as_u32(),
                 &format!("MCP server (PID: {})", process.pid()),
             ) {
                 stopped_count += 1;
             }
-        }
     }
 
     if stopped_count > 0 {
@@ -86,8 +85,8 @@ async fn stop_mcp_server_for_canister(canister_id: &str) -> Result<()> {
                     && cmd_strings.iter().any(|a| a == "mcp"))
         }) && cmd_strings.iter().any(|arg| arg == canister_id);
 
-        if is_target_mcp_server {
-            if stop_process(
+        if is_target_mcp_server
+            && stop_process(
                 process.pid().as_u32(),
                 &format!(
                     "MCP server for canister {} (PID: {})",
@@ -97,7 +96,6 @@ async fn stop_mcp_server_for_canister(canister_id: &str) -> Result<()> {
             ) {
                 stopped_count += 1;
             }
-        }
     }
 
     if stopped_count > 0 {

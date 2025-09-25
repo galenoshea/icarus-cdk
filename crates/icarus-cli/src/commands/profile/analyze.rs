@@ -4,7 +4,7 @@ use super::*;
 use anyhow::{anyhow, Result};
 use colored::Colorize;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 /// Execute WASM analysis command
 pub async fn execute(wasm_path: Option<String>, memory: bool, instructions: bool) -> Result<()> {
@@ -94,7 +94,7 @@ fn find_wasm_file(wasm_path: Option<String>) -> Result<PathBuf> {
 }
 
 /// Analyze basic WASM properties
-fn analyze_basic_properties(wasm_bytes: &[u8], wasm_file: &PathBuf) -> Result<()> {
+fn analyze_basic_properties(wasm_bytes: &[u8], wasm_file: &Path) -> Result<()> {
     let size = wasm_bytes.len();
     println!(
         "   Binary size:      {}",
@@ -276,7 +276,7 @@ fn analyze_performance_patterns(code_data: &[u8]) {
 }
 
 /// Provide optimization recommendations
-fn provide_optimization_recommendations(wasm_bytes: &[u8], wasm_file: &PathBuf) -> Result<()> {
+fn provide_optimization_recommendations(wasm_bytes: &[u8], wasm_file: &Path) -> Result<()> {
     let size = wasm_bytes.len();
 
     // Size-based recommendations

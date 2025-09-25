@@ -1,7 +1,6 @@
 //! Tests for timer functionality
 
 use icarus_canister::timers::{TimerError, TimerInfo, TimerType};
-use serde_json;
 use std::time::Duration;
 
 /// Test TimerInfo creation and serialization
@@ -297,15 +296,15 @@ fn test_timer_info_special_characters() {
 /// Test TimerType exhaustive matching
 #[test]
 fn test_timer_type_exhaustive() {
-    fn match_timer_type(timer_type: TimerType) -> &'static str {
+    fn match_timer_type(timer_type: &TimerType) -> &'static str {
         match timer_type {
             TimerType::Once => "once",
             TimerType::Periodic => "periodic",
         }
     }
 
-    assert_eq!(match_timer_type(TimerType::Once), "once");
-    assert_eq!(match_timer_type(TimerType::Periodic), "periodic");
+    assert_eq!(match_timer_type(&TimerType::Once), "once");
+    assert_eq!(match_timer_type(&TimerType::Periodic), "periodic");
 }
 
 /// Test large scale TimerInfo operations
