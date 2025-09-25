@@ -8,8 +8,7 @@ use std::path::Path;
 use toml::Value;
 
 /// Claude Desktop integration configuration
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ClaudeDesktopConfig {
     /// Automatically update Claude Desktop config on deploy
     #[serde(default)]
@@ -21,8 +20,7 @@ pub struct ClaudeDesktopConfig {
 }
 
 /// ChatGPT Desktop integration configuration
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ChatGptDesktopConfig {
     /// Automatically update ChatGPT Desktop config on deploy
     #[serde(default)]
@@ -34,8 +32,7 @@ pub struct ChatGptDesktopConfig {
 }
 
 /// Claude Code integration configuration
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct ClaudeCodeConfig {
     /// Automatically update Claude Code config on deploy
     #[serde(default)]
@@ -47,8 +44,7 @@ pub struct ClaudeCodeConfig {
 }
 
 /// Icarus metadata configuration in Cargo.toml
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[derive(Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct IcarusMetadata {
     #[serde(default)]
     pub claude_desktop: ClaudeDesktopConfig,
@@ -59,10 +55,6 @@ pub struct IcarusMetadata {
     #[serde(default)]
     pub claude_code: ClaudeCodeConfig,
 }
-
-
-
-
 
 /// Load Icarus configuration from Cargo.toml
 pub fn load_from_cargo_toml(project_dir: &Path) -> Result<Option<IcarusMetadata>> {

@@ -43,9 +43,10 @@ async fn stop_all_mcp_servers() -> Result<()> {
             && stop_process(
                 process.pid().as_u32(),
                 &format!("MCP server (PID: {})", process.pid()),
-            ) {
-                stopped_count += 1;
-            }
+            )
+        {
+            stopped_count += 1;
+        }
     }
 
     if stopped_count > 0 {
@@ -93,9 +94,10 @@ async fn stop_mcp_server_for_canister(canister_id: &str) -> Result<()> {
                     canister_id,
                     process.pid()
                 ),
-            ) {
-                stopped_count += 1;
-            }
+            )
+        {
+            stopped_count += 1;
+        }
     }
 
     if stopped_count > 0 {

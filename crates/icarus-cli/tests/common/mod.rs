@@ -40,7 +40,13 @@ impl CliRunner {
                 .env_remove("CARGO_LLVM_COV_TARGET_DIR");
 
             let output = cmd
-                .current_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).parent().unwrap().parent().unwrap())
+                .current_dir(
+                    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                        .parent()
+                        .unwrap()
+                        .parent()
+                        .unwrap(),
+                )
                 .args([
                     "build",
                     "--package",

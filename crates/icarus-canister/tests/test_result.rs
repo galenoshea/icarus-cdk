@@ -344,9 +344,11 @@ fn test_error_equality() {
 #[test]
 fn test_complex_validation_scenarios() {
     // Multiple field validation
-    let errors = [IcarusError::validation("username", "must be at least 3 characters"),
+    let errors = [
+        IcarusError::validation("username", "must be at least 3 characters"),
         IcarusError::validation("password", "must contain at least one uppercase letter"),
-        IcarusError::validation("email", "invalid email format")];
+        IcarusError::validation("email", "invalid email format"),
+    ];
 
     for (i, error) in errors.iter().enumerate() {
         if let IcarusError::ValidationError { field, message } = error {

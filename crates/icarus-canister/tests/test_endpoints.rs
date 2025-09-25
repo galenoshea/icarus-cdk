@@ -251,11 +251,13 @@ fn test_http_request_post() {
     // (since it's designed for browser viewing, not API usage)
 
     // Test that we would get the same response structure
-    let response_headers = [(
+    let response_headers = [
+        (
             "Content-Type".to_string(),
             "text/html; charset=UTF-8".to_string(),
         ),
-        ("Cache-Control".to_string(), "no-cache".to_string())];
+        ("Cache-Control".to_string(), "no-cache".to_string()),
+    ];
 
     assert_eq!(response_headers.len(), 2);
     assert_eq!(response_headers[0].0, "Content-Type");

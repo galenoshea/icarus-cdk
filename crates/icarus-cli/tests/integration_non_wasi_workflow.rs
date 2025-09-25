@@ -107,10 +107,7 @@ fn test_non_wasi_project_structure() {
     let project = TestProject::new("test-non-wasi-structure");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-structure"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-structure"]);
     assert_success(&output);
 
     // Verify project structure is optimized for simple canisters
@@ -202,10 +199,7 @@ fn test_non_wasi_project_optimization() {
     let project = TestProject::new("test-non-wasi-optimization");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-optimization"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-optimization"]);
     assert_success(&output);
 
     // Verify optimization settings for pure WASM
@@ -241,10 +235,7 @@ fn test_non_wasi_project_deployment() {
     let project = TestProject::new("test-non-wasi-deployment");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-deployment"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-deployment"]);
     assert_success(&output);
 
     // Verify dfx.json is configured for simple deployment
@@ -272,10 +263,7 @@ fn test_non_wasi_project_error_handling() {
     let project = TestProject::new("test-non-wasi-errors");
 
     // Test with invalid project name
-    let output = runner.run_in(
-        project.path(),
-        &["new", "invalid-name-with-special@chars"],
-    );
+    let output = runner.run_in(project.path(), &["new", "invalid-name-with-special@chars"]);
 
     // Should fail with informative error
     assert!(
@@ -299,10 +287,7 @@ fn test_non_wasi_project_consistency() {
     // Create multiple non-WASI projects with different settings
     let scenarios = vec![
         ("basic", vec!["new", "basic"]),
-        (
-            "with-tests",
-            vec!["new", "with-tests", "--with-tests"],
-        ),
+        ("with-tests", vec!["new", "with-tests", "--with-tests"]),
         ("no-tests", vec!["new", "no-tests"]),
     ];
 
@@ -347,10 +332,7 @@ fn test_non_wasi_build_configuration() {
     let project = TestProject::new("test-non-wasi-build-config");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-build-config"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-build-config"]);
     assert_success(&output);
 
     // Create cargo config for local dependencies
@@ -388,10 +370,7 @@ fn test_non_wasi_project_validation() {
     let project = TestProject::new("test-non-wasi-validation");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-validation"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-validation"]);
     assert_success(&output);
 
     // Comprehensive non-WASI validation
@@ -475,10 +454,7 @@ fn test_non_wasi_project_performance() {
     let project = TestProject::new("test-non-wasi-performance");
 
     // Create non-WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-non-wasi-performance"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-non-wasi-performance"]);
     assert_success(&output);
 
     // Verify performance-oriented configuration

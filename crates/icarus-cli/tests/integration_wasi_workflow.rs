@@ -14,10 +14,7 @@ fn test_wasi_project_creation_end_to_end() {
     let project = TestProject::new("test-wasi-e2e");
 
     // Run icarus new with --wasi flag
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-e2e", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-e2e", "--wasi"]);
 
     // Verify command succeeded
     assert_success(&output);
@@ -78,10 +75,7 @@ fn test_wasi_project_builds_correctly() {
     let project = TestProject::new("test-wasi-build");
 
     // Create WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-build", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-build", "--wasi"]);
     assert_success(&output);
 
     // Create cargo config override to use local dependencies
@@ -186,10 +180,7 @@ fn test_wasi_feature_detection() {
     let project = TestProject::new("test-wasi-detection");
 
     // Create WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-detection", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-detection", "--wasi"]);
     assert_success(&output);
 
     // Verify that build command detects WASI features in the created project
@@ -209,10 +200,7 @@ fn test_wasi_ecosystem_libraries_setup() {
     let project = TestProject::new("test-wasi-ecosystem");
 
     // Create WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-ecosystem", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-ecosystem", "--wasi"]);
     assert_success(&output);
 
     // Verify the project is set up to support ecosystem libraries
@@ -364,10 +352,7 @@ fn test_wasi_project_error_handling() {
     fs::write(project.project_dir().join("existing_file.txt"), "test")
         .expect("Failed to create existing file");
 
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-errors", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-errors", "--wasi"]);
 
     // Command should handle the existing directory gracefully
     // Either succeed (overwrite) or fail with informative message
@@ -427,10 +412,7 @@ fn test_wasi_project_validation() {
     let project = TestProject::new("test-wasi-validation");
 
     // Create WASI project
-    let output = runner.run_in(
-        project.path(),
-        &["new", "test-wasi-validation", "--wasi"],
-    );
+    let output = runner.run_in(project.path(), &["new", "test-wasi-validation", "--wasi"]);
     assert_success(&output);
 
     // Validate the project meets WASI requirements
