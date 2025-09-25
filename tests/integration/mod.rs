@@ -1,7 +1,7 @@
-//! Integration Test Framework for Icarus SDK
+//! Integration Test Framework for Icarus CDK
 //!
 //! This framework provides comprehensive testing utilities for MCP servers
-//! built with the Icarus SDK, including canister deployment, MCP protocol
+//! built with the Icarus CDK, including canister deployment, MCP protocol
 //! testing, and end-to-end validation.
 
 use candid::{Decode, Encode, Principal};

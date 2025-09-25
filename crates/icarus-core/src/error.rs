@@ -1,4 +1,4 @@
-//! Error types for the Icarus SDK
+//! Error types for the Icarus CDK
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;

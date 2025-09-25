@@ -12,6 +12,9 @@ readme = "README.md"
 keywords = ["icp", "internet-computer", "mcp", "canister", "stable-memory"]
 categories = ["development-tools", "web-programming", "wasm"]
 
+[lints]
+workspace = true
+
 [dependencies]
 icarus-core = { workspace = true }
 icarus-derive = { workspace = true }
@@ -21,7 +24,6 @@ ic-cdk-macros = { workspace = true }
 ic-cdk-timers = { workspace = true }
 ic-stable-structures = { workspace = true }
 ic-management-canister-types = { workspace = true }
-ic-wasi-polyfill = { workspace = true }
 candid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -30,4 +32,3 @@ async-trait = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true }
-pocket-ic = { workspace = true }

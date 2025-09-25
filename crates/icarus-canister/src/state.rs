@@ -210,21 +210,18 @@ mod tests {
     use ic_stable_structures::Memory;
 
     /// Create a valid test Principal using slice notation
+    #[cfg(test)]
     fn test_principal(id: u8) -> Principal {
         Principal::from_slice(&[id, 0, 0, 0, 0, 0, 0, 0, 1])
     }
 
     /// Create a test canister Principal
+    #[cfg(test)]
     fn test_canister_principal() -> Principal {
         Principal::from_slice(&[0, 0, 0, 0, 0, 0, 0, 0, 2])
     }
 
-    /// Clear test memory between tests to avoid state interference
-    fn clear_test_memory() {
-        // Reset the in-memory state
-        crate::state::STATE.with(|s| *s.borrow_mut() = None);
-    }
-
+    #[cfg(test)]
     fn create_test_config() -> ServerConfig {
         ServerConfig {
             name: "Test Server".to_string(),
@@ -234,6 +231,7 @@ mod tests {
         }
     }
 
+    #[cfg(test)]
     fn create_test_tool_state() -> ToolState {
         ToolState {
             name: "test_tool".to_string(),
@@ -245,6 +243,7 @@ mod tests {
         }
     }
 
+    #[cfg(test)]
     fn create_test_resource_state() -> ResourceState {
         ResourceState {
             uri: "https://example.com/resource".to_string(),
@@ -642,7 +641,7 @@ mod tests {
             assert!(config_name == "Test Server" || config_name == "New Server");
 
             // Tools may persist in stable storage, so we just verify state is accessible
-            assert!(state.tools.len() >= 0); // Can be 0 or more depending on stable memory behavior
+            // Length can be 0 or more depending on stable memory behavior
         });
     }
 }

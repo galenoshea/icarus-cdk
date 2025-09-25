@@ -1,0 +1,31 @@
+[package]
+name = "icarus-wasi"
+version = "0.8.0"
+edition = "2021"
+description = "Build-time WASI orchestration for Icarus canisters"
+keywords = ["wasi", "webassembly", "ic", "internet-computer", "build"]
+categories = ["wasm", "development-tools"]
+license = "MIT OR Apache-2.0"
+
+[dependencies]
+# Error handling
+anyhow = "1.0"
+# Process execution
+which = "4.4"
+# Temporary files
+tempfile = "3.8"
+# WASI polyfill (optional, for runtime WASI support)
+ic-wasi-polyfill = { version = "0.11", optional = true }
+
+[build-dependencies]
+# Build-time dependency detection if needed
+
+[dev-dependencies]
+tempfile = "3"
+
+[features]
+default = ["polyfill"]
+polyfill = ["ic-wasi-polyfill"]
+
+[lib]
+name = "icarus_wasi"

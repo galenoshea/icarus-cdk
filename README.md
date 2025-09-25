@@ -1,15 +1,15 @@
 <div align="center">
 
-# 🚀 Icarus SDK
+# 🚀 Icarus CDK
 
 **Build persistent AI tools that run forever on the blockchain**
 
 [![Crates.io](https://img.shields.io/crates/v/icarus.svg)](https://crates.io/crates/icarus)
 [![Documentation](https://docs.rs/icarus/badge.svg)](https://docs.rs/icarus)
 [![License](https://img.shields.io/badge/license-BSL--1.1-blue.svg)](LICENSE)
-[![CI](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/ci.yml)
-[![Coverage](https://github.com/galenoshea/icarus-sdk/actions/workflows/coverage.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/coverage.yml)
-[![Release](https://github.com/galenoshea/icarus-sdk/actions/workflows/release.yml/badge.svg)](https://github.com/galenoshea/icarus-sdk/actions/workflows/release.yml)
+[![CI](https://github.com/galenoshea/icarus-cdk/actions/workflows/ci.yml/badge.svg)](https://github.com/galenoshea/icarus-cdk/actions/workflows/ci.yml)
+[![Coverage](https://github.com/galenoshea/icarus-cdk/actions/workflows/coverage.yml/badge.svg)](https://github.com/galenoshea/icarus-cdk/actions/workflows/coverage.yml)
+[![Release](https://github.com/galenoshea/icarus-cdk/actions/workflows/release.yml/badge.svg)](https://github.com/galenoshea/icarus-cdk/actions/workflows/release.yml)
 
 [Quick Start](#-quick-start) • [Docs](https://docs.rs/icarus) • [Examples](examples/) • [Contributing](CONTRIBUTING.md)
 
@@ -90,30 +90,38 @@ serde = { version = "1.0", features = ["derive"] }
 ```rust
 use icarus::prelude::*;
 
-#[icarus_module]
-mod tools {
-    // This memory persists forever on the blockchain
-    stable_storage! {
-        MEMORIES: StableBTreeMap<String, String, Memory> = memory_id!(0);
-    }
-    
-    #[update]
-    #[icarus_tool("Store a memory that lasts forever")]
-    pub fn remember(key: String, value: String) -> Result<String, String> {
-        MEMORIES.with(|m| m.borrow_mut().insert(key, value));
-        Ok("Memory stored permanently! 🎉".to_string())
-    }
-    
-    #[query]
-    #[icarus_tool("Recall a memory from any session")]
-    pub fn recall(key: String) -> Result<String, String> {
-        MEMORIES.with(|m| 
-            m.borrow()
-                .get(&key)
-                .ok_or_else(|| "Memory not found".to_string())
-        )
-    }
+/// Simple greeting function - accessible to everyone
+#[icarus::tool("Say hello to Icarus")]
+#[query]
+pub fn hello() -> String {
+    "Hello from Icarus! 🚀".to_string()
 }
+
+/// Personalized greeting - requires authenticated user
+#[icarus::tool("Get personalized greeting", auth = "user")]
+#[query]
+pub fn greet(name: String) -> String {
+    format!("Hello {}, welcome to Icarus! 👋", name)
+}
+
+/// System information - requires admin privileges
+#[icarus::tool("Get system information", auth = "admin")]
+#[query]
+pub fn system_info() -> String {
+    format!(
+        "Icarus MCP Server v{} - Running on Internet Computer",
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
+// Generate authentication management functions
+icarus::auth!();
+
+// Generate MCP tool discovery function
+icarus::mcp!();
+
+// Export the Candid interface
+export_candid!();
 ```
 
 ### Connect to AI Clients
@@ -142,6 +150,7 @@ icarus mcp start <your-canister-id> --daemon
 icarus/
 ├── 🧩 icarus-core        # Core MCP protocol implementation
 ├── 🔮 icarus-derive      # Procedural macros for less boilerplate
+├── 🌐 icarus-wasi        # WASI polyfill and optimization
 ├── 📦 icarus-canister    # ICP canister integration
 ├── 🛠️  icarus-cli         # Command-line tools
 └── 📚 examples/          # Ready-to-deploy examples
@@ -207,18 +216,22 @@ let active = timers::list_active_timers();
 ### 💾 Stable Storage
 
 ```rust
-// Your data structures
-#[derive(IcarusStorable)]
-struct UserProfile {
-    id: String,
-    preferences: HashMap<String, String>,
-    created_at: u64,
+use icarus::prelude::*;
+
+/// Memory persists forever on the blockchain
+#[update]
+#[icarus::tool("Store a memory that lasts forever", auth = "user")]
+pub async fn remember(key: String, value: String) -> Result<String, String> {
+    // Built-in stable storage automatically persists data
+    stable_store(&key, &value).await?;
+    Ok("Memory stored permanently! 🎉".to_string())
 }
 
-// Automatic persistence with stable storage
-stable_storage! {
-    USERS: StableBTreeMap<String, UserProfile, Memory> = memory_id!(0);
-    SETTINGS: StableVec<Settings, Memory> = memory_id!(1);
+#[query]
+#[icarus::tool("Recall a memory from any session", auth = "user")]
+pub fn recall(key: String) -> Result<String, String> {
+    stable_get(&key)
+        .ok_or_else(|| "Memory not found".to_string())
 }
 ```
 
@@ -232,18 +245,17 @@ stable_storage! {
 
 ## 🏗️ Architecture & Crates
 
-Icarus SDK is organized into focused crates for modularity and flexibility:
+Icarus CDK is organized into focused crates for modularity and flexibility:
 
 ### Core Crates
 - **[`icarus`](crates/icarus/)** - Main SDK with all features bundled
 - **[`icarus-core`](crates/icarus-core/)** - Core types, traits, and session management
-- **[`icarus-derive`](crates/icarus-derive/)** - Proc macros (`#[icarus_module]`, `#[icarus_tool]`)
+- **[`icarus-derive`](crates/icarus-derive/)** - Proc macros (`#[tool]`, derive)
 - **[`icarus-canister`](crates/icarus-canister/)** - ICP integration and stable storage
 
-### Infrastructure Crates
-- **[`icarus-bridge`](crates/icarus-bridge/)** - MCP-to-ICP bridge for AI client communication
-- **[`icarus-dev`](crates/icarus-dev/)** - Development tools, file watching, and project management
-- **[`icarus-mcp`](crates/icarus-mcp/)** - MCP protocol implementation and networking
+### Specialized Crates
+- **[`icarus-wasi`](crates/icarus-wasi/)** - WASI polyfill, detection, and optimization
+- **[`icarus-cli`](crates/icarus-cli/)** - Command-line interface with MCP client integration
 
 ### Modular Usage
 
@@ -252,9 +264,9 @@ Icarus SDK is organized into focused crates for modularity and flexibility:
 icarus = "0.8.0"
 
 # Or pick specific crates for specialized use cases
-icarus-bridge = "0.7.0"   # For custom bridge implementations
-icarus-dev = "0.7.0"      # For development tooling
-icarus-mcp = "0.7.0"      # For MCP protocol work
+icarus-core = "0.8.0"      # Core functionality and MCP protocol
+icarus-canister = "0.8.0"  # Canister-specific utilities
+icarus-wasi = "0.8.0"      # WASI optimization
 ```
 
 ---
@@ -301,10 +313,10 @@ icarus logs <id>          # View canister logs
 **New Architecture**: Icarus has been refactored into focused crates for better modularity.
 
 ### What's New in 0.7.0:
-- 🏗️ **Modular Architecture**: Split into 6 focused crates (`icarus-bridge`, `icarus-dev`, etc.)
-- 🧪 **Enhanced Testing**: 74+ new unit tests for improved reliability
-- 🛠️ **Better Development**: Enhanced dev tools and file watching
-- 🌉 **Improved Bridge**: More robust MCP-to-ICP communication
+- 🏗️ **Modular Architecture**: Split into 6 focused crates (`icarus-core`, `icarus-canister`, etc.)
+- 🧪 **Enhanced Testing**: 412+ comprehensive tests for improved reliability
+- 🛠️ **Better Development**: Integrated CLI with MCP client management
+- 🌉 **Native MCP**: Built-in MCP protocol support without translation layers
 
 ### To upgrade:
 1. Update your dependency: `icarus = "0.8.0"`
@@ -333,8 +345,8 @@ We welcome contributions! See our [Contributing Guide](CONTRIBUTING.md) for deta
 
 ```bash
 # Clone the repository
-git clone https://github.com/galenoshea/icarus-sdk
-cd icarus-sdk
+git clone https://github.com/galenoshea/icarus-cdk
+cd icarus-cdk
 
 # Install dependencies
 ./scripts/install-deps.sh
@@ -362,23 +374,23 @@ generate-did .
 # The .did file is automatically updated with all your tool functions
 ```
 
-The `#[icarus_module]` macro automatically generates all the necessary endpoints, and `ic_cdk::export_candid!()` embeds the interface in your WASM for extraction.
+The `icarus::auth!()` and `icarus::mcp!()` macros automatically generate all the necessary endpoints, and `ic_cdk::export_candid!()` embeds the interface in your WASM for extraction.
 
 ---
 
 ## 💬 Community & Support
 
 - **[Discord](https://discord.gg/icarus)** - Join our community
-- **[GitHub Issues](https://github.com/galenoshea/icarus-sdk/issues)** - Report bugs
-- **[Discussions](https://github.com/galenoshea/icarus-sdk/discussions)** - Ask questions
+- **[GitHub Issues](https://github.com/galenoshea/icarus-cdk/issues)** - Report bugs
+- **[Discussions](https://github.com/galenoshea/icarus-cdk/discussions)** - Ask questions
 
 ---
 
 ## 📄 License
 
-Icarus SDK is licensed under the Business Source License 1.1 (BSL). See [LICENSE](LICENSE) for details.
+Icarus CDK is licensed under the Business Source License 1.1 (BSL). See [LICENSE](LICENSE) for details.
 
-The BSL allows you to use Icarus SDK for developing and deploying MCP tools to the Icarus Marketplace.
+The BSL allows you to use Icarus CDK for developing and deploying MCP tools to the Icarus Marketplace.
 
 ---
 

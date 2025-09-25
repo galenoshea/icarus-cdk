@@ -152,11 +152,11 @@ mod tests {
     struct TestKey(String);
 
     impl Storable for TestKey {
-        fn to_bytes(&self) -> Cow<[u8]> {
+        fn to_bytes(&self) -> Cow<'_, [u8]> {
             Cow::Borrowed(self.0.as_bytes())
         }
 
-        fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
             TestKey(String::from_utf8(bytes.into_owned()).unwrap())
         }
 
@@ -175,7 +175,7 @@ mod tests {
     }
 
     impl Storable for TestValue {
-        fn to_bytes(&self) -> Cow<[u8]> {
+        fn to_bytes(&self) -> Cow<'_, [u8]> {
             // Use length-prefixed encoding to avoid delimiter conflicts
             let data_bytes = self.data.as_bytes();
             let data_len = data_bytes.len() as u32;
@@ -186,7 +186,7 @@ mod tests {
             Cow::Owned(result)
         }
 
-        fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
             let bytes = bytes.as_ref();
             if bytes.len() < 8 {
                 panic!("Invalid TestValue format: too short");

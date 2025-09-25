@@ -665,24 +665,16 @@ Error: State inconsistency detected
    }
    ```
 
-2. Implement proper upgrade handling:
+2. Stable storage automatically handles persistence:
    ```rust
-   #[pre_upgrade]
-   fn pre_upgrade() {
-       // Save state before upgrade
-       STORAGE.with(|s| {
-           stable_storage::save_state(s.borrow().deref());
-       });
+   // ✅ State automatically persists across upgrades
+   stable_storage! {
+       memory 0: {
+           auth_users: StableBTreeMap<Principal, User> = StableBTreeMap::init(memory_id!(0));
+           counter: Cell<u64> = Cell::init(0);
+       }
    }
-
-   #[post_upgrade]
-   fn post_upgrade() {
-       // Restore state after upgrade
-       STORAGE.with(|s| {
-           let state = stable_storage::load_state();
-           *s.borrow_mut() = state;
-       });
-   }
+   // No upgrade hooks needed - data persists automatically
    ```
 
 ---

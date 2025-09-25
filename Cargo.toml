@@ -1,12 +1,12 @@
 [package]
 name = "icarus"
 version = "0.8.0"
-authors = ["Icarus SDK Contributors"]
+authors = ["Icarus CDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
-repository = "https://github.com/galenoshea/icarus-sdk"
+repository = "https://github.com/galenoshea/icarus-cdk"
 documentation = "https://docs.rs/icarus"
-homepage = "https://github.com/galenoshea/icarus-sdk"
+homepage = "https://github.com/galenoshea/icarus-cdk"
 readme = "README.md"
 description = "Build MCP (Model Context Protocol) servers that run as Internet Computer canisters"
 keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
@@ -14,16 +14,17 @@ categories = ["development-tools", "web-programming", "wasm"]
 
 [features]
 default = ["canister"]
-canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core"]
+canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core", "icarus-core/canister"]
 core = ["dep:icarus-core"]
+wasi = []  # Feature flag for WASI support detection
 
 [dependencies]
-icarus-core = { version = "0.8.0", path = "crates/icarus-core", optional = true }
+icarus-core = { version = "0.8.0", path = "crates/icarus-core", optional = true, default-features = false }
 icarus-derive = { version = "0.8.0", path = "crates/icarus-derive", optional = true }
 icarus-canister = { version = "0.8.0", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["sync", "time", "io-util", "rt", "macros"] }
 serde_json = "1.0"
 candid = "0.10"
 criterion = { version = "0.5", features = ["html_reports"] }
@@ -40,10 +41,8 @@ members = [
     "crates/icarus-core",
     "crates/icarus-derive",
     "crates/icarus-canister",
-    "crates/icarus-mcp",
-    "crates/icarus-bridge",
-    "crates/icarus-dev",
-    "cli",
+    "crates/icarus-cli",
+    "crates/icarus-wasi",
 ]
 resolver = "2"
 
@@ -65,11 +64,12 @@ harness = false
 
 [workspace.package]
 version = "0.8.0"
-authors = ["Icarus SDK Contributors"]
+authors = ["Icarus CDK Contributors"]
 edition = "2021"
+rust-version = "1.75"
 license-file = "LICENSE"
-repository = "https://github.com/galenoshea/icarus-sdk"
-homepage = "https://github.com/galenoshea/icarus-sdk"
+repository = "https://github.com/galenoshea/icarus-cdk"
+homepage = "https://github.com/galenoshea/icarus-cdk"
 
 [workspace.dependencies]
 # External dependencies
@@ -84,13 +84,14 @@ ic-cdk = "0.18"
 ic-cdk-macros = "0.18"
 ic-cdk-timers = "0.12"
 ic-stable-structures = "0.7"
-ic-management-canister-types = "0.3"
+ic-management-canister-types = "0.4.1"
 ic-wasi-polyfill = "0.11"
 candid = { version = "0.10", features = ["value"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
-tokio = { version = "1", features = ["full"] }
+getrandom = { version = "0.2", features = ["custom"] }
+tokio = { version = "1", features = ["sync", "time", "io-util", "rt", "macros"] }
 tokio-stream = "0.1"
 async-trait = "0.1"
 tracing = "0.1"
@@ -103,6 +104,7 @@ linkme = "0.3"
 rustc-hash = "2.0"  # Faster HashMap for small keys
 smallvec = "1.13"   # Stack allocation for small collections
 bytes = "1.7"       # Efficient buffer management
+base64 = "0.22"     # Base64 encoding for Candid output
 
 # Cryptography
 sha2 = "0.10"         # For WASI conversion caching
@@ -117,6 +119,8 @@ url = "2.5"
 toml = "0.9"
 ciborium = "0.2"
 rand = "0.9"
+num-traits = "0.2"  # For numeric type conversions
+cargo_metadata = "0.18"  # For build-time dependency analysis
 indicatif = "0.18"
 dialoguer = "0.12"
 is-terminal = "0.4"
@@ -137,12 +141,11 @@ futures = "0.3"
 futures-util = "0.3"
 tokio-tungstenite = { version = "0.27", features = ["native-tls"] }
 comfy-table = "7.1"        # Beautiful table formatting
-crossterm = "0.27"         # Better terminal control
+crossterm = "0.29"         # Better terminal control
 unicode-width = "0.2"      # Proper text width calculation
-notify = "6.1"             # File system events
+notify = "8.2"             # File system events
 
 # Test dependencies
-pocket-ic = "9"
 serial_test = "3"
 assert_cmd = "2"
 predicates = "3"
@@ -153,8 +156,7 @@ ring = "0.17"
 icarus-core = { path = "crates/icarus-core", version = "0.8.0" }
 icarus-derive = { path = "crates/icarus-derive", version = "0.8.0" }
 icarus-canister = { path = "crates/icarus-canister", version = "0.8.0" }
-icarus-bridge = { path = "crates/icarus-bridge", version = "0.8.0" }
-icarus-dev = { path = "crates/icarus-dev", version = "0.8.0" }
+icarus-wasi = { path = "crates/icarus-wasi", version = "0.8.0" }
 
 [profile.release]
 opt-level = 3
@@ -165,3 +167,39 @@ strip = true
 [profile.dev]
 opt-level = 0
 debug = true
+
+[workspace.lints.rust]
+# Note: unsafe_code is allowed in allocator and profiling modules where necessary
+unused_imports = "warn"
+unused_variables = "warn"
+dead_code = "warn"
+
+[workspace.lints.clippy]
+# Allow most pedantic lints for now, but keep essential quality lints
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+too_many_lines = "allow"
+struct_excessive_bools = "allow"
+cast_precision_loss = "allow"
+multiple_crate_versions = "allow"
+cargo_common_metadata = "allow"
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+derive_partial_eq_without_eq = "allow"
+use_self = "allow"
+must_use_candidate = "allow"
+items_after_statements = "allow"
+uninlined_format_args = "allow"
+ignored_unit_patterns = "allow"
+redundant_closure_for_method_calls = "allow"
+map_unwrap_or = "allow"
+# Performance lints we want to keep
+needless_pass_by_value = "warn"
+needless_borrows_for_generic_args = "warn"
+# Style lints we want to keep
+redundant_pattern_matching = "warn"
+needless_return = "warn"
+# Complexity lints we want to keep
+collapsible_if = "warn"
+for_kv_map = "warn"

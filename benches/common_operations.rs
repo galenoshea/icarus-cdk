@@ -1,4 +1,4 @@
-//! Comprehensive benchmark suite for Icarus SDK common operations
+//! Comprehensive benchmark suite for Icarus CDK common operations
 //!
 //! This benchmark suite measures performance of key operations including:
 //! - MCP protocol operations (tool registration, execution, session management)

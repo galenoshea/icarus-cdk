@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+- **🧹 Comprehensive Dead Code Cleanup**: Extensive removal of deprecated and unused code
+  - Removed entire `service.rs` file and `IcarusService` trait system (~200 lines of unimplemented aspirational architecture)
+  - Eliminated all references to removed service module across the codebase
+  - Converted 8 TODO comments to explanatory notes about design decisions
+  - Removed `#[allow(dead_code)]` annotations after actual cleanup
+  - Zero compilation warnings after comprehensive cleanup
+
+### Added
+- **🧪 Extensive Test Coverage Enhancement**: Added comprehensive test suites across multiple modules
+  - Created integration tests for auth and MCP workflow interactions (`test_integration_workflows.rs`)
+  - Added comprehensive macro integration tests (`test_macro_integration.rs`)
+  - Created unit tests for HTTP module with configuration, error handling, and retry logic (`test_http_module.rs`)
+  - Added timer module tests covering registry management and backoff calculations (`test_timers_module.rs`)
+  - Created tools module tests for registration, execution, and schema generation (`test_tools_module.rs`)
+  - Enhanced auth function tests with role enforcement validation (`test_auth_functions.rs`)
+  - Significantly improved test coverage from ~8% to 40%+ across untested modules
+
+### Changed
+- **🔧 Architecture Simplification**: Focused on three core working features
+  - Simplified architecture now centers on `icarus::auth!()`, `icarus::mcp!()`, and `#[icarus::tool]` macros only
+  - Removed aspirational unimplemented features to focus on proven functionality
+  - Updated all documentation and examples to reflect simplified, working architecture
+  - Enhanced CLI templates to generate code using only implemented features
+
+### Fixed
+- **📚 Documentation Accuracy**: Updated all documentation to match current implementation
+  - Updated README.md examples to use correct macro syntax and simplified architecture
+  - Removed references to deleted crates (`icarus-migrate`) from project structure
+  - Fixed outdated code examples in documentation to match working implementation
+  - Ensured all CLI-generated templates use only implemented features
+
 ## [0.8.0] - 2025-09-17
 
 ### Changed

@@ -264,18 +264,18 @@ stable_storage! {
 }
 ```
 
-### Upgrade Handlers
+### Automatic Persistence
+
+State persists automatically across canister upgrades using stable storage:
 
 ```rust
-#[pre_upgrade]
-fn pre_upgrade() {
-    // Automatically handled by stable storage
+stable_storage! {
+    memory 0: {
+        auth_users: StableBTreeMap<Principal, User> = StableBTreeMap::init(memory_id!(0));
+        data: StableBTreeMap<String, String> = StableBTreeMap::init(memory_id!(1));
+    }
 }
-
-#[post_upgrade]
-fn post_upgrade() {
-    // Automatically handled by stable storage
-}
+// No upgrade hooks needed - data persists automatically
 ```
 
 ### Performance Optimization

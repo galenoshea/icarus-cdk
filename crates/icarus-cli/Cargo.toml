@@ -1,0 +1,115 @@
+[package]
+name = "icarus-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+description = "Command-line tool for creating, building, testing, and deploying MCP servers to ICP"
+license-file.workspace = true
+repository.workspace = true
+keywords = ["mcp", "icp", "blockchain", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[lints]
+workspace = true
+
+[dependencies]
+# CLI and async runtime
+clap = { workspace = true }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time", "process", "fs", "io-util", "io-std"] }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# HTTP and ICP interaction
+reqwest = { workspace = true }
+ic-agent = { workspace = true }
+candid = { workspace = true }
+ic-identity-hsm = { workspace = true }
+ic-management-canister-types = { workspace = true }
+num-traits = { workspace = true }
+url = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+toml = { workspace = true }
+ciborium = { workspace = true }
+
+# MCP Protocol
+rmcp = { workspace = true, features = ["server"] }
+icarus-core = { workspace = true, features = ["mcp"] }
+
+# Icarus crates
+icarus-wasi = { path = "../icarus-wasi" }
+
+# Security and credentials
+rand = { workspace = true }
+sha2 = { workspace = true }
+
+# User interaction
+indicatif = { workspace = true }
+dialoguer = { workspace = true }
+console = { workspace = true }
+colored = { workspace = true }
+comfy-table = { workspace = true }
+crossterm = { workspace = true }
+unicode-width = { workspace = true }
+
+# File system and utilities
+dirs = { workspace = true }
+which = { workspace = true }
+tempfile = { workspace = true }
+zip = { workspace = true }
+tar = { workspace = true }
+flate2 = { workspace = true }
+is-terminal = { workspace = true }
+
+# Platform detection
+os_info = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Process management
+sysinfo = { workspace = true }
+
+# Auto-update
+self_update = { workspace = true }
+
+# ID generation
+nanoid = { workspace = true }
+
+# Date/time
+chrono = { workspace = true, features = ["serde"] }
+
+# System info for profiling
+num_cpus = "1.16"
+rustc_version = "0.4"
+
+# Async utilities
+futures = { workspace = true }
+futures-util = { workspace = true }
+tokio-tungstenite = { workspace = true }
+
+
+[dev-dependencies]
+tempfile = { workspace = true }
+serial_test = { workspace = true }
+assert_cmd = { workspace = true }
+predicates = { workspace = true }
+once_cell = { workspace = true }
+candid = { workspace = true }
+ic-agent = { workspace = true }
+ring = { workspace = true }
+
+[[bin]]
+name = "icarus"
+path = "src/main.rs"
+
+
+
+
+
+

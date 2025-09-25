@@ -17,6 +17,6 @@
 //!     // - add_authorized_user
 //!     // - remove_authorized_user
 //!     // - update_user_role
-//!     // - get_auth_status
+//!     // - get_current_user
 //! }
 //! ```

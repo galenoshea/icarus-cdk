@@ -13,7 +13,7 @@ We release patches for security vulnerabilities. Currently supported versions:
 
 ## Reporting a Vulnerability
 
-We take the security of the Icarus SDK seriously. If you believe you have found a security vulnerability, please report it to us as described below.
+We take the security of the Icarus CDK seriously. If you believe you have found a security vulnerability, please report it to us as described below.
 
 ### Please do NOT:
 - Open a public GitHub issue for security vulnerabilities
@@ -42,7 +42,7 @@ We take the security of the Icarus SDK seriously. If you believe you have found 
 
 ## Security Considerations for Canister Development
 
-When building MCP tools with Icarus SDK, consider these security best practices:
+When building MCP tools with Icarus CDK, consider these security best practices:
 
 ### Authentication & Authorization
 - Always validate caller principals in update methods

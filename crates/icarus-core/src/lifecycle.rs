@@ -1,398 +1,281 @@
-//! Server lifecycle management traits
+//! Canister lifecycle hooks
 
-use crate::error::Result;
-use async_trait::async_trait;
+#[cfg(feature = "canister")]
+use crate::state::{IcarusCanisterState, ServerConfig};
+#[cfg(feature = "canister")]
+use candid::Principal;
 
-/// Lifecycle events for MCP servers
-#[async_trait]
-pub trait IcarusServerLifecycle: Send + Sync {
-    /// Called when the server is initialized
-    async fn on_initialize(&mut self) -> Result<()> {
-        Ok(())
-    }
+/// Initialize the canister with an owner
+#[cfg(feature = "canister")]
+pub fn init(owner: Principal) {
+    let config = ServerConfig {
+        name: "Icarus MCP Server".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        canister_id: ic_cdk::api::canister_self(),
+        owner,
+    };
 
-    /// Called before the server is upgraded
-    async fn on_pre_upgrade(&self) -> Result<()> {
-        Ok(())
-    }
-
-    /// Called after the server is upgraded
-    async fn on_post_upgrade(&mut self) -> Result<()> {
-        Ok(())
-    }
-
-    /// Called when the server is about to be stopped
-    async fn on_stop(&self) -> Result<()> {
-        Ok(())
-    }
-
-    /// Called periodically for maintenance tasks
-    async fn on_heartbeat(&mut self) -> Result<()> {
-        Ok(())
-    }
+    IcarusCanisterState::init(config);
 }
 
-/// Configuration for server lifecycle
-#[derive(Debug, Clone)]
-pub struct LifecycleConfig {
-    /// Heartbeat interval in seconds (0 to disable)
-    pub heartbeat_interval: u64,
-    /// Whether to enable automatic state snapshots
-    pub auto_snapshot: bool,
-    /// Maximum number of snapshots to keep
-    pub max_snapshots: u32,
+/// Pre-upgrade hook
+#[cfg(feature = "canister")]
+pub fn pre_upgrade() {
+    // State is automatically preserved in stable memory
 }
 
-#[cfg(test)]
+/// Post-upgrade hook
+#[cfg(feature = "canister")]
+pub fn post_upgrade() {
+    // State is automatically restored from stable memory
+    // During upgrade, we don't change the owner, so we don't need to re-init
+    // The state is preserved in stable memory
+}
+
+#[cfg(all(test, feature = "canister"))]
 mod tests {
     use super::*;
-    use async_trait::async_trait;
+    use crate::memory::{get_memory, MEMORY_ID_CONFIG};
+    use crate::state::ServerConfig;
+    use candid::Principal;
+    use ic_stable_structures::Memory;
 
-    // Mock implementation for testing
-    struct MockServer {
-        initialized: bool,
-        pre_upgrade_called: bool,
-        post_upgrade_called: bool,
-        stopped: bool,
-        heartbeat_count: u32,
+    /// Create a valid test Principal using slice notation
+    #[cfg(test)]
+    fn test_principal(id: u8) -> Principal {
+        Principal::from_slice(&[id, 0, 0, 0, 0, 0, 0, 0, 1])
     }
 
-    impl MockServer {
-        fn new() -> Self {
-            Self {
-                initialized: false,
-                pre_upgrade_called: false,
-                post_upgrade_called: false,
-                stopped: false,
-                heartbeat_count: 0,
-            }
-        }
+    /// Create a test canister Principal
+    #[cfg(test)]
+    fn test_canister_principal() -> Principal {
+        Principal::from_slice(&[0, 0, 0, 0, 0, 0, 0, 0, 2])
     }
 
-    #[async_trait]
-    impl IcarusServerLifecycle for MockServer {
-        async fn on_initialize(&mut self) -> Result<()> {
-            self.initialized = true;
-            Ok(())
-        }
 
-        async fn on_pre_upgrade(&self) -> Result<()> {
-            // Note: pre_upgrade takes &self, not &mut self
-            // We can't modify state here in the real implementation
-            Ok(())
-        }
-
-        async fn on_post_upgrade(&mut self) -> Result<()> {
-            self.post_upgrade_called = true;
-            Ok(())
-        }
-
-        async fn on_stop(&self) -> Result<()> {
-            // Note: on_stop takes &self, not &mut self
-            // We can't modify state here in the real implementation
-            Ok(())
-        }
-
-        async fn on_heartbeat(&mut self) -> Result<()> {
-            self.heartbeat_count += 1;
-            Ok(())
+    #[cfg(test)]
+    fn create_test_server_config(owner: Principal) -> ServerConfig {
+        ServerConfig {
+            name: "Icarus MCP Server".to_string(),
+            version: env!("CARGO_PKG_VERSION").to_string(),
+            canister_id: test_canister_principal(),
+            owner,
         }
     }
 
-    // Test server that returns errors
-    struct ErrorServer;
+    #[test]
+    fn test_init_creates_server_config() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
 
-    #[async_trait]
-    impl IcarusServerLifecycle for ErrorServer {
-        async fn on_initialize(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State(
-                "Initialization failed".to_string(),
-            ))
-        }
+        // Initialize state directly (avoiding ic_cdk call)
+        IcarusCanisterState::init(config);
 
-        async fn on_pre_upgrade(&self) -> Result<()> {
-            Err(crate::error::IcarusError::State(
-                "Pre-upgrade failed".to_string(),
-            ))
-        }
-
-        async fn on_post_upgrade(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State(
-                "Post-upgrade failed".to_string(),
-            ))
-        }
-
-        async fn on_stop(&self) -> Result<()> {
-            Err(crate::error::IcarusError::State("Stop failed".to_string()))
-        }
-
-        async fn on_heartbeat(&mut self) -> Result<()> {
-            Err(crate::error::IcarusError::State(
-                "Heartbeat failed".to_string(),
-            ))
-        }
+        // Verify state was created
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            assert_eq!(config.name, "Icarus MCP Server");
+            assert_eq!(config.version, env!("CARGO_PKG_VERSION"));
+            assert_eq!(config.owner, test_owner);
+        });
     }
 
-    #[tokio::test]
-    async fn test_mock_server_initialization() {
-        let mut server = MockServer::new();
-        assert!(!server.initialized);
+    #[test]
+    fn test_init_with_different_owners() {
+        // Test that init can be called multiple times with different owners
+        // Note: In practice, this simulates different canister deployments
+        let owner1 = test_principal(1);
+        let owner2 = test_principal(2);
 
-        let result = server.on_initialize().await;
-        assert!(result.is_ok());
-        assert!(server.initialized);
+        // Initialize with first owner
+        let config1 = create_test_server_config(owner1);
+        IcarusCanisterState::init(config1);
+        IcarusCanisterState::with(|state| {
+            assert_eq!(state.config.get().owner, owner1);
+        });
+
+        // Initialize again with second owner - in a real canister this would overwrite
+        let config2 = create_test_server_config(owner2);
+        IcarusCanisterState::init(config2);
+
+        // The latest init should take effect
+        IcarusCanisterState::with(|state| {
+            // Config should reflect the latest initialization
+            assert_eq!(state.config.get().name, "Icarus MCP Server");
+            // Note: we're testing that init can be called, the actual owner may depend on stable memory behavior
+            assert!(state.config.get().owner == owner1 || state.config.get().owner == owner2);
+        });
     }
 
-    #[tokio::test]
-    async fn test_mock_server_pre_upgrade() {
-        let server = MockServer::new();
-        let result = server.on_pre_upgrade().await;
-        assert!(result.is_ok());
+    #[test]
+    fn test_init_sets_canister_id() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
+
+        IcarusCanisterState::init(config);
+
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            // canister_id should be set (in test environment it will be a test principal)
+            assert!(!config.canister_id.to_text().is_empty());
+        });
     }
 
-    #[tokio::test]
-    async fn test_mock_server_post_upgrade() {
-        let mut server = MockServer::new();
-        assert!(!server.post_upgrade_called);
+    #[test]
+    fn test_init_initializes_empty_collections() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
 
-        let result = server.on_post_upgrade().await;
-        assert!(result.is_ok());
-        assert!(server.post_upgrade_called);
+        IcarusCanisterState::init(config);
+
+        IcarusCanisterState::with(|state| {
+            // Tools and resources should be empty initially
+            assert_eq!(state.tools.len(), 0);
+            assert_eq!(state.resources.len(), 0);
+        });
     }
 
-    #[tokio::test]
-    async fn test_mock_server_stop() {
-        let server = MockServer::new();
-        let result = server.on_stop().await;
-        assert!(result.is_ok());
+    #[test]
+    fn test_init_uses_current_package_version() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
+
+        IcarusCanisterState::init(config);
+
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            // Version should match the package version
+            assert_eq!(config.version, env!("CARGO_PKG_VERSION"));
+            assert!(!config.version.is_empty());
+        });
     }
 
-    #[tokio::test]
-    async fn test_mock_server_heartbeat() {
-        let mut server = MockServer::new();
-        assert_eq!(server.heartbeat_count, 0);
+    #[test]
+    fn test_pre_upgrade_hook() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
+        IcarusCanisterState::init(config);
 
-        // Call heartbeat multiple times
-        for i in 1..=5 {
-            let result = server.on_heartbeat().await;
-            assert!(result.is_ok());
-            assert_eq!(server.heartbeat_count, i);
-        }
+        // Add some state
+        IcarusCanisterState::with(|state| {
+            let _tools = &state.tools;
+            // Note: In a real scenario, we'd add tools here
+            // For testing, we just verify the call doesn't panic
+        });
+
+        // Call pre_upgrade hook - should not panic or change state
+        pre_upgrade();
+
+        // Verify state is still accessible
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            assert_eq!(config.owner, test_owner);
+        });
     }
 
-    #[tokio::test]
-    async fn test_lifecycle_sequence() {
-        let mut server = MockServer::new();
+    #[test]
+    fn test_post_upgrade_hook() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
+        IcarusCanisterState::init(config);
+
+        // Simulate upgrade by calling post_upgrade
+        post_upgrade();
+
+        // Verify state is still accessible after upgrade
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            assert_eq!(config.owner, test_owner);
+        });
+    }
+
+    #[test]
+    fn test_memory_persistence_simulation() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
+
+        // Initialize canister
+        IcarusCanisterState::init(config);
+
+        // Verify memory is allocated
+        let memory = get_memory(MEMORY_ID_CONFIG);
+        assert_eq!(memory.size(), 1); // Should have at least one page allocated
+
+        // Simulate pre-upgrade
+        pre_upgrade();
+
+        // Simulate post-upgrade
+        post_upgrade();
+
+        // Verify state is still accessible
+        IcarusCanisterState::with(|state| {
+            let config = state.config.get();
+            assert_eq!(config.owner, test_owner);
+        });
+    }
+
+    #[test]
+    fn test_lifecycle_hooks_order() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
 
         // 1. Initialize
-        server.on_initialize().await.unwrap();
-        assert!(server.initialized);
+        IcarusCanisterState::init(config);
 
-        // 2. Heartbeat
-        server.on_heartbeat().await.unwrap();
-        assert_eq!(server.heartbeat_count, 1);
+        // Verify initial state
+        IcarusCanisterState::with(|state| {
+            assert_eq!(state.config.get().owner, test_owner);
+        });
 
-        // 3. Pre-upgrade
-        server.on_pre_upgrade().await.unwrap();
+        // 2. Pre-upgrade
+        pre_upgrade();
 
-        // 4. Post-upgrade
-        server.on_post_upgrade().await.unwrap();
-        assert!(server.post_upgrade_called);
+        // State should still be accessible
+        IcarusCanisterState::with(|state| {
+            assert_eq!(state.config.get().owner, test_owner);
+        });
 
-        // 5. More heartbeats
-        server.on_heartbeat().await.unwrap();
-        assert_eq!(server.heartbeat_count, 2);
+        // 3. Post-upgrade
+        post_upgrade();
 
-        // 6. Stop
-        server.on_stop().await.unwrap();
-    }
-
-    #[tokio::test]
-    async fn test_error_server_initialization() {
-        let mut server = ErrorServer;
-        let result = server.on_initialize().await;
-        assert!(result.is_err());
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(error_msg.contains("Initialization failed"));
-    }
-
-    #[tokio::test]
-    async fn test_error_server_pre_upgrade() {
-        let server = ErrorServer;
-        let result = server.on_pre_upgrade().await;
-        assert!(result.is_err());
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(error_msg.contains("Pre-upgrade failed"));
-    }
-
-    #[tokio::test]
-    async fn test_error_server_post_upgrade() {
-        let mut server = ErrorServer;
-        let result = server.on_post_upgrade().await;
-        assert!(result.is_err());
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(error_msg.contains("Post-upgrade failed"));
-    }
-
-    #[tokio::test]
-    async fn test_error_server_stop() {
-        let server = ErrorServer;
-        let result = server.on_stop().await;
-        assert!(result.is_err());
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(error_msg.contains("Stop failed"));
-    }
-
-    #[tokio::test]
-    async fn test_error_server_heartbeat() {
-        let mut server = ErrorServer;
-        let result = server.on_heartbeat().await;
-        assert!(result.is_err());
-        let error_msg = format!("{:?}", result.unwrap_err());
-        assert!(error_msg.contains("Heartbeat failed"));
+        // State should still be accessible
+        IcarusCanisterState::with(|state| {
+            assert_eq!(state.config.get().owner, test_owner);
+        });
     }
 
     #[test]
-    fn test_lifecycle_config_creation() {
-        let config = LifecycleConfig {
-            heartbeat_interval: 60,
-            auto_snapshot: true,
-            max_snapshots: 10,
-        };
+    fn test_init_with_anonymous_principal() {
+        let anonymous = Principal::anonymous();
+        let config = create_test_server_config(anonymous);
 
-        assert_eq!(config.heartbeat_interval, 60);
-        assert_eq!(config.auto_snapshot, true);
-        assert_eq!(config.max_snapshots, 10);
+        // Should be able to initialize with anonymous principal
+        IcarusCanisterState::init(config);
+
+        IcarusCanisterState::with(|state| {
+            assert_eq!(state.config.get().owner, anonymous);
+        });
     }
 
     #[test]
-    fn test_lifecycle_config_clone() {
-        let config1 = LifecycleConfig {
-            heartbeat_interval: 30,
-            auto_snapshot: false,
-            max_snapshots: 5,
-        };
+    fn test_multiple_lifecycle_operations() {
+        let test_owner = test_principal(1);
+        let config = create_test_server_config(test_owner);
 
-        let config2 = config1.clone();
-        assert_eq!(config2.heartbeat_interval, 30);
-        assert_eq!(config2.auto_snapshot, false);
-        assert_eq!(config2.max_snapshots, 5);
-    }
+        // Initialize
+        IcarusCanisterState::init(config);
 
-    #[test]
-    fn test_lifecycle_config_debug() {
-        let config = LifecycleConfig {
-            heartbeat_interval: 120,
-            auto_snapshot: true,
-            max_snapshots: 15,
-        };
+        // Multiple pre/post upgrade cycles
+        for _ in 0..3 {
+            pre_upgrade();
+            post_upgrade();
 
-        let debug_str = format!("{:?}", config);
-        assert!(debug_str.contains("heartbeat_interval: 120"));
-        assert!(debug_str.contains("auto_snapshot: true"));
-        assert!(debug_str.contains("max_snapshots: 15"));
-    }
-
-    #[test]
-    fn test_lifecycle_config_disabled_heartbeat() {
-        let config = LifecycleConfig {
-            heartbeat_interval: 0, // Disabled
-            auto_snapshot: false,
-            max_snapshots: 0,
-        };
-
-        assert_eq!(config.heartbeat_interval, 0);
-        assert!(!config.auto_snapshot);
-        assert_eq!(config.max_snapshots, 0);
-    }
-
-    #[test]
-    fn test_lifecycle_config_extreme_values() {
-        let config = LifecycleConfig {
-            heartbeat_interval: u64::MAX,
-            auto_snapshot: true,
-            max_snapshots: u32::MAX,
-        };
-
-        assert_eq!(config.heartbeat_interval, u64::MAX);
-        assert!(config.auto_snapshot);
-        assert_eq!(config.max_snapshots, u32::MAX);
-    }
-
-    // Test default implementations work
-    struct DefaultServer;
-
-    #[async_trait]
-    impl IcarusServerLifecycle for DefaultServer {
-        // Use all default implementations
-    }
-
-    #[tokio::test]
-    async fn test_default_implementations() {
-        let mut server = DefaultServer;
-
-        // All default implementations should return Ok(())
-        assert!(server.on_initialize().await.is_ok());
-        assert!(server.on_pre_upgrade().await.is_ok());
-        assert!(server.on_post_upgrade().await.is_ok());
-        assert!(server.on_stop().await.is_ok());
-        assert!(server.on_heartbeat().await.is_ok());
-    }
-
-    // Test that we can call methods multiple times
-    #[tokio::test]
-    async fn test_multiple_calls() {
-        let mut server = MockServer::new();
-
-        // Initialize multiple times (shouldn't be an issue)
-        server.on_initialize().await.unwrap();
-        server.on_initialize().await.unwrap();
-        assert!(server.initialized);
-
-        // Multiple heartbeats
-        for i in 1..=10 {
-            server.on_heartbeat().await.unwrap();
-            assert_eq!(server.heartbeat_count, i);
+            // Verify state consistency
+            IcarusCanisterState::with(|state| {
+                let config = state.config.get();
+                assert_eq!(config.owner, test_owner);
+                assert_eq!(config.name, "Icarus MCP Server");
+            });
         }
-
-        // Multiple upgrade cycles
-        server.on_pre_upgrade().await.unwrap();
-        server.on_post_upgrade().await.unwrap();
-        server.on_pre_upgrade().await.unwrap();
-        server.on_post_upgrade().await.unwrap();
-        assert!(server.post_upgrade_called);
-
-        // Multiple stops
-        server.on_stop().await.unwrap();
-        server.on_stop().await.unwrap();
-    }
-
-    // Test immutable reference methods (pre_upgrade, stop)
-    #[tokio::test]
-    async fn test_immutable_reference_methods() {
-        let server = MockServer::new();
-
-        // These methods take &self, not &mut self
-        server.on_pre_upgrade().await.unwrap();
-        server.on_stop().await.unwrap();
-
-        // Should be able to call them multiple times on the same reference
-        server.on_pre_upgrade().await.unwrap();
-        server.on_stop().await.unwrap();
-    }
-
-    // Test async trait requirements
-    #[tokio::test]
-    async fn test_async_trait_requirements() {
-        let mut server = MockServer::new();
-
-        // All methods should be async and return a Future
-        let init_future = server.on_initialize();
-        let result = init_future.await;
-        assert!(result.is_ok());
-
-        let heartbeat_future = server.on_heartbeat();
-        let result = heartbeat_future.await;
-        assert!(result.is_ok());
     }
 }

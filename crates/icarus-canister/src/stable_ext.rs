@@ -159,11 +159,11 @@ mod tests {
     struct TestKey(String);
 
     impl Storable for TestKey {
-        fn to_bytes(&self) -> Cow<[u8]> {
+        fn to_bytes(&self) -> Cow<'_, [u8]> {
             Cow::Borrowed(self.0.as_bytes())
         }
 
-        fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
             TestKey(String::from_utf8(bytes.into_owned()).unwrap())
         }
 
@@ -182,7 +182,7 @@ mod tests {
     }
 
     impl Storable for TestValue {
-        fn to_bytes(&self) -> Cow<[u8]> {
+        fn to_bytes(&self) -> Cow<'_, [u8]> {
             let data_bytes = self.data.as_bytes();
             let data_len = data_bytes.len() as u32;
             let mut result = Vec::new();
@@ -192,7 +192,7 @@ mod tests {
             Cow::Owned(result)
         }
 
-        fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
             let bytes = bytes.as_ref();
             let data_len = u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
             let data = String::from_utf8(bytes[4..4 + data_len].to_vec()).unwrap();
@@ -227,7 +227,7 @@ mod tests {
     }
 
     impl Storable for TestCellValue {
-        fn to_bytes(&self) -> Cow<[u8]> {
+        fn to_bytes(&self) -> Cow<'_, [u8]> {
             let value_bytes = self.value.as_bytes();
             let value_len = value_bytes.len() as u32;
             let mut result = Vec::new();
@@ -237,7 +237,7 @@ mod tests {
             Cow::Owned(result)
         }
 
-        fn from_bytes(bytes: Cow<[u8]>) -> Self {
+        fn from_bytes(bytes: Cow<'_, [u8]>) -> Self {
             let bytes = bytes.as_ref();
             if bytes.len() < 8 {
                 return TestCellValue::default();

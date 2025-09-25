@@ -249,8 +249,8 @@ fn test_macro_usage() {
     let _with_retries = quote_macro!(http_get!("https://api.example.com", retries: 5));
 
     // Test http_post_json! macro
-    let body = json!({"test": "data"});
-    let _basic_post = quote_macro!(http_post_json!("https://api.example.com", body));
+    let _body = json!({"test": "data"});
+    let _basic_post = quote_macro!(http_post_json!("https://api.example.com", _body));
     let _post_with_timeout =
-        quote_macro!(http_post_json!("https://api.example.com", body, timeout: 45));
+        quote_macro!(http_post_json!("https://api.example.com", _body, timeout: 45));
 }

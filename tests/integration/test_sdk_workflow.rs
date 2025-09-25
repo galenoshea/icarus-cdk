@@ -1,4 +1,4 @@
-//! Integration tests for the complete SDK workflow
+//! Integration tests for the complete CDK workflow
 
 use icarus_canister::tools::{ToolRegistration, ToolRegistry};
 use icarus_core::error::ToolError;
@@ -34,7 +34,7 @@ async fn test_complete_tool_workflow() {
     assert_eq!(result["processed"], true);
 }
 
-/// Test error handling across the SDK
+/// Test error handling across the CDK
 #[tokio::test]
 async fn test_error_handling() {
     let mut tool_registry = ToolRegistry::new();

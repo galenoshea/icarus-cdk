@@ -9,18 +9,18 @@ Version 0.8.0 introduces a **modular architecture** with focused crates for bett
 ### What's New in 0.8.0
 
 #### 🏗️ Modular Crate Architecture
-The SDK has been refactored into 6 focused crates:
+The CDK is organized into focused crates:
 
-- **`icarus-bridge`** - MCP-to-ICP bridge functionality
-- **`icarus-dev`** - Development tools and file watching
-- **`icarus-core`** - Core types and session management
-- **`icarus-derive`** - Proc macros
+- **`icarus`** - Main SDK with all features bundled
+- **`icarus-core`** - Core types, traits, and MCP protocol implementation
+- **`icarus-derive`** - Procedural macros (`#[tool]`, derive)
 - **`icarus-canister`** - ICP integration and stable storage
-- **`icarus-mcp`** - MCP protocol implementation
+- **`icarus-wasi`** - WASI polyfill, detection, and optimization
+- **`icarus-cli`** - Command-line interface with MCP client integration
 
 #### 🧪 Enhanced Testing
-- 74+ new unit tests across all crates
-- Comprehensive test coverage for bridge and dev functionality
+- 412+ comprehensive tests across all crates
+- Comprehensive test coverage for MCP protocol and CLI functionality
 - Improved reliability and error handling
 
 ### Migration Steps

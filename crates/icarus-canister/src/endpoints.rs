@@ -135,7 +135,7 @@ pub fn http_request(_req: HttpRequest) -> HttpResponse {
 <body>
     <div class="container">
         <h1>🚀 Icarus Canister</h1>
-        <p>This is a standard ICP canister built with Icarus SDK.</p>
+        <p>This is a standard ICP canister built with Icarus CDK.</p>
         
         <div class="info">
             <strong>Canister ID:</strong> <code>{}</code><br>
@@ -152,7 +152,7 @@ pub fn http_request(_req: HttpRequest) -> HttpResponse {
         
         <hr style="margin-top: 40px; border: none; border-top: 1px solid #eee;">
         <p style="text-align: center; color: #666; font-size: 14px;">
-            Powered by <a href="https://icarus.dev" style="color: #2196F3;">Icarus SDK</a>
+            Powered by <a href="https://icarus.dev" style="color: #2196F3;">Icarus CDK</a>
         </p>
     </div>
 </body>

@@ -44,4 +44,4 @@ canister_ids.json
 .env.local
 secrets/
 *.key
-*.pempocket-ic
+*.pem

@@ -1,6 +1,6 @@
-# Contributing to Icarus SDK
+# Contributing to Icarus CDK
 
-Thank you for your interest in contributing to the Icarus SDK! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to the Icarus CDK! This document provides guidelines and instructions for contributing to the project.
 
 ## Code of Conduct
 
@@ -36,8 +36,8 @@ We love pull requests! Here's how to contribute code:
 
 ```bash
 # Fork and clone the repository
-git clone https://github.com/YOUR_USERNAME/icarus-sdk.git
-cd icarus-sdk
+git clone https://github.com/YOUR_USERNAME/icarus-cdk.git
+cd icarus-cdk
 
 # Install Rust (if not already installed)
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -105,7 +105,7 @@ git commit -m "feat: add support for custom storage backends"
 ### Project Structure
 
 ```
-icarus-sdk/
+icarus-cdk/
 ├── crates/
 │   ├── icarus-core/      # Core MCP protocol implementation
 │   ├── icarus-derive/     # Procedural macros
@@ -220,4 +220,4 @@ Contributors will be recognized in:
 - Release notes
 - Project documentation
 
-Thank you for helping make Icarus SDK better!
+Thank you for helping make Icarus CDK better!

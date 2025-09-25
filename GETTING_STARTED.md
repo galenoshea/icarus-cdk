@@ -1,6 +1,6 @@
-# Getting Started with Icarus SDK
+# Getting Started with Icarus CDK
 
-Welcome to Icarus SDK! This tutorial will guide you through creating your first MCP (Model Context Protocol) server that runs as an Internet Computer Protocol (ICP) canister.
+Welcome to Icarus CDK! This tutorial will guide you through creating your first MCP (Model Context Protocol) server that runs as an Internet Computer Protocol (ICP) canister.
 
 ## Prerequisites
 
@@ -10,9 +10,9 @@ Before starting, ensure you have:
 - [DFX](https://internetcomputer.org/docs/current/developer-docs/setup/install) (0.15.0+ recommended)
 - [Node.js](https://nodejs.org/) (for Claude Desktop integration)
 
-## What is Icarus SDK?
+## What is Icarus CDK?
 
-Icarus SDK enables you to create **persistent AI tools** that:
+Icarus CDK enables you to create **persistent AI tools** that:
 
 - Run as **ICP canisters** with blockchain-grade security
 - Integrate with **Claude Desktop** via the Model Context Protocol (MCP)
@@ -22,7 +22,7 @@ Icarus SDK enables you to create **persistent AI tools** that:
 ## Step 1: Install Icarus CLI
 
 ```bash
-cargo install --git https://github.com/anthgur/icarus-sdk icarus-cli
+cargo install --git https://github.com/anthgur/icarus-cdk icarus-cli
 ```
 
 Verify the installation:
@@ -463,12 +463,12 @@ dfx identity use default
 
 - Explore [advanced examples](./examples/) for more complex patterns
 - Read about [MCP protocol details](https://spec.modelcontextprotocol.io/)
-- Join the [Icarus community](https://github.com/anthgur/icarus-sdk/discussions)
+- Join the [Icarus community](https://github.com/anthgur/icarus-cdk/discussions)
 - Deploy your canister to production and share it!
 
 ## Need Help?
 
 - 📖 [Full Documentation](./docs/)
-- 🐛 [Report Issues](https://github.com/anthgur/icarus-sdk/issues)
-- 💬 [Community Discussions](https://github.com/anthgur/icarus-sdk/discussions)
-- 📧 [Email Support](mailto:support@icarus-sdk.com)
+- 🐛 [Report Issues](https://github.com/anthgur/icarus-cdk/issues)
+- 💬 [Community Discussions](https://github.com/anthgur/icarus-cdk/discussions)
+- 📧 [Email Support](mailto:support@icarus-cdk.com)

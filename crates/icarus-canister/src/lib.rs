@@ -13,7 +13,6 @@ pub mod auth;
 pub mod auth_tools;
 pub mod easy_storage;
 pub mod endpoints;
-pub mod extensions;
 pub mod http;
 pub mod lifecycle;
 pub mod macros;
@@ -26,24 +25,19 @@ pub mod timers;
 pub mod tools;
 
 pub use auth::{
-    add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users, get_user,
-    init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
-    require_none_of_roles, require_role_or_higher, update_user_role, AuthAction, AuthAuditEntry,
-    AuthInfo, AuthRole, User,
+    add_user, authenticate, get_current_user, get_user, init_auth, list_users, remove_user,
+    require_role_or_higher, update_user_role, AuthInfo, AuthRole, User,
 };
 pub use endpoints::{
     get_owner as get_canister_owner, http_request, icarus_metadata, HttpRequest, HttpResponse,
 };
-pub use extensions::{WasiConfig, WasiExtension};
 pub use lifecycle::{init, post_upgrade, pre_upgrade};
 pub use stable_ext::{StableBTreeMapExt, StableCellExt};
 pub use state::{assert_owner, get_owner, is_owner, IcarusCanisterState};
 pub use storage::{StableCounter, StableMap};
 
-// Re-export the macros from icarus-derive
-pub use icarus_derive::{
-    icarus_canister, icarus_module, icarus_tool, IcarusStorable, IcarusStorage, IcarusType,
-};
+// Re-export the storage macros from icarus-derive
+pub use icarus_derive::{IcarusStorable, IcarusStorage, IcarusType};
 
 // Re-export commonly used macros (defined with #[macro_export])
 // Note: These macros are automatically available at the crate root due to #[macro_export]
@@ -73,10 +67,8 @@ pub mod prelude {
     pub use crate::{
         // Authentication system
         auth::{
-            add_user, authenticate, get_auth_audit, get_auth_status, get_authorized_users,
-            get_user, init_auth, list_users, remove_user, require_any_of_roles, require_exact_role,
-            require_none_of_roles, require_role_or_higher, update_user_role, AuthAction,
-            AuthAuditEntry, AuthInfo, AuthRole, User,
+            add_user, authenticate, get_current_user, get_user, init_auth, list_users, remove_user,
+            require_role_or_higher, update_user_role, AuthInfo, AuthRole, User,
         },
         // Easy storage patterns
         easy_storage::{CounterCell, StorageCell, StorageMap},
@@ -87,16 +79,10 @@ pub mod prelude {
             HttpResponse,
         },
 
-        // Extensions for advanced initialization
-        extensions::{WasiConfig, WasiExtension},
-
         // HTTP outcalls for external data
         http,
 
-        icarus_module,
         icarus_storage,
-        // Macros for tool definition
-        icarus_tool,
         init_memory,
         // Lifecycle hooks
         lifecycle::*,
@@ -116,6 +102,7 @@ pub mod prelude {
         timers,
 
         tool_metadata,
+        wasi_init,
         IcarusStorable,
         IcarusStorage,
         IcarusType,
@@ -123,8 +110,7 @@ pub mod prelude {
 
     // Re-export core traits for convenience
     pub use icarus_core::{
-        AuthConfig, ErrorConfig, ExtensionProvider, GenerateServiceMetadata, IcarusToolMethod,
-        IcarusToolProvider, InitError, InitRequirements, InitializationExtension, ServiceConfig,
+        AuthConfig, ErrorConfig, GenerateServiceMetadata, IcarusToolMethod, ServiceConfig,
         ServiceMetadata, ToolMethodMetadata,
     };
 

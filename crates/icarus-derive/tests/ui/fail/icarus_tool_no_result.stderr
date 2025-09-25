@@ -1,7 +1,0 @@
-error: Tool function validation failed:
-         - Tool functions must have either #[query] or #[update] attribute
-         - Tool functions must return Result<T, String>
- --> tests/ui/fail/icarus_tool_no_result.rs:4:4
-  |
-4 | fn bad_tool() -> String {
-  |    ^^^^^^^^

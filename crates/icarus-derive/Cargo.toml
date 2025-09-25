@@ -1,29 +1,33 @@
 [package]
 name = "icarus-derive"
 version.workspace = true
-authors.workspace = true
 edition.workspace = true
+authors.workspace = true
 license-file.workspace = true
 repository.workspace = true
-description = "Procedural macros for the Icarus SDK - enables automatic MCP tool metadata generation"
-documentation = "https://docs.rs/icarus"
-homepage = "https://github.com/galenoshea/icarus-sdk"
-readme = "README.md"
-keywords = ["icp", "internet-computer", "mcp", "ai", "proc-macro"]
-categories = ["development-tools::procedural-macro-helpers", "web-programming", "wasm"]
+description = "Derive macros for the Icarus SDK - build MCP servers with automatic Candid export"
+keywords = ["derive", "macro", "icp", "mcp", "candid"]
+categories = ["development-tools", "wasm"]
+
+[lints]
+workspace = true
 
 [lib]
 proc-macro = true
 
 [dependencies]
+# Proc macro essentials
 syn = { workspace = true, features = ["full", "extra-traits"] }
 quote = { workspace = true }
 proc-macro2 = { workspace = true }
 
+# For better error reporting
+proc-macro-error = "1.0"
+
+# For JSON schema generation hints
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
 [dev-dependencies]
-icarus-core = { workspace = true }
+# For testing macro expansion
 trybuild = "1.0"
-ic-stable-structures = { workspace = true }
-candid = { workspace = true }
-serde = { workspace = true }
-ic-cdk = { workspace = true }
