@@ -22,14 +22,10 @@ use tempfile::NamedTempFile;
 /// * `Ok(Vec<u8>)` - IC-compatible WASM bytes with WASI imports replaced
 /// * `Err(anyhow::Error)` - If conversion fails
 pub fn convert_wasi_to_ic(wasm_bytes: &[u8]) -> Result<Vec<u8>> {
-    eprintln!(
-        "DEBUG: convert_wasi_to_ic called with {} bytes",
-        wasm_bytes.len()
-    );
+    // Convert WASI to IC-compatible WASM
 
     // Check if input has WASI imports
-    let has_wasi = has_wasi_imports(wasm_bytes)?;
-    eprintln!("DEBUG: Input WASM has WASI imports: {}", has_wasi);
+    let _has_wasi = has_wasi_imports(wasm_bytes)?;
 
     // Check if wasi2ic is available
     if which::which("wasi2ic").is_err() {
@@ -42,7 +38,6 @@ pub fn convert_wasi_to_ic(wasm_bytes: &[u8]) -> Result<Vec<u8>> {
 
     // Write input WASM to temporary file
     fs::write(input_file.path(), wasm_bytes)?;
-    eprintln!("DEBUG: Written input WASM to: {:?}", input_file.path());
 
     // Run wasi2ic conversion
     let output = Command::new("wasi2ic")
@@ -61,14 +56,9 @@ pub fn convert_wasi_to_ic(wasm_bytes: &[u8]) -> Result<Vec<u8>> {
 
     // Read the converted WASM
     let converted_bytes = fs::read(output_file.path())?;
-    eprintln!(
-        "DEBUG: Read {} bytes from output file",
-        converted_bytes.len()
-    );
 
     // Check if output has WASI imports
-    let output_has_wasi = has_wasi_imports(&converted_bytes)?;
-    eprintln!("DEBUG: Output WASM has WASI imports: {}", output_has_wasi);
+    let _output_has_wasi = has_wasi_imports(&converted_bytes)?;
 
     Ok(converted_bytes)
 }

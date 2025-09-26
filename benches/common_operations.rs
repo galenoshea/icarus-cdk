@@ -24,7 +24,10 @@ mod bench_utils {
 
     impl BenchContext {
         pub fn new() -> Self {
-            let runtime = Runtime::new().unwrap();
+            let runtime = tokio::runtime::Builder::new_current_thread()
+                .enable_all()
+                .build()
+                .unwrap();
             let canister_id = "rdmx6-jaaaa-aaaaa-aaadq-cai".to_string();
 
             Self {

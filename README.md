@@ -74,7 +74,7 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.8.0"
+icarus = "0.9.0"
 
 # Or specify features explicitly
 icarus = { version = "0.7.0", features = ["canister"] }
@@ -114,11 +114,10 @@ pub fn system_info() -> String {
     )
 }
 
-// Generate authentication management functions
-icarus::auth!();
-
-// Generate MCP tool discovery function
-icarus::mcp!();
+// Generate MCP canister with auth and tool discovery
+icarus::mcp! {
+    .build()
+};
 
 // Export the Candid interface
 export_candid!();
@@ -261,12 +260,12 @@ Icarus CDK is organized into focused crates for modularity and flexibility:
 
 ```toml
 # Use the full SDK (recommended)
-icarus = "0.8.0"
+icarus = "0.9.0"
 
 # Or pick specific crates for specialized use cases
-icarus-core = "0.8.0"      # Core functionality and MCP protocol
-icarus-canister = "0.8.0"  # Canister-specific utilities
-icarus-wasi = "0.8.0"      # WASI optimization
+icarus-core = "0.9.0"      # Core functionality and MCP protocol
+icarus-canister = "0.9.0"  # Canister-specific utilities
+icarus-wasi = "0.9.0"      # WASI optimization
 ```
 
 ---
@@ -319,7 +318,7 @@ icarus logs <id>          # View canister logs
 - 🌉 **Native MCP**: Built-in MCP protocol support without translation layers
 
 ### To upgrade:
-1. Update your dependency: `icarus = "0.8.0"`
+1. Update your dependency: `icarus = "0.9.0"`
 2. Redeploy: `icarus deploy` (builds automatically)
 
 **No breaking changes** - existing code continues to work unchanged. The modular architecture is internal - your application code remains the same.

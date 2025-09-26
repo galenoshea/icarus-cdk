@@ -266,10 +266,7 @@ pub async fn build_canister_wasi_native(
     let use_wasi_conversion = target == "wasm32-wasip1";
     let has_wasi_polyfills = has_icarus_wasi_dependency(project_dir)?;
 
-    crate::utils::print_info(&format!(
-        "DEBUG: target={}, use_wasi_conversion={}, has_wasi_polyfills={}",
-        target, use_wasi_conversion, has_wasi_polyfills
-    ));
+    // Removed debug output - only show essential build information
 
     // Architecture selected (WASI conversion, WASI with polyfills, or pure WASM)
     if has_wasi_polyfills && use_wasi_conversion {
@@ -285,10 +282,8 @@ pub async fn build_canister_wasi_native(
 
     // Step 2: If WASI conversion needed, convert to IC-compatible format FIRST, then extract Candid
     if use_wasi_conversion {
-        eprintln!("DEBUG build_utils: About to call convert_wasi_to_ic");
         // Convert WASI to IC-compatible WASM IN PLACE
         convert_wasi_to_ic(project_dir, &wasm_path, &wasm_path).await?;
-        eprintln!("DEBUG build_utils: convert_wasi_to_ic completed");
 
         // Create IC-compatible WASM path for dfx deployment (with _ic suffix)
         let wasm_name = project_name.replace('-', "_");

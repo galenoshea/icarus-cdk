@@ -1,6 +1,6 @@
 [package]
 name = "icarus-wasi"
-version = "0.8.0"
+version.workspace = true
 edition = "2021"
 description = "Build-time WASI orchestration for Icarus canisters"
 keywords = ["wasi", "webassembly", "ic", "internet-computer", "build"]

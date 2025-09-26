@@ -780,61 +780,6 @@ mod tests {
     use std::fs;
     use tempfile::TempDir;
 
-    // Mock for testing interactive wizard without actual user input
-    #[derive(Debug)]
-    #[allow(dead_code)]
-    struct MockDialoguer {
-        confirm_responses: Vec<bool>,
-        input_responses: Vec<String>,
-        select_responses: Vec<usize>,
-        call_count: std::cell::RefCell<usize>,
-    }
-
-    #[allow(dead_code)]
-    impl MockDialoguer {
-        fn new() -> Self {
-            Self {
-                confirm_responses: vec![],
-                input_responses: vec![],
-                select_responses: vec![],
-                call_count: std::cell::RefCell::new(0),
-            }
-        }
-
-        fn with_confirms(mut self, responses: Vec<bool>) -> Self {
-            self.confirm_responses = responses;
-            self
-        }
-
-        fn with_inputs(mut self, responses: Vec<String>) -> Self {
-            self.input_responses = responses;
-            self
-        }
-
-        fn with_selects(mut self, responses: Vec<usize>) -> Self {
-            self.select_responses = responses;
-            self
-        }
-
-        fn next_confirm(&self) -> bool {
-            let count = *self.call_count.borrow();
-            *self.call_count.borrow_mut() += 1;
-            self.confirm_responses.get(count).copied().unwrap_or(false)
-        }
-
-        fn next_input(&self) -> String {
-            let count = *self.call_count.borrow();
-            *self.call_count.borrow_mut() += 1;
-            self.input_responses.get(count).cloned().unwrap_or_default()
-        }
-
-        fn next_select(&self) -> usize {
-            let count = *self.call_count.borrow();
-            *self.call_count.borrow_mut() += 1;
-            self.select_responses.get(count).copied().unwrap_or(0)
-        }
-    }
-
     #[test]
     fn test_interactive_wizard_creation() {
         let wizard = InteractiveWizard::new();

@@ -1941,7 +1941,7 @@ dependencies = [
 
 [[package]]
 name = "icarus"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "candid",
  "criterion",
@@ -1956,7 +1956,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-canister"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "async-trait",
  "candid",
@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-cli"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -2033,7 +2033,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-core"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2064,7 +2064,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-derive"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
@@ -2077,7 +2077,7 @@ dependencies = [
 
 [[package]]
 name = "icarus-wasi"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "anyhow",
  "ic-wasi-polyfill",

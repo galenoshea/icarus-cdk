@@ -2,11 +2,11 @@
 
 This guide helps you migrate between different versions of the Icarus SDK.
 
-## Migrating from 0.6.x to 0.8.0
+## Migrating from 0.6.x to 0.9.0
 
-Version 0.8.0 introduces a **modular architecture** with focused crates for better maintainability and development experience. This is a **non-breaking change** - existing applications continue to work without modification.
+Version 0.9.0 introduces a **modular architecture** with focused crates for better maintainability and development experience. This is a **non-breaking change** - existing applications continue to work without modification.
 
-### What's New in 0.8.0
+### What's New in 0.9.0
 
 #### 🏗️ Modular Crate Architecture
 The CDK is organized into focused crates:
@@ -28,7 +28,7 @@ The CDK is organized into focused crates:
 1. **Update your `Cargo.toml`**:
    ```toml
    [dependencies]
-   icarus = "0.8.0"  # No other changes needed
+   icarus = "0.9.0"  # No other changes needed
    ```
 
 2. **Redeploy your canister**:
@@ -39,9 +39,9 @@ The CDK is organized into focused crates:
 3. **Optional: Use modular dependencies** (for specialized use cases):
    ```toml
    [dependencies]
-   icarus-bridge = "0.8.0"   # For custom bridge implementations
-   icarus-dev = "0.8.0"      # For development tooling
-   icarus-core = "0.8.0"     # For core functionality only
+   icarus-bridge = "0.9.0"   # For custom bridge implementations
+   icarus-dev = "0.9.0"      # For development tooling
+   icarus-core = "0.9.0"     # For core functionality only
    ```
 
 ### No Breaking Changes
@@ -50,7 +50,7 @@ The CDK is organized into focused crates:
 - **Same functionality**: All features remain available
 - **Backward compatibility**: No migration of existing canisters needed
 
-### Benefits of 0.8.0
+### Benefits of 0.9.0
 
 - **Faster builds**: Modular compilation improves build times
 - **Better development**: Enhanced file watching and dev tools
@@ -93,7 +93,7 @@ Update your `Cargo.toml`:
 
 ```toml
 [dependencies]
-icarus = "0.8.0"
+icarus = "0.9.0"
 ic-cdk = "0.18"
 candid = "0.10"
 serde = { version = "1.0", features = ["derive"] }
@@ -372,7 +372,7 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.8.0)**: Full support with modular architecture
+- **Current Version (0.9.0)**: Full support with modular architecture
 - **Previous Minor (0.5.8)**: Critical fixes only
 - **Previous Minor (0.4.x)**: Security updates only
 - **Older Versions**: No support, upgrade recommended

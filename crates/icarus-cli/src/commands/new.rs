@@ -197,17 +197,12 @@ pub fn admin_status() -> String {
     )
 }
 
-// Mark WASI usage (dependency-free marker)
-icarus::wasi!();
-
-// Generate authentication management functions
-// This creates: init(owner), add_user, remove_user, etc.
-// WASI initialization is automatic when "wasi" feature is enabled
-icarus::auth!();
-
-// Generate MCP tool discovery function
-// This creates: get_tools() for MCP clients
-icarus::mcp!();
+// NEW: Builder pattern - marketplace-compatible MCP canister
+// Automatically includes auth, init(owner), and all required functions
+icarus::mcp! {
+    .with_wasi()
+    .build()
+};
 
 // Export the Candid interface for dfx deployment
 export_candid!();
@@ -246,13 +241,11 @@ pub async fn echo(message: String) -> Result<String, String> {
     Ok(format!("Echo: {}", message))
 }
 
-// Generate authentication management functions
-// This creates: init(owner), add_user, remove_user, etc.
-icarus::auth!();
-
-// Generate MCP tool discovery function
-// This creates: get_tools() for MCP clients
-icarus::mcp!();
+// NEW: Builder pattern - marketplace-compatible MCP canister
+// Automatically includes auth, init(owner), and all required functions
+icarus::mcp! {
+    .build()
+};
 
 // Export the Candid interface for dfx deployment
 export_candid!();
@@ -437,7 +430,7 @@ rpath = false
 
 fn create_dfx_json(project_path: &Path, name: &str, wasi: bool) -> Result<()> {
     let dfx_json = if wasi {
-        // WASI projects need custom build pipeline
+        // WASI projects use custom type but let Icarus handle building
         format!(
             r#"{{
   "canisters": {{
@@ -447,7 +440,6 @@ fn create_dfx_json(project_path: &Path, name: &str, wasi: bool) -> Result<()> {
       "wasm": "target/wasm32-wasip1/release/{}_ic.wasm",
       "candid": "src/{}.did",
       "optimize": "cycles",
-      "build": "icarus build --wasi",
       "metadata": [
         {{
           "name": "candid:service"
@@ -654,21 +646,22 @@ mod tests {
 
         let lib_rs_content = fs::read_to_string(src_dir.join("lib.rs")).unwrap();
 
-        // Should contain comment about automatic WASI initialization
+        // Should contain new builder pattern with WASI
         assert!(
-            lib_rs_content
-                .contains("WASI initialization is automatic when \"wasi\" feature is enabled"),
-            "WASI-enabled project should mention automatic WASI initialization"
-        );
-
-        // Should still have basic structure (auth and mcp macros)
-        assert!(
-            lib_rs_content.contains("icarus::auth!();"),
-            "Should contain auth macro"
+            lib_rs_content.contains("icarus::mcp! {"),
+            "Should contain new builder pattern"
         );
         assert!(
-            lib_rs_content.contains("icarus::mcp!();"),
-            "Should contain mcp macro"
+            lib_rs_content.contains(".with_wasi()"),
+            "WASI-enabled project should use .with_wasi()"
+        );
+        assert!(
+            lib_rs_content.contains(".build()"),
+            "Should contain .build() call"
+        );
+        assert!(
+            lib_rs_content.contains("marketplace-compatible"),
+            "Should mention marketplace compatibility"
         );
     }
 
@@ -682,20 +675,22 @@ mod tests {
 
         let lib_rs_content = fs::read_to_string(src_dir.join("lib.rs")).unwrap();
 
-        // Should NOT contain WASI-related comments
+        // Should contain new builder pattern without WASI
         assert!(
-            !lib_rs_content.contains("WASI initialization is automatic"),
-            "Non-WASI project should not mention WASI initialization"
-        );
-
-        // Should still have basic structure (auth and mcp macros)
-        assert!(
-            lib_rs_content.contains("icarus::auth!();"),
-            "Should contain auth macro"
+            lib_rs_content.contains("icarus::mcp! {"),
+            "Should contain new builder pattern"
         );
         assert!(
-            lib_rs_content.contains("icarus::mcp!();"),
-            "Should contain mcp macro"
+            !lib_rs_content.contains(".with_wasi()"),
+            "Non-WASI project should not contain .with_wasi()"
+        );
+        assert!(
+            lib_rs_content.contains(".build()"),
+            "Should contain .build() call"
+        );
+        assert!(
+            lib_rs_content.contains("marketplace-compatible"),
+            "Should mention marketplace compatibility"
         );
     }
 
@@ -779,8 +774,8 @@ mod tests {
 
         let lib_rs = fs::read_to_string(actual_project_path.join("src/lib.rs")).unwrap();
         assert!(
-            lib_rs.contains("WASI initialization is automatic when \"wasi\" feature is enabled"),
-            "Generated project should mention automatic WASI initialization"
+            lib_rs.contains(".with_wasi()"),
+            "Generated WASI project should use .with_wasi() builder pattern"
         );
     }
 

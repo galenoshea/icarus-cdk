@@ -7,13 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2025-09-26
+
 ### Removed
+- **🗑️ Deprecated Macro System Removal**: Removed all deprecated standalone macros in favor of builder pattern
+  - Removed `icarus::auth!()`, `icarus::wasi!()`, `icarus::init!()` standalone macros
+  - Removed `mcp_macro.rs`, `auth_macro.rs`, `wasi_macro.rs`, `init_macro.rs` implementation files
+  - Cleaned deprecated test functions and examples from documentation
+  - All functionality preserved in new `icarus::mcp! { .build() }` builder pattern
 - **🧹 Comprehensive Dead Code Cleanup**: Extensive removal of deprecated and unused code
   - Removed entire `service.rs` file and `IcarusService` trait system (~200 lines of unimplemented aspirational architecture)
   - Eliminated all references to removed service module across the codebase
   - Converted 8 TODO comments to explanatory notes about design decisions
   - Removed `#[allow(dead_code)]` annotations after actual cleanup
   - Zero compilation warnings after comprehensive cleanup
+- **🔄 WASI Build Circular Dependency**: Removed circular dependency in WASI project dfx.json
+  - Removed `"build": "icarus build --wasi"` from dfx.json template
+  - Eliminates confusing circular call pattern where deploy → dfx → icarus build
+  - Improved developer experience with cleaner build workflow
 
 ### Added
 - **🧪 Extensive Test Coverage Enhancement**: Added comprehensive test suites across multiple modules
@@ -38,6 +49,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Removed references to deleted crates (`icarus-migrate`) from project structure
   - Fixed outdated code examples in documentation to match working implementation
   - Ensured all CLI-generated templates use only implemented features
+- **⚡ Tokio Runtime Compatibility**: Fixed tokio Runtime API usage in benchmarks
+  - Updated from deprecated `Runtime::new()` to `Builder::new_current_thread()`
+  - Ensures compatibility with current tokio version
 
 ## [0.8.0] - 2025-09-17
 

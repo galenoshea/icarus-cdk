@@ -43,9 +43,10 @@
 //!     Ok(format!("Stored: {}", content))
 //! }
 //!
-//! // Add authentication and MCP infrastructure
-//! icarus::auth!();
-//! icarus::mcp!();
+//! // Generate MCP canister with authentication and infrastructure
+//! icarus::mcp! {
+//!     .build()
+//! };
 //! ic_cdk::export_candid!();
 //! ```
 
@@ -63,7 +64,7 @@ pub use icarus_canister as canister;
 
 // Derive macros and MCP macro - export directly at crate root for clean usage
 #[cfg(feature = "canister")]
-pub use icarus_derive::{auth, mcp, tool, wasi};
+pub use icarus_derive::{mcp, tool};
 
 /// Prelude module for convenient imports
 #[cfg(feature = "canister")]

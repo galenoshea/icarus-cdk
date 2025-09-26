@@ -1,6 +1,6 @@
 [package]
 name = "icarus"
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Icarus CDK Contributors"]
 edition = "2021"
 license-file = "LICENSE"
@@ -19,9 +19,9 @@ core = ["dep:icarus-core"]
 wasi = []  # Feature flag for WASI support detection
 
 [dependencies]
-icarus-core = { version = "0.8.0", path = "crates/icarus-core", optional = true, default-features = false }
-icarus-derive = { version = "0.8.0", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.8.0", path = "crates/icarus-canister", optional = true }
+icarus-core = { version = "0.9.0", path = "crates/icarus-core", optional = true, default-features = false }
+icarus-derive = { version = "0.9.0", path = "crates/icarus-derive", optional = true }
+icarus-canister = { version = "0.9.0", path = "crates/icarus-canister", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1", features = ["sync", "time", "io-util", "rt", "macros"] }
@@ -63,7 +63,7 @@ name = "common_operations"
 harness = false
 
 [workspace.package]
-version = "0.8.0"
+version = "0.9.0"
 authors = ["Icarus CDK Contributors"]
 edition = "2021"
 rust-version = "1.75"
@@ -153,10 +153,10 @@ once_cell = "1"
 ring = "0.17"
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.8.0" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.8.0" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.8.0" }
-icarus-wasi = { path = "crates/icarus-wasi", version = "0.8.0" }
+icarus-core = { path = "crates/icarus-core", version = "0.9.0" }
+icarus-derive = { path = "crates/icarus-derive", version = "0.9.0" }
+icarus-canister = { path = "crates/icarus-canister", version = "0.9.0" }
+icarus-wasi = { path = "crates/icarus-wasi", version = "0.9.0" }
 
 [profile.release]
 opt-level = 3

@@ -84,6 +84,12 @@ pub async fn execute(
         env_vars.push(("RUSTFLAGS", simd_flags));
     }
 
+    // Set GETRANDOM_BACKEND for wasm32-wasip1 builds (needed for ML dependencies)
+    if target == "wasm32-wasip1" {
+        env_vars.push(("GETRANDOM_BACKEND", "custom".to_string()));
+        print_info("🎲 Setting GETRANDOM_BACKEND=custom for WASI target compatibility");
+    }
+
     // Compile with cargo
     run_command_with_env(
         "cargo",
