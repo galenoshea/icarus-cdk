@@ -1,259 +1,259 @@
-//! Remove MCP server from AI client configurations
-
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Result};
 use colored::Colorize;
-use dialoguer::{theme::ColorfulTheme, MultiSelect, Select};
-use std::collections::HashMap;
+use dialoguer::{theme::ColorfulTheme, Confirm};
+use tracing::info;
 
-use crate::utils::{
-    mcp_clients::{ClientRegistry, ClientType, McpClient},
-    print_error, print_info, print_success, print_warning,
-};
+use crate::config::mcp::McpConfig;
+use crate::{commands::mcp::RemoveArgs, Cli};
 
-/// Remove MCP server from AI client configurations
-pub async fn execute(
-    server_name: String,
-    clients: Option<Vec<String>>,
-    all_clients: bool,
-    config_path: Option<String>,
-) -> Result<()> {
-    print_info(&format!(
-        "Removing MCP server '{}' from AI clients...",
-        server_name
-    ));
+pub(crate) async fn execute(args: RemoveArgs, cli: &Cli) -> Result<()> {
+    info!("Removing MCP server registration: {}", args.identifier);
 
-    let registry = ClientRegistry::new();
-    let all_client_info = registry.get_all_client_info();
+    // Load existing configuration
+    let mut mcp_config = McpConfig::load().await.unwrap_or_default();
 
-    // Filter to only installed clients
-    let installed_clients: Vec<_> = all_client_info
+    // Find server by identifier (name or canister ID)
+    let server = mcp_config
+        .servers
         .iter()
-        .filter(|info| info.is_installed)
-        .collect();
+        .find(|s| s.name == args.identifier || s.canister_id == args.identifier)
+        .cloned();
 
-    if installed_clients.is_empty() {
-        print_warning("No supported AI clients detected on this system.");
-        return Ok(());
-    }
-
-    // Determine which clients to check/remove from
-    let clients_to_check = if all_clients {
-        // Check all installed clients
-        installed_clients.clone()
-    } else if let Some(client_names) = clients {
-        // Use specified clients
-        let mut selected_clients = Vec::new();
-        for client_name in client_names {
-            let client_type = match client_name.to_lowercase().as_str() {
-                "claude" | "claude-desktop" | "claude_desktop" => ClientType::ClaudeDesktop,
-                "chatgpt" | "chatgpt-desktop" | "chatgpt_desktop" => ClientType::ChatGptDesktop,
-                "claude-code" | "claude_code" | "cline" => ClientType::ClaudeCode,
-                _ => {
-                    print_warning(&format!("Unknown client type: {}", client_name));
-                    continue;
-                }
-            };
-
-            if let Some(info) = installed_clients
-                .iter()
-                .find(|info| info.client_type == client_type)
-            {
-                selected_clients.push(*info);
-            } else {
-                print_warning(&format!(
-                    "{} is not installed or not detected",
-                    client_type.display_name()
-                ));
-            }
-        }
-        selected_clients
-    } else {
-        // Interactive client selection - but first check which clients have this server
-        find_clients_with_server(&registry, &installed_clients, &server_name).await?
+    let Some(server) = server else {
+        return Err(anyhow!(
+            "No MCP server found with identifier: {}",
+            args.identifier
+        ));
     };
 
-    if clients_to_check.is_empty() {
-        print_warning(&format!(
-            "Server '{}' not found in any client configuration.",
-            server_name
-        ));
-        return Ok(());
+    if !cli.quiet {
+        println!("{} Removing MCP server", "→".bright_blue());
+        println!(
+            "  {} {}",
+            "Name:".bright_white(),
+            server.name.to_string().bright_cyan()
+        );
+        println!(
+            "  {} {}",
+            "Canister ID:".bright_white(),
+            server.canister_id.to_string().bright_cyan()
+        );
+        println!(
+            "  {} {}",
+            "Client:".bright_white(),
+            server.client.bright_cyan()
+        );
     }
 
-    // Remove from each selected client
-    let mut results = HashMap::new();
-    for client_info in &clients_to_check {
-        let client = registry
-            .get_client(client_info.client_type)
-            .context("Failed to get client implementation")?;
+    // Confirm removal unless --yes flag is used
+    if !args.yes && !cli.force {
+        let theme = ColorfulTheme::default();
+        let confirmed = Confirm::with_theme(&theme)
+            .with_prompt(&format!(
+                "Remove MCP server '{}'? This will unregister it from all AI clients.",
+                server.name
+            ))
+            .default(false)
+            .interact()?;
 
-        print_info(&format!(
-            "Removing from {}...",
-            client_info.client_type.display_name()
-        ));
-
-        let result =
-            remove_from_client(client, &server_name, client_info, config_path.as_ref()).await;
-        results.insert(client_info.client_type, result);
-    }
-
-    // Report results
-    println!();
-    println!("{}", "Removal Results:".bold().cyan());
-    println!("{}", "─".repeat(50).cyan());
-
-    let mut success_count = 0;
-    let mut total_count = 0;
-
-    for (client_type, result) in results {
-        total_count += 1;
-        match result {
-            Ok(_) => {
-                print_success(&format!("✓ {}", client_type.display_name()));
-                success_count += 1;
-            }
-            Err(e) => {
-                print_error(&format!("✗ {}: {}", client_type.display_name(), e));
-            }
+        if !confirmed {
+            return Err(anyhow!("Removal cancelled"));
         }
     }
 
-    println!();
-    if success_count == total_count {
-        print_success(&format!(
-            "Successfully removed '{}' from {} client(s)!",
-            server_name, success_count
-        ));
-        print_info("Restart the AI clients to apply the changes.");
-    } else if success_count > 0 {
-        print_warning(&format!(
-            "Partially successful: removed from {}/{} clients",
-            success_count, total_count
-        ));
+    // Remove from client configuration if client is specified or remove from all
+    if let Some(ref client) = args.client {
+        remove_from_client(&server, client).await?;
     } else {
-        print_error("Failed to remove from any clients.");
-        anyhow::bail!("All removal operations failed");
+        remove_from_all_clients(&server).await?;
     }
 
+    // Remove from our configuration
+    mcp_config.remove_server(server.name.as_str())?;
+    mcp_config.save().await?;
+
+    if !cli.quiet {
+        println!(
+            "\n{}",
+            "✅ MCP Server Removed Successfully!".bright_green().bold()
+        );
+        println!(
+            "  {} {}",
+            "Server:".bright_white(),
+            server.name.to_string().bright_cyan()
+        );
+        println!(
+            "\n{}",
+            "Note: Restart your AI clients to apply changes.".bright_yellow()
+        );
+    }
+
+    info!("MCP server removed successfully");
     Ok(())
-}
-
-async fn find_clients_with_server<'a>(
-    registry: &'a ClientRegistry,
-    installed_clients: &'a [&'a crate::utils::mcp_clients::ClientInfo],
-    server_name: &'a str,
-) -> Result<Vec<&'a crate::utils::mcp_clients::ClientInfo>> {
-    let mut clients_with_server = Vec::new();
-
-    // Check each client to see if it has this server configured
-    for client_info in installed_clients {
-        let client = registry
-            .get_client(client_info.client_type)
-            .context("Failed to get client implementation")?;
-
-        if let Ok(servers) = client.list_servers(&client_info.config_path) {
-            if servers.contains(&server_name.to_string()) {
-                clients_with_server.push(*client_info);
-            }
-        }
-    }
-
-    if clients_with_server.is_empty() {
-        return Ok(vec![]);
-    }
-
-    // If multiple clients have the server, ask user which ones to remove from
-    if clients_with_server.len() == 1 {
-        // Only one client has it, ask for confirmation
-        let client = clients_with_server[0];
-        println!();
-        print_info(&format!(
-            "Found server '{}' in {}",
-            server_name,
-            client.client_type.display_name()
-        ));
-
-        let theme = ColorfulTheme::default();
-        let confirmation = dialoguer::Confirm::with_theme(&theme)
-            .with_prompt("Remove from this client?")
-            .default(true)
-            .interact()?;
-
-        if confirmation {
-            Ok(clients_with_server)
-        } else {
-            Ok(vec![])
-        }
-    } else {
-        // Multiple clients have it, show selection menu
-        println!();
-        print_info(&format!(
-            "Found server '{}' in multiple clients:",
-            server_name
-        ));
-
-        let client_options: Vec<String> = clients_with_server
-            .iter()
-            .map(|info| info.client_type.display_name().to_string())
-            .collect();
-
-        let theme = ColorfulTheme::default();
-
-        // Ask if they want to remove from all or select specific ones
-        let choices = vec!["Remove from all clients", "Select specific clients"];
-        let selection = Select::with_theme(&theme)
-            .with_prompt("How would you like to proceed?")
-            .items(&choices)
-            .default(0)
-            .interact()?;
-
-        if selection == 0 {
-            // Remove from all
-            Ok(clients_with_server)
-        } else {
-            // Select specific clients
-            let selections = MultiSelect::with_theme(&theme)
-                .with_prompt(
-                    "Select clients to remove from (use space to select, enter to confirm)",
-                )
-                .items(&client_options)
-                .interact()?;
-
-            let selected_clients: Vec<_> = selections
-                .into_iter()
-                .map(|i| clients_with_server[i])
-                .collect();
-
-            Ok(selected_clients)
-        }
-    }
 }
 
 async fn remove_from_client(
-    client: &dyn McpClient,
-    server_name: &str,
-    client_info: &crate::utils::mcp_clients::ClientInfo,
-    custom_config_path: Option<&String>,
+    server: &crate::config::mcp::McpServerConfig,
+    client: &crate::commands::mcp::McpClient,
 ) -> Result<()> {
-    // Determine config path: custom path > default detection > fallback to client info
-    let config_path = if let Some(custom_path) = custom_config_path {
-        std::path::PathBuf::from(custom_path)
-    } else {
-        match client.find_config_path() {
-            Ok(path) => path,
-            Err(_) => {
-                // Use the detected config path from client info as fallback
-                client_info.config_path.clone()
-            }
+    match client {
+        crate::commands::mcp::McpClient::ClaudeDesktop => remove_from_claude_desktop(server).await,
+        crate::commands::mcp::McpClient::ClaudeCode => remove_from_claude_code(server).await,
+        crate::commands::mcp::McpClient::ChatgptDesktop => {
+            remove_from_chatgpt_desktop(server).await
         }
-    };
+        crate::commands::mcp::McpClient::Continue => remove_from_continue(server).await,
+        crate::commands::mcp::McpClient::Custom => {
+            // Custom clients require manual configuration
+            Ok(())
+        }
+    }
+}
 
-    print_info(&format!("Using config path: {}", config_path.display()));
+async fn remove_from_all_clients(server: &crate::config::mcp::McpServerConfig) -> Result<()> {
+    // Try to remove from all known clients (ignore errors for clients that aren't installed)
+    let _ = remove_from_claude_desktop(server).await;
+    let _ = remove_from_claude_code(server).await;
+    let _ = remove_from_chatgpt_desktop(server).await;
+    let _ = remove_from_continue(server).await;
+    Ok(())
+}
 
-    // Remove the server configuration
-    client
-        .remove_config(&config_path, server_name)
-        .context("Failed to remove server from client configuration")?;
+async fn remove_from_claude_desktop(server: &crate::config::mcp::McpServerConfig) -> Result<()> {
+    use crate::utils::client_detector;
+    use tokio::fs;
+
+    let config_path = client_detector::get_claude_desktop_config_path()?;
+    if !config_path.exists() {
+        return Ok(()); // No config file, nothing to remove
+    }
+
+    let config_content = fs::read_to_string(&config_path).await?;
+    let mut config: serde_json::Value = serde_json::from_str(&config_content)?;
+
+    // Remove server from mcpServers
+    if let Some(mcp_servers) = config.get_mut("mcpServers") {
+        if let Some(obj) = mcp_servers.as_object_mut() {
+            obj.remove(server.name.as_str());
+        }
+    }
+
+    // Write updated configuration
+    let updated_config = serde_json::to_string_pretty(&config)?;
+    fs::write(&config_path, updated_config).await?;
 
     Ok(())
+}
+
+async fn remove_from_claude_code(server: &crate::config::mcp::McpServerConfig) -> Result<()> {
+    // Similar to Claude Desktop
+    remove_from_claude_desktop(server).await
+}
+
+async fn remove_from_chatgpt_desktop(server: &crate::config::mcp::McpServerConfig) -> Result<()> {
+    use crate::utils::client_detector;
+    use tokio::fs;
+
+    let config_path = client_detector::get_chatgpt_desktop_config_path()?;
+    if !config_path.exists() {
+        return Ok(());
+    }
+
+    let config_content = fs::read_to_string(&config_path).await?;
+    let mut config: serde_json::Value = serde_json::from_str(&config_content)?;
+
+    // Remove from mcp object
+    if let Some(mcp) = config.get_mut("mcp") {
+        if let Some(obj) = mcp.as_object_mut() {
+            obj.remove(server.name.as_str());
+        }
+    }
+
+    let updated_config = serde_json::to_string_pretty(&config)?;
+    fs::write(&config_path, updated_config).await?;
+
+    Ok(())
+}
+
+async fn remove_from_continue(server: &crate::config::mcp::McpServerConfig) -> Result<()> {
+    use crate::utils::client_detector;
+    use tokio::fs;
+
+    let config_path = client_detector::get_continue_config_path()?;
+    if !config_path.exists() {
+        return Ok(());
+    }
+
+    let config_content = fs::read_to_string(&config_path).await?;
+    let mut config: serde_json::Value = serde_json::from_str(&config_content)?;
+
+    // Remove from mcp array
+    if let Some(mcp_array) = config.get_mut("mcp") {
+        if let Some(array) = mcp_array.as_array_mut() {
+            array.retain(|item| {
+                item.get("name")
+                    .and_then(|n| n.as_str())
+                    .map(|name| server.name != name)
+                    .unwrap_or(true)
+            });
+        }
+    }
+
+    let updated_config = serde_json::to_string_pretty(&config)?;
+    fs::write(&config_path, updated_config).await?;
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::mcp::McpServerConfig;
+    use chrono::Utc;
+
+    #[tokio::test]
+    async fn test_remove_nonexistent_server() {
+        let args = RemoveArgs {
+            identifier: "nonexistent-server".to_string(),
+            client: None,
+            yes: true,
+        };
+
+        let cli = crate::Cli {
+            verbose: false,
+            quiet: true,
+            force: false,
+            command: crate::Commands::Mcp(crate::commands::McpArgs::Remove(args.clone())),
+        };
+
+        let result = execute(args, &cli).await;
+        assert!(result.is_err());
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("No MCP server found"));
+    }
+
+    #[test]
+    fn test_server_identification() {
+        use crate::types::{CanisterId, Network, ServerName};
+
+        let server = McpServerConfig {
+            name: ServerName::new("test-server").unwrap(),
+            canister_id: CanisterId::new("rdmx6-jaaaa-aaaaa-aaadq-cai").unwrap(),
+            network: Network::Local,
+            url: "http://localhost:3000/mcp".to_string(),
+            client: "claude-desktop".to_string(),
+            port: Some(3000),
+            enabled: true,
+            created_at: Utc::now(),
+            last_updated: Utc::now(),
+        };
+
+        // Should be identifiable by name
+        assert_eq!(server.name, "test-server");
+
+        // Should be identifiable by canister ID
+        assert_eq!(server.canister_id, "rdmx6-jaaaa-aaaaa-aaadq-cai");
+    }
 }

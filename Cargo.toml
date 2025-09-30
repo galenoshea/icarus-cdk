@@ -1,83 +1,33 @@
-[package]
-name = "icarus"
-version = "0.9.0"
-authors = ["Icarus CDK Contributors"]
-edition = "2021"
-license-file = "LICENSE"
-repository = "https://github.com/galenoshea/icarus-cdk"
-documentation = "https://docs.rs/icarus"
-homepage = "https://github.com/galenoshea/icarus-cdk"
-readme = "README.md"
-description = "Build MCP (Model Context Protocol) servers that run as Internet Computer canisters"
-keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
-categories = ["development-tools", "web-programming", "wasm"]
-
-[features]
-default = ["canister"]
-canister = ["dep:icarus-canister", "dep:icarus-derive", "dep:icarus-core", "icarus-core/canister"]
-core = ["dep:icarus-core"]
-wasi = []  # Feature flag for WASI support detection
-
-[dependencies]
-icarus-core = { version = "0.9.0", path = "crates/icarus-core", optional = true, default-features = false }
-icarus-derive = { version = "0.9.0", path = "crates/icarus-derive", optional = true }
-icarus-canister = { version = "0.9.0", path = "crates/icarus-canister", optional = true }
-
-[dev-dependencies]
-tokio = { version = "1", features = ["sync", "time", "io-util", "rt", "macros"] }
-serde_json = "1.0"
-candid = "0.10"
-criterion = { version = "0.5", features = ["html_reports"] }
-fastrand = "2.0"
-futures = "0.3"
-
-# Known Issues:
-# - paste 1.0.15 (RUSTSEC-2024-0436): Unmaintained transitive dependency from rmcp and candid.
-#   This is not a security vulnerability, just an unmaintained crate warning.
-#   Waiting for upstream crates to update their dependencies.
+# Icarus CDK - Workspace containing all CDK crates
+# This workspace provides a unified build environment for the Icarus CDK components
 
 [workspace]
 members = [
     "crates/icarus-core",
-    "crates/icarus-derive",
-    "crates/icarus-canister",
+    "crates/icarus-macros",
+    "crates/icarus-runtime",
+    "crates/icarus",
     "crates/icarus-cli",
-    "crates/icarus-wasi",
 ]
 resolver = "2"
 
-[[test]]
-name = "unit_session"
-path = "tests/unit/test_session.rs"
-
-[[test]]
-name = "unit_tools"
-path = "tests/unit/test_tools.rs"
-
-[[test]]
-name = "integration_sdk_workflow"
-path = "tests/integration/test_sdk_workflow.rs"
-
-[[bench]]
-name = "common_operations"
-harness = false
-
 [workspace.package]
-version = "0.9.0"
+version = "1.0.0"
 authors = ["Icarus CDK Contributors"]
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.70"
 license-file = "LICENSE"
 repository = "https://github.com/galenoshea/icarus-cdk"
 homepage = "https://github.com/galenoshea/icarus-cdk"
 
 [workspace.dependencies]
 # External dependencies
-rmcp = "0.6.4"
+rmcp = "0.7.0"
 # Override problematic time dependencies to disable wasm features
 chrono = { version = "0.4", default-features = false, features = [
     "std",
     "serde",
+    "clock",
 ] }
 web-time = { version = "1.1", default-features = false }
 ic-cdk = "0.18"
@@ -102,7 +52,7 @@ linkme = "0.3"
 
 # Performance optimizations
 rustc-hash = "2.0"  # Faster HashMap for small keys
-smallvec = "1.13"   # Stack allocation for small collections
+smallvec = { version = "1.13", features = ["serde"] }   # Stack allocation for small collections
 bytes = "1.7"       # Efficient buffer management
 base64 = "0.22"     # Base64 encoding for Candid output
 
@@ -151,21 +101,45 @@ assert_cmd = "2"
 predicates = "3"
 once_cell = "1"
 ring = "0.17"
+proptest = "1.6"
+criterion = { version = "0.5", features = ["html_reports"] }
 
 # Internal dependencies
-icarus-core = { path = "crates/icarus-core", version = "0.9.0" }
-icarus-derive = { path = "crates/icarus-derive", version = "0.9.0" }
-icarus-canister = { path = "crates/icarus-canister", version = "0.9.0" }
-icarus-wasi = { path = "crates/icarus-wasi", version = "0.9.0" }
+icarus = { path = "crates/icarus", version = "1.0.0" }
+icarus-core = { path = "crates/icarus-core", version = "1.0.0" }
+icarus-macros = { path = "crates/icarus-macros", version = "1.0.0" }
+icarus-runtime = { path = "crates/icarus-runtime", version = "1.0.0" }
+icarus-cli = { path = "crates/icarus-cli", version = "1.0.0" }
 
 [profile.release]
 opt-level = 3
-lto = true
+lto = "fat"
 codegen-units = 1
 strip = true
+panic = "abort"
 
 [profile.dev]
 opt-level = 0
+debug = true
+incremental = true
+
+# Performance-focused release profile with PGO support
+[profile.release-with-debug]
+inherits = "release"
+debug = true
+strip = false
+
+# Optimized build for benchmarks
+[profile.bench]
+opt-level = 3
+lto = "fat"
+codegen-units = 1
+debug = true
+strip = false
+
+# Profile for testing with optimizations
+[profile.test]
+opt-level = 1
 debug = true
 
 [workspace.lints.rust]
@@ -173,9 +147,24 @@ debug = true
 unused_imports = "warn"
 unused_variables = "warn"
 dead_code = "warn"
+# Rust 2024 specific lints
+rust_2024_compatibility = "warn"
+unused_qualifications = "warn"
+unreachable_pub = "warn"
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+variant_size_differences = "warn"
 
 [workspace.lints.clippy]
-# Allow most pedantic lints for now, but keep essential quality lints
+# Rust 2024 Edition recommended lints
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+
+# Allow specific pedantic lints that are too noisy for this codebase
 missing_errors_doc = "allow"
 missing_panics_doc = "allow"
 module_name_repetitions = "allow"
@@ -194,12 +183,26 @@ uninlined_format_args = "allow"
 ignored_unit_patterns = "allow"
 redundant_closure_for_method_calls = "allow"
 map_unwrap_or = "allow"
-# Performance lints we want to keep
+
+# Performance lints (elevated to deny for critical performance)
 needless_pass_by_value = "warn"
 needless_borrows_for_generic_args = "warn"
+large_types_passed_by_value = "warn"
+trivially_copy_pass_by_ref = "warn"
+
 # Style lints we want to keep
 redundant_pattern_matching = "warn"
 needless_return = "warn"
+
 # Complexity lints we want to keep
 collapsible_if = "warn"
 for_kv_map = "warn"
+
+# Modern Rust patterns (2024 edition)
+manual_let_else = "warn"
+manual_is_ascii_check = "warn"
+redundant_locals = "warn"
+arc_with_non_send_sync = "warn"
+clear_with_drain = "warn"
+collection_is_never_read = "warn"
+needless_raw_string_hashes = "warn"

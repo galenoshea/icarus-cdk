@@ -1,0 +1,56 @@
+[package]
+name = "icarus-macros"
+description = "Procedural macros for the Icarus CDK"
+documentation = "https://docs.rs/icarus-macros"
+readme = "README.md"
+keywords = ["mcp", "ai", "tools", "internet-computer", "macros"]
+categories = ["api-bindings", "web-programming", "wasm"]
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+homepage.workspace = true
+
+[lib]
+proc-macro = true
+
+[dependencies]
+# Core macro dependencies
+syn = { workspace = true }
+quote = { workspace = true }
+proc-macro2 = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# For parsing and validation
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+# For testing procedural macros
+trybuild = "1.0"
+tokio = { workspace = true, features = ["rt-multi-thread"] }
+proptest = { workspace = true }
+criterion = { version = "0.5", features = ["html_reports"] }
+
+# Dependencies needed for macro-generated code in tests
+icarus-core = { path = "../icarus-core" }
+icarus-runtime = { path = "../icarus-runtime" }
+linkme = { workspace = true }
+tokio-test = "0.4"
+
+[features]
+default = []
+
+# Feature for development/testing
+test-utils = []
+
+[[bench]]
+name = "macro_performance"
+harness = false
+
+[lints]
+workspace = true

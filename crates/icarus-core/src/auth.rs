@@ -1,376 +1,265 @@
-//! Authentication and authorization system for Icarus canisters
+//! Authentication and authorization module with stable memory persistence.
 //!
-//! Provides a simple authentication system with role-based access control
-//! and secure principal management for MCP servers.
+//! This module provides a whitelist-based RBAC (Role-Based Access Control) system
+//! with three tiers: public (no auth), user, and admin. All data is stored in
+//! stable memory to survive canister upgrades.
 
-#[cfg(feature = "canister")]
-use crate::{memory_id, stable_storage};
-#[cfg(feature = "canister")]
-use candid::{CandidType, Deserialize, Principal};
-#[cfg(feature = "canister")]
-use ic_stable_structures::memory_manager::VirtualMemory;
-#[cfg(feature = "canister")]
-use ic_stable_structures::{DefaultMemoryImpl, StableBTreeMap};
-#[cfg(feature = "canister")]
-use serde::Serialize;
+use candid::Principal;
+use ic_stable_structures::{
+    memory_manager::{MemoryId, MemoryManager, VirtualMemory},
+    storable::Bound,
+    DefaultMemoryImpl, StableBTreeMap, Storable,
+};
+use std::borrow::Cow;
+use std::cell::RefCell;
 
-#[cfg(feature = "canister")]
+/// Type alias for virtual memory
 type Memory = VirtualMemory<DefaultMemoryImpl>;
 
-/// User entry for simple role-based access control
-#[cfg(feature = "canister")]
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct User {
-    pub principal: Principal,
-    pub added_at: u64,
-    pub added_by: Principal,
-    pub role: AuthRole,
-    pub active: bool,
-}
+/// Type alias for principal set stored in stable memory
+type PrincipalSet = RefCell<StableBTreeMap<Principal, Unit, Memory>>;
 
-/// Role-based access control for MCP servers
-#[cfg(feature = "canister")]
-#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, CandidType)]
-pub enum AuthRole {
-    Owner, // Full access, can manage all users
-    Admin, // Can use admin-level tools
-    User,  // Can use regular tools
-}
+/// Empty value type for set-like behavior in `BTreeMap`
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Unit;
 
-/// Authentication result
-#[cfg(feature = "canister")]
-#[derive(Debug, Clone, Serialize, Deserialize, CandidType)]
-pub struct AuthInfo {
-    pub principal: String,
-    pub role: AuthRole,
-    pub is_authenticated: bool,
-}
-
-// Implement Storable for User
-#[cfg(feature = "canister")]
-impl ic_stable_structures::Storable for User {
-    fn to_bytes(&self) -> std::borrow::Cow<'_, [u8]> {
-        std::borrow::Cow::Owned(candid::encode_one(self).unwrap())
+impl Storable for Unit {
+    fn to_bytes(&self) -> Cow<'_, [u8]> {
+        Cow::Borrowed(&[])
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<'_, [u8]>) -> Self {
-        candid::decode_one(&bytes).unwrap()
+    fn from_bytes(_bytes: Cow<'_, [u8]>) -> Self {
+        Unit
     }
 
-    fn into_bytes(self) -> std::vec::Vec<u8> {
-        candid::encode_one(self).unwrap()
+    fn into_bytes(self) -> Vec<u8> {
+        vec![]
     }
 
-    const BOUND: ic_stable_structures::storable::Bound =
-        ic_stable_structures::storable::Bound::Unbounded;
+    const BOUND: Bound = Bound::Bounded {
+        max_size: 0,
+        is_fixed_size: true,
+    };
 }
 
-// Implement IcarusStorable for User
-#[cfg(feature = "canister")]
-impl crate::storage::IcarusStorable for User {}
+// Stable storage for admin and user principals
+thread_local! {
+    static MEMORY_MANAGER: RefCell<MemoryManager<DefaultMemoryImpl>> =
+        RefCell::new(MemoryManager::init(DefaultMemoryImpl::default()));
 
-// Declare stable storage for authentication system
-#[cfg(feature = "canister")]
-stable_storage! {
-    AUTH_USERS: StableBTreeMap<Principal, User, Memory> = memory_id!(10);
+    /// Set of admin principals (Memory ID 0)
+    static ADMINS: PrincipalSet = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(0)))
+        )
+    );
+
+    /// Set of user principals (Memory ID 1)
+    static USERS: PrincipalSet = RefCell::new(
+        StableBTreeMap::init(
+            MEMORY_MANAGER.with(|m| m.borrow().get(MemoryId::new(1)))
+        )
+    );
 }
 
-/// Initialize the authentication system with the canister owner
-#[cfg(feature = "canister")]
-pub fn init_auth(owner: Principal) {
-    // Security check: prevent anonymous principal from being owner
-    if owner == Principal::anonymous() {
-        ic_cdk::trap("Security Error: Anonymous principal cannot be set as owner");
-    }
-
-    AUTH_USERS.with(|users| {
-        let owner_entry = User {
-            principal: owner,
-            added_at: ic_cdk::api::time(),
-            added_by: owner, // Self-added
-            role: AuthRole::Owner,
-            active: true,
-        };
-        users.borrow_mut().insert(owner, owner_entry);
+/// Add a principal to the admin whitelist
+#[inline]
+pub fn add_admin(principal: Principal) {
+    ADMINS.with(|admins| {
+        admins.borrow_mut().insert(principal, Unit);
     });
 }
 
-/// Validate authentication and return auth info, or trap on failure
-#[cfg(feature = "canister")]
-pub fn authenticate() -> AuthInfo {
-    let caller = ic_cdk::api::msg_caller();
+/// Add a principal to the user whitelist
+#[inline]
+pub fn add_user(principal: Principal) {
+    USERS.with(|users| {
+        users.borrow_mut().insert(principal, Unit);
+    });
+}
 
-    // Security check: anonymous principal is never authenticated
-    if caller == Principal::anonymous() {
-        ic_cdk::trap("Access denied: Anonymous principal cannot be authenticated");
-    }
+/// Remove a principal from the admin whitelist
+#[inline]
+pub fn remove_admin(principal: &Principal) {
+    ADMINS.with(|admins| {
+        admins.borrow_mut().remove(principal);
+    });
+}
 
-    AUTH_USERS.with(|users| {
-        let auth_entry = if let Some(entry) = users.borrow().get(&caller) {
-            entry
-        } else {
-            ic_cdk::trap(format!(
-                "Access denied: Principal {} not authorized",
-                caller.to_text()
-            ));
-        };
+/// Remove a principal from the user whitelist
+#[inline]
+pub fn remove_user(principal: &Principal) {
+    USERS.with(|users| {
+        users.borrow_mut().remove(principal);
+    });
+}
 
-        if !auth_entry.active {
-            ic_cdk::trap("Access denied: account deactivated");
+/// Check if a principal is an admin
+#[inline]
+#[must_use]
+pub fn is_admin(principal: &Principal) -> bool {
+    ADMINS.with(|admins| admins.borrow().contains_key(principal))
+}
+
+/// Check if a principal is a user (but not admin)
+#[inline]
+#[must_use]
+pub fn is_user(principal: &Principal) -> bool {
+    USERS.with(|users| users.borrow().contains_key(principal))
+}
+
+/// Check if a principal is the anonymous principal
+#[inline]
+#[must_use]
+pub fn is_anonymous(principal: &Principal) -> bool {
+    *principal == Principal::anonymous()
+}
+
+/// Get all admin principals
+#[must_use]
+pub fn get_all_admins() -> Vec<Principal> {
+    ADMINS.with(|admins| {
+        let admins_ref = admins.borrow();
+        let mut result = Vec::new();
+        for entry in admins_ref.iter() {
+            result.push(*entry.key());
         }
+        result
+    })
+}
 
-        AuthInfo {
-            principal: caller.to_text(),
-            role: auth_entry.role,
-            is_authenticated: true,
+/// Get all user principals
+#[must_use]
+pub fn get_all_users() -> Vec<Principal> {
+    USERS.with(|users| {
+        let users_ref = users.borrow();
+        let mut result = Vec::new();
+        for entry in users_ref.iter() {
+            result.push(*entry.key());
         }
+        result
     })
 }
 
-/// Check if caller has specific role or higher (hierarchical)
-/// Owner > Admin > User
-#[cfg(feature = "canister")]
-pub fn require_role_or_higher(minimum_role: AuthRole) -> AuthInfo {
-    let auth_info = authenticate();
-
-    let has_permission = matches!(
-        (&auth_info.role, &minimum_role),
-        (AuthRole::Owner, _)
-            | (AuthRole::Admin, AuthRole::Admin | AuthRole::User)
-            | (AuthRole::User, AuthRole::User)
-    );
-
-    if has_permission {
-        auth_info
-    } else {
-        ic_cdk::trap(format!(
-            "Insufficient permissions: {:?} or higher required",
-            minimum_role
-        ));
-    }
+/// Check if a principal has user-level access (user OR admin)
+#[inline]
+#[must_use]
+pub fn has_user_access(principal: &Principal) -> bool {
+    is_admin(principal) || is_user(principal)
 }
 
-/// Add a new user (requires Owner role)
-#[cfg(feature = "canister")]
-pub fn add_user(principal: Principal, role: AuthRole) -> String {
-    // Security check: prevent anonymous principal from being added
-    if principal == Principal::anonymous() {
-        ic_cdk::trap("Security Error: Anonymous principal cannot be authorized");
-    }
-
-    require_role_or_higher(AuthRole::Owner);
-    let caller = ic_cdk::api::msg_caller();
-
-    AUTH_USERS.with(|users| {
-        if users.borrow().contains_key(&principal) {
-            ic_cdk::trap("Principal already authorized");
-        }
-
-        let auth_entry = User {
-            principal,
-            added_at: ic_cdk::api::time(),
-            added_by: caller,
-            role,
-            active: true,
-        };
-
-        users.borrow_mut().insert(principal, auth_entry);
-
-        format!(
-            "Principal {} added with role {:?}",
-            principal.to_text(),
-            role
-        )
-    })
+/// Check if a principal has admin-level access
+#[inline]
+#[must_use]
+pub fn has_admin_access(principal: &Principal) -> bool {
+    is_admin(principal)
 }
 
-/// Remove a user (requires Owner role)
-#[cfg(feature = "canister")]
-pub fn remove_user(principal: Principal) -> String {
-    require_role_or_higher(AuthRole::Owner);
-    let caller = ic_cdk::api::msg_caller();
-
-    // Prevent self-removal
-    if principal == caller {
-        ic_cdk::trap("Cannot remove yourself");
-    }
-
-    AUTH_USERS.with(|users| {
-        if users.borrow().contains_key(&principal) {
-            users.borrow_mut().remove(&principal);
-            format!("Principal {} removed", principal.to_text())
-        } else {
-            ic_cdk::trap(format!("User {} not found", principal.to_text()))
-        }
-    })
-}
-
-/// Update user role (requires Owner role)
-#[cfg(feature = "canister")]
-pub fn update_user_role(principal: Principal, new_role: AuthRole) -> String {
-    // Security check: prevent anonymous principal from having any role
-    if principal == Principal::anonymous() {
-        ic_cdk::trap("Security Error: Anonymous principal cannot have a role");
-    }
-
-    require_role_or_higher(AuthRole::Owner);
-
-    AUTH_USERS.with(|users| {
-        if let Some(mut auth_entry) = users.borrow().get(&principal) {
-            let old_role = auth_entry.role;
-            auth_entry.role = new_role;
-            users.borrow_mut().insert(principal, auth_entry);
-
-            format!(
-                "Principal {} role updated from {:?} to {:?}",
-                principal.to_text(),
-                old_role,
-                new_role
-            )
-        } else {
-            ic_cdk::trap("Principal not found");
-        }
-    })
-}
-
-/// Get all authorized users (requires Owner role)
-#[cfg(feature = "canister")]
-pub fn list_users() -> Vec<User> {
-    require_role_or_higher(AuthRole::Owner);
-
-    AUTH_USERS.with(|users| {
-        users
-            .borrow()
-            .iter()
-            .map(|entry| entry.value().clone())
-            .collect()
-    })
-}
-
-/// Get current caller's user info
-#[cfg(feature = "canister")]
-pub fn get_current_user() -> AuthInfo {
-    authenticate()
-}
-
-/// Get specific user by principal
-#[cfg(feature = "canister")]
-pub fn get_user(principal: Principal) -> Option<User> {
-    AUTH_USERS.with(|users| users.borrow().get(&principal))
-}
-
-/// Check if a principal is authenticated (required by derive macros)
-#[cfg(feature = "canister")]
-pub fn is_authenticated(principal: &Principal) -> bool {
-    if *principal == Principal::anonymous() {
-        return false;
-    }
-
-    AUTH_USERS.with(|users| {
-        users
-            .borrow()
-            .get(principal)
-            .is_some_and(|user| user.active)
-    })
-}
-
-/// Check if a principal is the owner (required by derive macros)
-#[cfg(feature = "canister")]
-pub fn is_owner(principal: &Principal) -> bool {
-    if *principal == Principal::anonymous() {
-        return false;
-    }
-
-    AUTH_USERS.with(|users| {
-        users
-            .borrow()
-            .get(principal)
-            .is_some_and(|user| user.active && matches!(user.role, AuthRole::Owner))
-    })
-}
-
-// Convenience macros for common auth checks
-#[cfg(feature = "canister")]
-#[macro_export]
-macro_rules! require_auth {
-    () => {
-        $crate::auth::authenticate();
-    };
-}
-
-#[cfg(feature = "canister")]
-#[macro_export]
-macro_rules! require_owner {
-    () => {
-        $crate::auth::require_role_or_higher($crate::auth::AuthRole::Owner);
-    };
-}
-
-#[cfg(all(test, feature = "canister"))]
+#[cfg(test)]
 mod tests {
     use super::*;
-    use std::cell::RefCell;
-    use std::collections::HashMap;
 
-    // Mock stable storage for testing
-    thread_local! {
-        static MOCK_USERS: RefCell<HashMap<Principal, User>> = RefCell::new(HashMap::new());
-        static MOCK_TIME: RefCell<u64> = const { RefCell::new(1000000000000) };
-        static MOCK_CALLER: RefCell<Principal> = const { RefCell::new(Principal::anonymous()) };
-    }
-
-    fn create_test_principal(text: &str) -> Principal {
-        Principal::from_text(text).unwrap_or_else(|_| {
-            // For test strings that aren't valid principal text, create a deterministic principal
-            let bytes = text.as_bytes();
-            let mut padded = [0u8; 29]; // Principal can be up to 29 bytes
-            let len = bytes.len().min(29);
-            padded[..len].copy_from_slice(&bytes[..len]);
-            Principal::from_slice(&padded[..len])
-        })
+    /// Helper to create a test principal
+    fn test_principal(id: u8) -> Principal {
+        Principal::from_slice(&[id])
     }
 
     #[test]
-    fn test_user_creation() {
-        let owner = create_test_principal("owner");
-        let user = User {
-            principal: owner,
-            added_at: 1000000000000,
-            added_by: owner,
-            role: AuthRole::Owner,
-            active: true,
-        };
-
-        assert_eq!(user.principal, owner);
-        assert_eq!(user.role, AuthRole::Owner);
-        assert!(user.active);
+    fn test_add_and_check_admin() {
+        let admin = test_principal(1);
+        add_admin(admin);
+        assert!(is_admin(&admin));
+        assert!(!is_user(&admin));
     }
 
     #[test]
-    fn test_auth_role_hierarchy() {
-        // Test role equality
-        assert_eq!(AuthRole::Owner, AuthRole::Owner);
-        assert_eq!(AuthRole::Admin, AuthRole::Admin);
-        assert_eq!(AuthRole::User, AuthRole::User);
-
-        // Test role inequality
-        assert_ne!(AuthRole::Owner, AuthRole::Admin);
-        assert_ne!(AuthRole::Admin, AuthRole::User);
-        assert_ne!(AuthRole::Owner, AuthRole::User);
+    fn test_add_and_check_user() {
+        let user = test_principal(2);
+        add_user(user);
+        assert!(is_user(&user));
+        assert!(!is_admin(&user));
     }
 
-    // Additional tests for completeness...
     #[test]
-    fn test_auth_info_creation() {
-        let principal = "rrkah-fqaaa-aaaaa-aaaaq-cai";
-        let auth_info = AuthInfo {
-            principal: principal.to_string(),
-            role: AuthRole::User,
-            is_authenticated: true,
-        };
+    fn test_remove_admin() {
+        let admin = test_principal(3);
+        add_admin(admin);
+        assert!(is_admin(&admin));
 
-        assert_eq!(auth_info.principal, principal);
-        assert_eq!(auth_info.role, AuthRole::User);
-        assert!(auth_info.is_authenticated);
+        remove_admin(&admin);
+        assert!(!is_admin(&admin));
+    }
+
+    #[test]
+    fn test_remove_user() {
+        let user = test_principal(4);
+        add_user(user);
+        assert!(is_user(&user));
+
+        remove_user(&user);
+        assert!(!is_user(&user));
+    }
+
+    #[test]
+    fn test_is_anonymous() {
+        let anon = Principal::anonymous();
+        assert!(is_anonymous(&anon));
+
+        let user = test_principal(5);
+        assert!(!is_anonymous(&user));
+    }
+
+    #[test]
+    fn test_has_user_access() {
+        let admin = test_principal(6);
+        let user = test_principal(7);
+        let nobody = test_principal(8);
+
+        add_admin(admin);
+        add_user(user);
+
+        assert!(has_user_access(&admin)); // Admins have user access
+        assert!(has_user_access(&user)); // Users have user access
+        assert!(!has_user_access(&nobody)); // Non-whitelisted don't have access
+    }
+
+    #[test]
+    fn test_has_admin_access() {
+        let admin = test_principal(9);
+        let user = test_principal(10);
+
+        add_admin(admin);
+        add_user(user);
+
+        assert!(has_admin_access(&admin)); // Admins have admin access
+        assert!(!has_admin_access(&user)); // Users don't have admin access
+    }
+
+    #[test]
+    fn test_get_all_admins() {
+        let admin1 = test_principal(11);
+        let admin2 = test_principal(12);
+
+        add_admin(admin1);
+        add_admin(admin2);
+
+        let admins = get_all_admins();
+        assert_eq!(admins.len(), 2);
+        assert!(admins.contains(&admin1));
+        assert!(admins.contains(&admin2));
+    }
+
+    #[test]
+    fn test_get_all_users() {
+        let user1 = test_principal(13);
+        let user2 = test_principal(14);
+
+        add_user(user1);
+        add_user(user2);
+
+        let users = get_all_users();
+        assert_eq!(users.len(), 2);
+        assert!(users.contains(&user1));
+        assert!(users.contains(&user2));
     }
 }

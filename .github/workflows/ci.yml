@@ -87,6 +87,17 @@ jobs:
     - name: Run clippy
       run: cargo clippy --all-targets --all-features -- -D warnings
 
+    - name: Check for anti-patterns
+      run: |
+        echo "Checking for unwrap() usage in all code..."
+        if grep -r "\.unwrap()" --include="*.rs" crates/; then
+          echo "❌ Found unwrap() usage in code (see above)"
+          echo "Please use ? operator or expect() with descriptive message"
+          exit 1
+        else
+          echo "✅ No unwrap() usage found in code"
+        fi
+
   # Build shared artifacts once
   build-artifacts:
     name: Build Artifacts

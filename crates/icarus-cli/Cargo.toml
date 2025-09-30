@@ -1,115 +1,162 @@
 [package]
 name = "icarus-cli"
 version.workspace = true
-edition.workspace = true
 authors.workspace = true
-description = "Command-line tool for creating, building, testing, and deploying MCP servers to ICP"
+edition.workspace = true
+rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
-keywords = ["mcp", "icp", "blockchain", "cli"]
-categories = ["command-line-utilities", "development-tools"]
-
-[lints]
-workspace = true
-
-[dependencies]
-# CLI and async runtime
-clap = { workspace = true }
-tokio = { workspace = true, features = ["macros", "rt-multi-thread", "net", "time", "process", "fs", "io-util", "io-std"] }
-
-# Error handling
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-
-# HTTP and ICP interaction
-reqwest = { workspace = true }
-ic-agent = { workspace = true }
-candid = { workspace = true }
-ic-identity-hsm = { workspace = true }
-ic-management-canister-types = { workspace = true }
-num-traits = { workspace = true }
-url = { workspace = true }
-
-# Serialization
-serde = { workspace = true }
-serde_json = { workspace = true }
-toml = { workspace = true }
-ciborium = { workspace = true }
-
-# MCP Protocol
-rmcp = { workspace = true, features = ["server"] }
-icarus-core = { workspace = true, features = ["mcp"] }
-
-# Icarus crates
-icarus-wasi = { path = "../icarus-wasi" }
-
-# Security and credentials
-rand = { workspace = true }
-sha2 = { workspace = true }
-
-# User interaction
-indicatif = { workspace = true }
-dialoguer = { workspace = true }
-console = { workspace = true }
-colored = { workspace = true }
-comfy-table = { workspace = true }
-crossterm = { workspace = true }
-unicode-width = { workspace = true }
-
-# File system and utilities
-dirs = { workspace = true }
-which = { workspace = true }
-tempfile = { workspace = true }
-zip = { workspace = true }
-tar = { workspace = true }
-flate2 = { workspace = true }
-is-terminal = { workspace = true }
-
-# Platform detection
-os_info = { workspace = true }
-
-# Logging
-tracing = { workspace = true }
-tracing-subscriber = { workspace = true }
-
-# Process management
-sysinfo = { workspace = true }
-
-# Auto-update
-self_update = { workspace = true }
-
-# ID generation
-nanoid = { workspace = true }
-
-# Date/time
-chrono = { workspace = true, features = ["serde"] }
-
-# System info for profiling
-num_cpus = "1.16"
-rustc_version = "0.4"
-
-# Async utilities
-futures = { workspace = true }
-futures-util = { workspace = true }
-tokio-tungstenite = { workspace = true }
-
-
-[dev-dependencies]
-tempfile = { workspace = true }
-serial_test = { workspace = true }
-assert_cmd = { workspace = true }
-predicates = { workspace = true }
-once_cell = { workspace = true }
-candid = { workspace = true }
-ic-agent = { workspace = true }
-ring = { workspace = true }
+homepage.workspace = true
+description = "Command-line interface for the Icarus MCP canister framework"
+keywords = ["internet-computer", "mcp", "ai", "cli", "web3"]
+categories = ["command-line-utilities", "development-tools", "web-programming"]
 
 [[bin]]
-name = "icarus"
+name = "icarus-cli"
 path = "src/main.rs"
 
+[dependencies]
+# Core dependencies
+anyhow.workspace = true
+thiserror.workspace = true
+tokio = { workspace = true, features = ["full"] }
+futures.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
 
+# CLI dependencies
+clap.workspace = true
+dialoguer.workspace = true
+indicatif.workspace = true
+console.workspace = true
+colored.workspace = true
+comfy-table.workspace = true
+crossterm.workspace = true
+is-terminal.workspace = true
 
+# File system and utilities
+dirs.workspace = true
+which.workspace = true
+tempfile.workspace = true
+notify.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+toml.workspace = true
 
+# Template and archive handling
+zip.workspace = true
+tar.workspace = true
+flate2.workspace = true
 
+# System information
+os_info.workspace = true
+nanoid.workspace = true
 
+# HTTP client for API interactions
+reqwest.workspace = true
+url.workspace = true
+
+# Internet Computer integration
+ic-agent.workspace = true
+candid.workspace = true
+
+# Date and time
+chrono = { workspace = true, features = ["serde"] }
+
+# Additional utilities
+async-trait.workspace = true
+regex = "1.10"
+hyper = { version = "1.5", features = ["full"] }
+
+# Internal dependencies
+icarus-core = { path = "../icarus-core", version = "1.0.0" }
+
+# MCP Protocol
+rmcp = "0.7.0"
+
+# Platform-specific dependencies
+[target.'cfg(unix)'.dependencies]
+nix = { version = "0.29", features = ["signal", "process"] }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+    "Win32_System_Threading",
+    "Win32_System_Diagnostics_Debug",
+] }
+
+[dev-dependencies]
+assert_cmd.workspace = true
+predicates.workspace = true
+tempfile.workspace = true
+serial_test.workspace = true
+tokio-test = "0.4"
+
+[lints.rust]
+# Inherit most workspace lints but override unreachable_pub for this crate
+# This crate uses a re-export pattern where items are not reachable via module paths
+# but are accessible through the curated public API in lib.rs
+unused_imports = "allow"  # Test code may have unused imports
+unused_variables = "warn"
+dead_code = "warn"
+rust_2024_compatibility = "warn"
+unused_qualifications = "allow"  # Sometimes explicit qualifications are clearer
+unreachable_pub = "allow"  # Override: allow due to intentional re-export pattern
+single_use_lifetimes = "warn"
+trivial_casts = "warn"
+trivial_numeric_casts = "warn"
+unsafe_op_in_unsafe_fn = "warn"
+unused_extern_crates = "warn"
+unused_import_braces = "warn"
+variant_size_differences = "warn"
+unused_comparisons = "allow"  # Sometimes comparisons are for documentation
+
+[lints.clippy]
+# Inherit workspace clippy settings
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+module_name_repetitions = "allow"
+too_many_lines = "allow"
+struct_excessive_bools = "allow"
+cast_precision_loss = "allow"
+multiple_crate_versions = "allow"
+cargo_common_metadata = "allow"
+missing_const_for_fn = "allow"
+option_if_let_else = "allow"
+derive_partial_eq_without_eq = "allow"
+use_self = "allow"
+must_use_candidate = "allow"
+items_after_statements = "allow"
+uninlined_format_args = "allow"
+# CLI-specific allowances
+similar_names = "allow"  # Template code naturally has similar variable names
+needless_raw_string_hashes = "allow"  # Raw strings are cleaner for templates
+disallowed_methods = "allow"  # Test code legitimately uses unwrap()
+unnecessary_literal_bound = "allow"  # Template functions return static strings
+unused_self = "allow"  # Template methods maintain trait consistency
+needless_continue = "allow"  # Clear control flow in loops
+single_char_pattern = "allow"  # String patterns are often clearer
+manual_string_new = "allow"  # Sometimes String::new() is less clear than "".to_string()
+redundant_closure_for_method_calls = "allow"  # Sometimes closures are clearer
+map_unwrap_or = "allow"  # Sometimes map().unwrap_or() is clearer than map_or()
+collapsible_if = "allow"  # Sometimes separate ifs are clearer
+unused_async = "allow"  # Async signatures maintained for trait consistency
+ptr_arg = "allow"  # PathBuf is often needed for ownership
+unnecessary_map_or = "allow"  # Sometimes map_or is clearer than new methods
+unnecessary_wraps = "allow"  # Results maintained for consistency and future changes
+needless_borrows_for_generic_args = "allow"  # Sometimes explicit borrowing is clearer
+doc_markdown = "allow"  # Product names don't need backticks
+type_complexity = "allow"  # Complex types are sometimes necessary
+cast_possible_wrap = "allow"  # Platform-specific casts are necessary
+if_not_else = "allow"  # Sometimes if-not structure is clearer
+overly_complex_bool_expr = "allow"  # Complex boolean expressions are sometimes needed
+items_after_test_module = "allow"  # Test module organization may vary
+absurd_extreme_comparisons = "allow"  # Sometimes comparisons are for documentation
+useless_vec = "allow"  # Vec! is sometimes clearer than array
+semicolon_if_nothing_returned = "allow"  # Return value may be used in some contexts
+
+[features]
+default = []
+# Enable additional debugging and development features
+dev = ["tracing-subscriber/env-filter"]

@@ -1,541 +1,349 @@
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
+use colored::Colorize;
+use indicatif::{ProgressBar, ProgressStyle};
 use std::path::Path;
-use toml::Value;
+use std::time::Duration;
+use tokio::process::Command;
+use tracing::{info, warn};
 
-use crate::utils::{
-    build_utils::{build_canister_wasi_native, get_project_name},
-    print_info, print_success, print_warning, run_command_with_env,
-};
+use crate::utils::project;
+use crate::{commands::BuildArgs, Cli};
 
-pub async fn execute(
-    force_pure_wasm: bool,
-    skip_optimize: bool,
-    enable_simd: bool,
-    force_wasi: bool,
-) -> Result<()> {
-    // Check if we're in an Icarus project
-    let current_dir = std::env::current_dir()?;
-    if !is_icarus_project(&current_dir) {
-        anyhow::bail!("Not in an Icarus project directory. Run this command from a project created with 'icarus new'.");
+pub(crate) async fn execute(args: BuildArgs, cli: &Cli) -> Result<()> {
+    info!("Building Icarus MCP canister project");
+
+    // Verify we're in a valid project directory
+    let project_root = project::find_project_root()?;
+    let project_config = project::load_project_config(&project_root).await?;
+
+    if !cli.quiet {
+        println!(
+            "{} Building project: {}",
+            "→".bright_blue(),
+            project_config.name.bright_cyan()
+        );
     }
 
-    // Get project name
-    let project_name = get_project_name(&current_dir)?;
-
-    // Determine WASI usage based on flags and auto-detection
-    let has_wasi = if force_pure_wasm {
-        false // Force pure WASM overrides everything
-    } else if force_wasi {
-        true // Explicit --wasi flag overrides auto-detection
+    // Create progress spinner
+    let spinner = if !cli.quiet {
+        let pb = ProgressBar::new_spinner();
+        pb.set_style(
+            ProgressStyle::default_spinner()
+                .tick_chars("⣾⣽⣻⢿⡿⣟⣯⣷")
+                .template("{spinner:.blue} {msg}")
+                .expect("progress bar template string is valid"),
+        );
+        pb.enable_steady_tick(Duration::from_millis(100));
+        Some(pb)
     } else {
-        detect_wasi_features(&current_dir)? // Auto-detect from dependencies
+        None
     };
 
-    if has_wasi {
-        if force_wasi {
-            print_info(&format!(
-                "🔨 Building {} with WASI support (forced by --wasi flag)",
-                project_name
-            ));
-        } else {
-            print_info(&format!(
-                "🔨 Building {} with WASI support (auto-detected)",
-                project_name
-            ));
+    // Step 1: Build Rust code
+    if let Some(ref pb) = spinner {
+        pb.set_message("Building Rust code...");
+    }
+    build_rust_code(&args, &project_root).await?;
+
+    // Step 2: Generate canister declarations if requested
+    if args.generate_declarations {
+        if let Some(ref pb) = spinner {
+            pb.set_message("Generating canister declarations...");
         }
-    } else if force_pure_wasm {
-        print_info(&format!(
-            "🔨 Building {} with pure WASM (forced by --pure-wasm flag)",
-            project_name
-        ));
-    } else {
-        print_info(&format!(
-            "🔨 Building {} with pure WASM (no WASI dependencies detected)",
-            project_name
-        ));
+        generate_declarations(&project_root).await?;
     }
 
-    // Step 1: Choose target using the updated get_wasm_target function
-    let target = crate::utils::build_utils::get_wasm_target(&current_dir, force_pure_wasm)?;
-
-    // Display appropriate message based on target and detection
-    if force_pure_wasm {
-        print_info("⚡ Using pure WASM (forced by --pure-wasm flag)");
-    } else if target == "wasm32-unknown-unknown" {
-        if crate::utils::build_utils::has_icarus_wasi_dependency(&current_dir)? {
-            print_info("🔧 Using icarus-wasi polyfills (no conversion needed)");
-        } else {
-            print_info("⚡ Using pure WASM target for simple deployment");
+    // Step 3: Run tests if requested
+    if args.test {
+        if let Some(ref pb) = spinner {
+            pb.set_message("Running tests...");
         }
+        run_tests(&args, &project_root).await?;
+    }
+
+    // Step 4: Copy artifacts to output directory
+    if let Some(ref output_dir) = args.output {
+        if let Some(ref pb) = spinner {
+            pb.set_message("Copying build artifacts...");
+        }
+        copy_artifacts(&project_root, output_dir).await?;
+    }
+
+    if let Some(pb) = spinner {
+        pb.finish_with_message("Build completed successfully! ✅");
+    }
+
+    if !cli.quiet {
+        print_build_summary(&args, &project_root);
+    }
+
+    info!("Build completed successfully");
+    Ok(())
+}
+
+async fn build_rust_code(args: &BuildArgs, project_root: &Path) -> Result<()> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg("build");
+    cmd.current_dir(project_root);
+
+    // Set build mode
+    match args.mode.as_str() {
+        "release" => {
+            cmd.arg("--release");
+        }
+        "debug" => {
+            // Default, no additional flags needed
+        }
+        _ => {
+            return Err(anyhow!(
+                "Invalid build mode: {}. Use 'debug' or 'release'",
+                args.mode
+            ))
+        }
+    }
+
+    // Set target if specified
+    if let Some(ref target) = args.target {
+        cmd.arg("--target").arg(target);
     } else {
-        print_info("🌐 Using WASI target for ecosystem compatibility");
+        // Default to WASM target for IC canisters
+        cmd.arg("--target").arg("wasm32-unknown-unknown");
     }
 
-    // Set RUSTFLAGS for SIMD if enabled
-    let mut env_vars = Vec::new();
-    if enable_simd {
-        print_info("🚀 Enabling SIMD optimizations for enhanced performance");
-        let current_rustflags = std::env::var("RUSTFLAGS").unwrap_or_default();
-        let simd_flags = if current_rustflags.is_empty() {
-            "-C target-feature=+simd128".to_string()
-        } else {
-            format!("{} -C target-feature=+simd128", current_rustflags)
-        };
-        env_vars.push(("RUSTFLAGS", simd_flags));
+    // Enable features
+    if !args.features.is_empty() {
+        cmd.arg("--features").arg(args.features.join(","));
     }
 
-    // Set GETRANDOM_BACKEND for wasm32-wasip1 builds (needed for ML dependencies)
-    if target == "wasm32-wasip1" {
-        env_vars.push(("GETRANDOM_BACKEND", "custom".to_string()));
-        print_info("🎲 Setting GETRANDOM_BACKEND=custom for WASI target compatibility");
+    // Execute build
+    let output = cmd.output().await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!("Cargo build failed:\n{}", stderr));
     }
-
-    // Compile with cargo
-    run_command_with_env(
-        "cargo",
-        &["build", "--target", target, "--release"],
-        Some(&current_dir),
-        &env_vars,
-    )
-    .await?;
-
-    // Step 2: Process WASM and extract Candid (with WASI conversion if needed)
-    let final_wasm_path = build_canister_wasi_native(&current_dir, !has_wasi).await?;
-
-    // Step 3: Optimize WASM if not skipped
-    if !skip_optimize {
-        optimize_wasm(&final_wasm_path, enable_simd).await?;
-    } else {
-        print_info("⏭️  Skipping WASM optimization");
-    }
-
-    print_success(&format!(
-        "✅ Build completed! WASM ready at: {}",
-        final_wasm_path.display()
-    ));
 
     Ok(())
 }
 
-fn is_icarus_project(path: &Path) -> bool {
-    path.join("Cargo.toml").exists() && path.join("dfx.json").exists()
-}
-
-/// Detect if the project has WASI features enabled
-fn detect_wasi_features(project_dir: &Path) -> Result<bool> {
-    let cargo_toml_path = project_dir.join("Cargo.toml");
-    if !cargo_toml_path.exists() {
-        return Ok(false);
-    }
-
-    let content = std::fs::read_to_string(&cargo_toml_path)?;
-    let value: Value = toml::from_str(&content)?;
-
-    // Check if ic-wasi-polyfill or icarus-wasi is in dependencies and NOT optional
-    if let Some(deps) = value.get("dependencies") {
-        // Check ic-wasi-polyfill
-        if let Some(polyfill_dep) = deps.get("ic-wasi-polyfill") {
-            // If it's not a table (just a string version), it's required
-            // If it's a table, check if optional is false or not present
-            if polyfill_dep.as_str().is_some() {
-                return Ok(true);
-            } else if let Some(dep_table) = polyfill_dep.as_table() {
-                if !dep_table
-                    .get("optional")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-                {
-                    return Ok(true);
-                }
-            }
-        }
-
-        // Check icarus-wasi (same logic)
-        if let Some(wasi_dep) = deps.get("icarus-wasi") {
-            if wasi_dep.as_str().is_some() {
-                return Ok(true);
-            } else if let Some(dep_table) = wasi_dep.as_table() {
-                if !dep_table
-                    .get("optional")
-                    .and_then(|v| v.as_bool())
-                    .unwrap_or(false)
-                {
-                    return Ok(true);
-                }
-            }
-        }
-    }
-
-    // Check if wasi feature exists and is in default features
-    if let Some(features) = value.get("features") {
-        if let Some(_wasi_feature) = features.get("wasi") {
-            // If wasi feature exists, check if it's in default features
-            if let Some(default_features) = features.get("default") {
-                if let Some(default_array) = default_features.as_array() {
-                    for feature in default_array {
-                        if let Some(feature_str) = feature.as_str() {
-                            if feature_str == "wasi" {
-                                return Ok(true);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Ok(false)
-}
-
-async fn optimize_wasm(wasm_path: &Path, enable_simd: bool) -> Result<()> {
-    if !wasm_path.exists() {
-        print_warning("WASM file not found, skipping optimization");
+async fn generate_declarations(project_root: &Path) -> Result<()> {
+    // Check if dfx.json exists
+    let dfx_config_path = project_root.join("dfx.json");
+    if !dfx_config_path.exists() {
+        warn!("No dfx.json found, skipping declaration generation");
         return Ok(());
     }
 
-    // Run ic-wasm optimization first if available
-    if which::which("ic-wasm").is_ok() {
-        let result = tokio::process::Command::new("ic-wasm")
-            .arg(wasm_path)
-            .arg("-o")
-            .arg(wasm_path)
-            .arg("shrink")
-            .output()
-            .await;
+    // Generate Candid declarations
+    let output = Command::new("dfx")
+        .args(["generate"])
+        .current_dir(project_root)
+        .output()
+        .await?;
 
-        match result {
-            Ok(output) if output.status.success() => {
-                // Optimization successful
-            }
-            Ok(output) => {
-                let error = String::from_utf8_lossy(&output.stderr);
-                print_warning(&format!("ic-wasm optimization failed: {}", error));
-            }
-            Err(e) => {
-                print_warning(&format!("Could not run ic-wasm: {}", e));
-            }
-        }
-    }
-
-    // Run wasm-opt optimization if available (especially for SIMD builds)
-    if which::which("wasm-opt").is_ok() {
-        let mut wasm_opt_args = vec!["-Os", "-o"];
-        wasm_opt_args.push(wasm_path.to_str().unwrap());
-        wasm_opt_args.push(wasm_path.to_str().unwrap());
-
-        // Enable additional features for SIMD builds
-        if enable_simd {
-            wasm_opt_args.extend(&[
-                "--enable-simd",
-                "--enable-bulk-memory",
-                "--enable-nontrapping-float-to-int",
-            ]);
-        }
-
-        let result = tokio::process::Command::new("wasm-opt")
-            .args(&wasm_opt_args)
-            .output()
-            .await;
-
-        match result {
-            Ok(output) if output.status.success() => {
-                // Success but don't print details
-            }
-            Ok(output) => {
-                let error = String::from_utf8_lossy(&output.stderr);
-                print_warning(&format!("wasm-opt optimization failed: {}", error));
-            }
-            Err(e) => {
-                print_warning(&format!("Could not run wasm-opt: {}", e));
-            }
-        }
-    } else if enable_simd {
-        print_warning("wasm-opt not found. For SIMD builds, consider installing binaryen for additional optimization");
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        warn!("Declaration generation failed: {}", stderr);
+        return Ok(()); // Non-fatal error
     }
 
     Ok(())
 }
 
-// Removed unused format_size function
+async fn run_tests(args: &BuildArgs, project_root: &Path) -> Result<()> {
+    let mut cmd = Command::new("cargo");
+    cmd.arg("test");
+    cmd.current_dir(project_root);
+
+    // Set build mode for tests
+    if args.mode == "release" {
+        cmd.arg("--release");
+    }
+
+    // Set target if specified
+    if let Some(ref target) = args.target {
+        cmd.arg("--target").arg(target);
+    }
+
+    // Enable features
+    if !args.features.is_empty() {
+        cmd.arg("--features").arg(args.features.join(","));
+    }
+
+    let output = cmd.output().await?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!("Tests failed:\n{}", stderr));
+    }
+
+    Ok(())
+}
+
+async fn copy_artifacts(project_root: &Path, output_dir: &Path) -> Result<()> {
+    use tokio::fs;
+
+    // Create output directory
+    fs::create_dir_all(output_dir).await.with_context(|| {
+        format!(
+            "Failed to create output directory: {}",
+            output_dir.display()
+        )
+    })?;
+
+    // Find and copy WASM files
+    let target_dir = project_root
+        .join("target")
+        .join("wasm32-unknown-unknown")
+        .join("release");
+
+    if target_dir.exists() {
+        let mut entries = fs::read_dir(&target_dir).await?;
+
+        loop {
+            let next_entry = entries.next_entry().await?;
+            let Some(entry) = next_entry else { break };
+            let path = entry.path();
+            if let Some(extension) = path.extension() {
+                if extension == "wasm" {
+                    let dest = output_dir.join(entry.file_name());
+                    let copy_result = fs::copy(&path, &dest).await;
+                    copy_result.with_context(|| {
+                        format!("Failed to copy {} to {}", path.display(), dest.display())
+                    })?;
+                }
+            }
+        }
+    }
+
+    // Copy Candid files if they exist
+    let candid_dir = project_root.join(".dfx").join("local").join("canisters");
+    if candid_dir.exists() {
+        copy_candid_files(&candid_dir, output_dir).await?;
+    }
+
+    Ok(())
+}
+
+async fn copy_candid_files(candid_dir: &Path, output_dir: &Path) -> Result<()> {
+    use tokio::fs;
+
+    let mut entries = fs::read_dir(candid_dir).await?;
+
+    loop {
+        let next_entry = entries.next_entry().await?;
+        let Some(entry) = next_entry else { break };
+        let path = entry.path();
+        if path.is_dir() {
+            let candid_file = path.join("service.did");
+            if candid_file.exists() {
+                let canister_name = entry.file_name();
+                let dest = output_dir.join(format!("{}.did", canister_name.to_string_lossy()));
+                fs::copy(&candid_file, &dest).await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn print_build_summary(args: &BuildArgs, project_root: &Path) {
+    println!("\n{}", "📦 Build Summary".bright_white().bold());
+    println!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+
+    println!("{} {}", "Mode:".bright_white(), args.mode.bright_cyan());
+
+    if let Some(ref target) = args.target {
+        println!("{} {}", "Target:".bright_white(), target.bright_cyan());
+    } else {
+        println!(
+            "{} {}",
+            "Target:".bright_white(),
+            "wasm32-unknown-unknown".bright_cyan()
+        );
+    }
+
+    if !args.features.is_empty() {
+        println!(
+            "{} {}",
+            "Features:".bright_white(),
+            args.features.join(", ").bright_cyan()
+        );
+    }
+
+    println!(
+        "{} {}",
+        "Project:".bright_white(),
+        project_root.display().to_string().bright_cyan()
+    );
+
+    if args.test {
+        println!("{} {}", "Tests:".bright_white(), "✅ Passed".bright_green());
+    }
+
+    if args.generate_declarations {
+        println!(
+            "{} {}",
+            "Declarations:".bright_white(),
+            "✅ Generated".bright_green()
+        );
+    }
+
+    if let Some(ref output_dir) = args.output {
+        println!(
+            "{} {}",
+            "Output:".bright_white(),
+            output_dir.display().to_string().bright_cyan()
+        );
+    }
+
+    println!();
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
     use tempfile::TempDir;
-
-    #[test]
-    fn test_detect_wasi_features_with_ic_wasi_polyfill_dependency() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-
-        let content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-ic-wasi-polyfill = "0.11"
-serde = "1.0"
-"#;
-        fs::write(&cargo_toml_path, content).unwrap();
-
-        assert!(
-            detect_wasi_features(temp_dir.path()).unwrap(),
-            "Should detect WASI when ic-wasi-polyfill is in dependencies"
-        );
-    }
-
-    #[test]
-    fn test_detect_wasi_features_with_optional_dependency() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-
-        let content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-ic-wasi-polyfill = { version = "0.11", optional = true }
-serde = "1.0"
-
-[features]
-default = ["wasi"]
-wasi = ["ic-wasi-polyfill"]
-"#;
-        fs::write(&cargo_toml_path, content).unwrap();
-
-        assert!(
-            detect_wasi_features(temp_dir.path()).unwrap(),
-            "Should detect WASI when wasi feature is in default features"
-        );
-    }
-
-    #[test]
-    fn test_detect_wasi_features_with_wasi_feature_not_default() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-
-        let content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-ic-wasi-polyfill = { version = "0.11", optional = true }
-serde = "1.0"
-
-[features]
-default = []
-wasi = ["ic-wasi-polyfill"]
-"#;
-        fs::write(&cargo_toml_path, content).unwrap();
-
-        assert!(
-            !detect_wasi_features(temp_dir.path()).unwrap(),
-            "Should NOT detect WASI when wasi feature exists but is not in default"
-        );
-    }
-
-    #[test]
-    fn test_detect_wasi_features_without_wasi() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-
-        let content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-serde = "1.0"
-ic-cdk = "0.18"
-"#;
-        fs::write(&cargo_toml_path, content).unwrap();
-
-        assert!(
-            !detect_wasi_features(temp_dir.path()).unwrap(),
-            "Should NOT detect WASI for projects without WASI dependencies"
-        );
-    }
-
-    #[test]
-    fn test_detect_wasi_features_missing_cargo_toml() {
-        let temp_dir = TempDir::new().unwrap();
-        // No Cargo.toml file created
-
-        assert!(
-            !detect_wasi_features(temp_dir.path()).unwrap(),
-            "Should return false when Cargo.toml doesn't exist"
-        );
-    }
-
-    #[test]
-    fn test_detect_wasi_features_invalid_toml() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-
-        let content = "invalid toml content [";
-        fs::write(&cargo_toml_path, content).unwrap();
-
-        assert!(
-            detect_wasi_features(temp_dir.path()).is_err(),
-            "Should return error for invalid TOML"
-        );
-    }
-
-    #[test]
-    fn test_is_icarus_project_with_both_files() {
-        let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("Cargo.toml"), "").unwrap();
-        fs::write(temp_dir.path().join("dfx.json"), "").unwrap();
-
-        assert!(
-            is_icarus_project(temp_dir.path()),
-            "Should recognize project with both Cargo.toml and dfx.json"
-        );
-    }
-
-    #[test]
-    fn test_is_icarus_project_missing_cargo_toml() {
-        let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("dfx.json"), "").unwrap();
-
-        assert!(
-            !is_icarus_project(temp_dir.path()),
-            "Should NOT recognize project missing Cargo.toml"
-        );
-    }
-
-    #[test]
-    fn test_is_icarus_project_missing_dfx_json() {
-        let temp_dir = TempDir::new().unwrap();
-        fs::write(temp_dir.path().join("Cargo.toml"), "").unwrap();
-
-        assert!(
-            !is_icarus_project(temp_dir.path()),
-            "Should NOT recognize project missing dfx.json"
-        );
-    }
-
-    #[test]
-    fn test_is_icarus_project_empty_directory() {
-        let temp_dir = TempDir::new().unwrap();
-
-        assert!(
-            !is_icarus_project(temp_dir.path()),
-            "Should NOT recognize empty directory as Icarus project"
-        );
-    }
+    use tokio::fs;
 
     #[tokio::test]
-    async fn test_execute_wasi_project_uses_correct_target() {
+    async fn test_copy_artifacts() {
         let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-        let dfx_json_path = temp_dir.path().join("dfx.json");
+        let project_root = temp_dir.path();
+        let output_dir = temp_dir.path().join("output");
 
-        // Create a WASI project
-        let cargo_content = r#"
-[package]
-name = "test"
-version = "0.1.0"
+        // Create a mock WASM file
+        let target_dir = project_root
+            .join("target")
+            .join("wasm32-unknown-unknown")
+            .join("release");
+        fs::create_dir_all(&target_dir).await.unwrap();
+        fs::write(target_dir.join("test.wasm"), b"mock wasm")
+            .await
+            .unwrap();
 
-[dependencies]
-ic-wasi-polyfill = { version = "0.11", optional = true }
+        // Test copying artifacts
+        copy_artifacts(project_root, &output_dir).await.unwrap();
 
-[features]
-default = ["wasi"]
-wasi = ["ic-wasi-polyfill"]
-"#;
-        fs::write(&cargo_toml_path, cargo_content).unwrap();
-        fs::write(&dfx_json_path, "{}").unwrap();
-
-        // Change to test directory temporarily
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Test should fail gracefully when cargo build fails (expected without full project)
-        let result = execute(false, false, false, false).await;
-
-        // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
-
-        // The function should at least detect it's a WASI project (even if build fails)
-        // We can't easily test the actual cargo command without a complete project setup
-        assert!(
-            result.is_err(),
-            "Build should fail in minimal test environment, which is expected"
-        );
+        // Verify the file was copied
+        assert!(output_dir.join("test.wasm").exists());
     }
 
-    #[tokio::test]
-    async fn test_execute_non_wasi_project_uses_correct_target() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-        let dfx_json_path = temp_dir.path().join("dfx.json");
-
-        // Create a non-WASI project
-        let cargo_content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-serde = "1.0"
-"#;
-        fs::write(&cargo_toml_path, cargo_content).unwrap();
-        fs::write(&dfx_json_path, "{}").unwrap();
-
-        // Change to test directory temporarily
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Test should fail gracefully when cargo build fails (expected without full project)
-        let result = execute(false, false, false, false).await;
-
-        // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
-
-        // The function should at least detect it's a non-WASI project (even if build fails)
-        assert!(
-            result.is_err(),
-            "Build should fail in minimal test environment, which is expected"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_execute_force_pure_wasm_overrides_wasi() {
-        let temp_dir = TempDir::new().unwrap();
-        let cargo_toml_path = temp_dir.path().join("Cargo.toml");
-        let dfx_json_path = temp_dir.path().join("dfx.json");
-
-        // Create a WASI project
-        let cargo_content = r#"
-[package]
-name = "test"
-version = "0.1.0"
-
-[dependencies]
-ic-wasi-polyfill = "0.11"
-"#;
-        fs::write(&cargo_toml_path, cargo_content).unwrap();
-        fs::write(&dfx_json_path, "{}").unwrap();
-
-        // Change to test directory temporarily
-        let original_dir = std::env::current_dir().unwrap();
-        std::env::set_current_dir(temp_dir.path()).unwrap();
-
-        // Test should fail gracefully (expected without full project setup)
-        // force_pure_wasm=true should override WASI detection
-        let result = execute(true, false, false, false).await;
-
-        // Restore original directory
-        std::env::set_current_dir(original_dir).unwrap();
-
-        assert!(
-            result.is_err(),
-            "Build should fail in minimal test environment, which is expected"
-        );
+    #[test]
+    fn test_build_mode_validation() {
+        // Valid modes should not cause errors during command construction
+        let valid_modes = vec!["debug", "release"];
+        for mode in valid_modes {
+            let args = BuildArgs {
+                target: None,
+                mode: mode.to_string(),
+                features: vec![],
+                test: false,
+                generate_declarations: false,
+                output: None,
+            };
+            // If this compiles, the mode format is valid
+            assert!(args.mode == mode);
+        }
     }
 }

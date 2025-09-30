@@ -1,0 +1,5 @@
+error: Unsupported feature: Generic functions - Tool functions cannot have generic parameters
+ --> tests/compilation/fail/lifetime_parameters.rs:5:17
+  |
+5 | fn lifetime_tool<'a>(x: &'a str) -> &'a str {
+  |                 ^

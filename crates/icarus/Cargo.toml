@@ -1,0 +1,31 @@
+[package]
+name = "icarus"
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+homepage.workspace = true
+description = "Icarus CDK - Build MCP servers on Internet Computer canisters"
+keywords = ["internet-computer", "canister", "mcp", "ai", "tools"]
+categories = ["development-tools", "web-programming", "api-bindings"]
+
+[dependencies]
+# Re-export all core crates
+icarus-core.workspace = true
+icarus-macros.workspace = true
+icarus-runtime.workspace = true
+
+# Async support (optional)
+tokio = { workspace = true, optional = true }
+async-trait = { workspace = true, optional = true }
+
+[dev-dependencies]
+
+[features]
+default = ["async"]
+async = ["icarus-runtime/async", "tokio", "async-trait"]
+
+[lints]
+workspace = true

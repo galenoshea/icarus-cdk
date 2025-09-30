@@ -1,73 +1,60 @@
 [package]
 name = "icarus-core"
+description = "Core types and MCP protocol integration for the Icarus CDK"
+documentation = "https://docs.rs/icarus-core"
+readme = "README.md"
+keywords = ["mcp", "ai", "tools", "internet-computer", "protocol"]
+categories = ["api-bindings", "web-programming", "wasm"]
 version.workspace = true
 authors.workspace = true
 edition.workspace = true
+rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
-description = "Core abstractions for building MCP servers on ICP"
-documentation = "https://docs.rs/icarus"
-homepage = "https://github.com/galenoshea/icarus-sdk"
-readme = "README.md"
-keywords = ["icp", "internet-computer", "mcp", "ai", "canister"]
-categories = ["development-tools", "web-programming", "wasm"]
-
-[lints]
-workspace = true
-
-[features]
-default = ["canister"]
-
-# Core feature groups
-canister = ["ic-cdk", "ic-cdk-timers", "ic-stable-structures"]
-mcp = ["client", "server", "streaming", "anyhow", "tracing"]
-
-# MCP sub-features
-client = ["networking", "ic-agent", "rustc-hash"]
-server = ["client", "protocol", "tokio", "tracing-subscriber"]
-streaming = ["storage", "bytes", "tokio-stream", "tokio"]
-protocol = []
-networking = ["url", "once_cell", "tokio"]
-storage = ["bytes"]
-cli = ["clap", "is-terminal", "tracing-subscriber"]
-
-# Performance optimization features
-simd = ["wide"]
+homepage.workspace = true
 
 [dependencies]
-# Core dependencies (always included)
+# Core serialization and MCP protocol
+rmcp = { workspace = true }
 candid = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+
+# Error handling following rust_best_practices.md
 thiserror = { workspace = true }
-base64 = { workspace = true }
-ciborium = { workspace = true }
 
-# Dependencies used by core modules (not feature-gated)
+# IC integration
+ic-cdk = { workspace = true }
+ic-stable-structures = { workspace = true }
+
+# Performance optimizations from workspace following rust_best_practices.md
+rustc-hash = { workspace = true }
 smallvec = { workspace = true }
-async-trait = { workspace = true }
-rmcp = { workspace = true }
 
+# Time handling (WASM-compatible)
+chrono = { workspace = true }
 
-# MCP feature dependencies
-anyhow = { workspace = true, optional = true }
-tracing = { workspace = true, optional = true }
-ic-agent = { workspace = true, optional = true }
-tokio = { workspace = true, optional = true, features = ["sync", "time", "process"] }
-rustc-hash = { workspace = true, optional = true }
-bytes = { workspace = true, optional = true }
-tokio-stream = { version = "0.1", optional = true }
-url = { workspace = true, optional = true }
-once_cell = { workspace = true, optional = true }
-clap = { workspace = true, features = ["derive", "env"], optional = true }
-is-terminal = { workspace = true, optional = true }
-tracing-subscriber = { workspace = true, optional = true }
-wide = { version = "0.7", optional = true }
-
-# Canister feature dependencies
-ic-cdk = { workspace = true, optional = true }
-ic-cdk-timers = { workspace = true, optional = true }
-ic-stable-structures = { workspace = true, optional = true }
+# UUID generation for session IDs - REMOVED per rust_best_practices.md
+# getrandom = { workspace = true }
 
 [dev-dependencies]
-tokio = { workspace = true, features = ["sync", "time"] }
+proptest = { workspace = true }
+tokio = { workspace = true }
+serde_json = { workspace = true }
+criterion = { workspace = true }
+
+[features]
+default = ["std"]
+std = []
+
+# Feature for development/testing (auto-enabled in dev/test profiles)
+test-utils = []
+
+# Feature for IC canister environment (use ic_cdk::api::time)
+ic-canister = []
+
+# Feature for stable memory-backed authentication system
+stable-auth = []
+
+[lints]
+workspace = true

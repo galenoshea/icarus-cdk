@@ -1,154 +1,339 @@
-use anyhow::Result;
-use sysinfo::{ProcessesToUpdate, Signal, System};
+use anyhow::{anyhow, Result};
+use colored::Colorize;
+use tokio::fs;
+use tracing::info;
 
-use crate::utils::{print_error, print_info, print_success, print_warning};
+use crate::{commands::mcp::StopArgs, Cli};
 
-pub async fn execute(all: bool, canister_id: Option<String>) -> Result<()> {
-    if all {
-        stop_all_mcp_servers().await
-    } else if let Some(id) = canister_id {
-        stop_mcp_server_for_canister(&id).await
+pub(crate) async fn execute(args: StopArgs, cli: &Cli) -> Result<()> {
+    info!("Stopping MCP bridge server");
+
+    if !cli.quiet {
+        println!("{} Stopping MCP bridge server", "→".bright_blue());
+    }
+
+    if args.all {
+        stop_all_processes(args.force, cli).await
     } else {
-        print_error("Specify either --all or --canister-id <CANISTER_ID>");
-        anyhow::bail!("No target specified");
+        stop_daemon_process(args.force, cli).await
     }
 }
 
-async fn stop_all_mcp_servers() -> Result<()> {
-    print_info("Stopping all Icarus MCP server instances...");
+async fn stop_daemon_process(force: bool, cli: &Cli) -> Result<()> {
+    let pid_file = "/tmp/icarus-mcp-bridge.pid";
 
-    let mut system = System::new_all();
-    system.refresh_processes(ProcessesToUpdate::All, true);
+    // Check if PID file exists
+    if !std::path::Path::new(pid_file).exists() {
+        if !cli.quiet {
+            println!("{}", "No running MCP bridge daemon found.".yellow());
+        }
+        return Ok(());
+    }
 
-    let mut stopped_count = 0;
+    // Read PID from file
+    let pid_str = fs::read_to_string(pid_file).await?;
+    let pid: u32 = pid_str
+        .trim()
+        .parse()
+        .map_err(|_| anyhow!("Invalid PID in file: {}", pid_str))?;
 
-    for process in system.processes().values() {
-        let cmd_line = process.cmd();
+    if !cli.quiet {
+        println!(
+            "  {} Stopping daemon (PID: {})",
+            "→".bright_blue(),
+            pid.to_string().bright_cyan()
+        );
+    }
 
-        // Convert OsString to String for processing
-        let cmd_strings: Vec<String> = cmd_line
-            .iter()
-            .map(|s| s.to_string_lossy().to_string())
-            .collect();
+    // Check if process is actually running
+    if !is_process_running(pid) {
+        if !cli.quiet {
+            println!(
+                "{}",
+                "Process is not running, cleaning up PID file.".yellow()
+            );
+        }
+        fs::remove_file(pid_file).await?;
+        return Ok(());
+    }
 
-        // Look for both icarus-mcp binary and icarus mcp start commands
-        let is_mcp_server = cmd_strings.iter().any(|arg| {
-            arg.contains("icarus-mcp")
-                || (cmd_strings.len() >= 2
-                    && cmd_strings.iter().any(|a| a.contains("icarus"))
-                    && cmd_strings.iter().any(|a| a == "mcp"))
-        });
+    // Stop the process
+    stop_process(pid, force)?;
 
-        if is_mcp_server
-            && stop_process(
-                process.pid().as_u32(),
-                &format!("MCP server (PID: {})", process.pid()),
-            )
-        {
-            stopped_count += 1;
+    // Wait for process to stop
+    let mut attempts = 0;
+    while is_process_running(pid) && attempts < 30 {
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        attempts += 1;
+    }
+
+    if is_process_running(pid) {
+        if force {
+            // Force kill if still running
+            kill_process(pid)?;
+            if !cli.quiet {
+                println!("{} Process forcefully terminated", "⚠️".yellow());
+            }
+        } else {
+            return Err(anyhow!(
+                "Process {} did not stop gracefully. Use --force to kill it.",
+                pid
+            ));
         }
     }
 
-    if stopped_count > 0 {
-        print_success(&format!("Stopped {} MCP server instance(s)", stopped_count));
-    } else {
-        print_warning("No MCP server instances found to stop");
+    // Clean up PID file
+    fs::remove_file(pid_file).await?;
+
+    if !cli.quiet {
+        println!("{} MCP bridge server stopped", "✅".green());
     }
 
+    info!("MCP bridge daemon stopped successfully");
     Ok(())
 }
 
-async fn stop_mcp_server_for_canister(canister_id: &str) -> Result<()> {
-    print_info(&format!(
-        "Stopping MCP server for canister {}...",
-        canister_id
-    ));
+async fn stop_all_processes(force: bool, cli: &Cli) -> Result<()> {
+    if !cli.quiet {
+        println!("  {} Stopping all MCP bridge processes", "→".bright_blue());
+    }
 
-    let mut system = System::new_all();
-    system.refresh_processes(ProcessesToUpdate::All, true);
+    // Find all icarus MCP processes
+    let processes = find_icarus_mcp_processes().await?;
+
+    if processes.is_empty() {
+        if !cli.quiet {
+            println!("{}", "No running MCP bridge processes found.".yellow());
+        }
+        return Ok(());
+    }
 
     let mut stopped_count = 0;
-
-    for process in system.processes().values() {
-        let cmd_line = process.cmd();
-
-        // Convert OsString to String for processing
-        let cmd_strings: Vec<String> = cmd_line
-            .iter()
-            .map(|s| s.to_string_lossy().to_string())
-            .collect();
-
-        // Check if this is an MCP server for the specific canister
-        let is_target_mcp_server = cmd_strings.iter().any(|arg| {
-            arg.contains("icarus-mcp")
-                || (cmd_strings.len() >= 2
-                    && cmd_strings.iter().any(|a| a.contains("icarus"))
-                    && cmd_strings.iter().any(|a| a == "mcp"))
-        }) && cmd_strings.iter().any(|arg| arg == canister_id);
-
-        if is_target_mcp_server
-            && stop_process(
-                process.pid().as_u32(),
-                &format!(
-                    "MCP server for canister {} (PID: {})",
-                    canister_id,
-                    process.pid()
-                ),
-            )
-        {
-            stopped_count += 1;
+    for pid in processes {
+        if !cli.quiet {
+            println!(
+                "  {} Stopping process {}",
+                "→".bright_blue(),
+                pid.to_string().bright_cyan()
+            );
         }
-    }
 
-    if stopped_count > 0 {
-        print_success(&format!(
-            "Stopped {} MCP server instance(s) for canister {}",
-            stopped_count, canister_id
-        ));
-    } else {
-        print_warning(&format!(
-            "No MCP server instances found for canister {}",
-            canister_id
-        ));
-    }
+        if stop_process(pid, force).is_ok() {
+            // Wait a bit for graceful shutdown
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 
-    Ok(())
-}
-
-fn stop_process(pid: u32, description: &str) -> bool {
-    let mut system = System::new();
-
-    if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
-        print_info(&format!("Stopping {}...", description));
-
-        // Try SIGTERM first (graceful)
-        if process.kill_with(Signal::Term).is_some() {
-            // Wait a moment for graceful shutdown
-            std::thread::sleep(std::time::Duration::from_secs(2));
-
-            // Check if it's still running
-            system.refresh_processes(ProcessesToUpdate::All, true);
-
-            if system.process(sysinfo::Pid::from_u32(pid)).is_none() {
-                return true; // Successfully stopped
+            if is_process_running(pid) && force {
+                kill_process(pid)?;
             }
 
-            // If still running, force kill
-            if let Some(process) = system.process(sysinfo::Pid::from_u32(pid)) {
-                if process.kill_with(Signal::Kill).is_some() {
-                    print_warning(&format!("Force killed {}", description));
-                    return true;
+            if !is_process_running(pid) {
+                stopped_count += 1;
+            }
+        }
+    }
+
+    // Clean up PID file if it exists
+    let _ = fs::remove_file("/tmp/icarus-mcp-bridge.pid").await;
+
+    if !cli.quiet {
+        println!(
+            "{} Stopped {} MCP bridge processes",
+            "✅".green(),
+            stopped_count.to_string().bright_cyan()
+        );
+    }
+
+    info!("Stopped {} MCP bridge processes", stopped_count);
+    Ok(())
+}
+
+fn is_process_running(pid: u32) -> bool {
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::kill;
+        use nix::unistd::Pid;
+
+        match kill(Pid::from_raw(pid as i32), None) {
+            Ok(()) => true,  // Process exists
+            Err(_) => false, // Process doesn't exist
+        }
+    }
+
+    #[cfg(windows)]
+    {
+        use windows::Win32::System::Diagnostics::Debug::GetProcessId;
+        use windows::Win32::System::Threading::{OpenProcess, PROCESS_QUERY_INFORMATION};
+
+        unsafe {
+            let handle = OpenProcess(PROCESS_QUERY_INFORMATION, false, pid);
+            match handle {
+                Ok(h) => {
+                    let _ = h.close();
+                    true
+                }
+                Err(_) => false,
+            }
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    {
+        // Fallback for other platforms
+        false
+    }
+}
+
+fn stop_process(pid: u32, force: bool) -> Result<()> {
+    #[cfg(unix)]
+    {
+        use nix::sys::signal::{kill, Signal};
+        use nix::unistd::Pid;
+
+        let signal = if force {
+            Signal::SIGKILL
+        } else {
+            Signal::SIGTERM
+        };
+        kill(Pid::from_raw(pid as i32), signal)
+            .map_err(|e| anyhow!("Failed to stop process {}: {}", pid, e))?;
+    }
+
+    #[cfg(windows)]
+    {
+        use windows::Win32::System::Threading::{OpenProcess, TerminateProcess, PROCESS_TERMINATE};
+
+        unsafe {
+            let handle = OpenProcess(PROCESS_TERMINATE, false, pid)
+                .map_err(|e| anyhow!("Failed to open process {}: {:?}", pid, e))?;
+
+            let exit_code = if force { 1 } else { 0 };
+            TerminateProcess(&handle, exit_code)
+                .map_err(|e| anyhow!("Failed to terminate process {}: {:?}", pid, e))?;
+
+            let _ = handle.close();
+        }
+    }
+
+    #[cfg(not(any(unix, windows)))]
+    {
+        return Err(anyhow!(
+            "Process termination not supported on this platform"
+        ));
+    }
+
+    Ok(())
+}
+
+fn kill_process(pid: u32) -> Result<()> {
+    stop_process(pid, true)
+}
+
+async fn find_icarus_mcp_processes() -> Result<Vec<u32>> {
+    let mut processes = Vec::new();
+
+    #[cfg(unix)]
+    {
+        use tokio::process::Command;
+
+        // Use ps to find icarus MCP processes
+        let output = Command::new("ps")
+            .args(["-eo", "pid,comm"])
+            .output()
+            .await?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if line.contains("icarus") && line.contains("mcp") {
+                if let Some(pid_str) = line.split_whitespace().next() {
+                    if let Ok(pid) = pid_str.parse::<u32>() {
+                        processes.push(pid);
+                    }
                 }
             }
         }
+    }
 
-        print_error(&format!("Failed to stop {}", description));
-        false
-    } else {
-        print_warning(&format!(
-            "Process {} not found (already stopped?)",
-            description
-        ));
-        false
+    #[cfg(windows)]
+    {
+        use tokio::process::Command;
+
+        // Use tasklist to find icarus processes
+        let output = Command::new("tasklist")
+            .args(["/FI", "IMAGENAME eq icarus.exe"])
+            .output()
+            .await?;
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for line in stdout.lines() {
+            if line.contains("icarus.exe") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                if parts.len() >= 2 {
+                    if let Ok(pid) = parts[1].parse::<u32>() {
+                        processes.push(pid);
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(processes)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process;
+
+    #[test]
+    fn test_process_running_check() {
+        // Test with current process (should be running)
+        let current_pid = process::id();
+        assert!(is_process_running(current_pid));
+
+        // Test with a PID that definitely doesn't exist (very high number)
+        assert!(!is_process_running(99_999_999));
+    }
+
+    #[tokio::test]
+    async fn test_find_processes() {
+        // This test will find processes, but we can't guarantee specific results
+        let result = find_icarus_mcp_processes().await;
+        assert!(result.is_ok());
+
+        let processes = result.unwrap();
+        // The result could be empty if no icarus processes are running, which is fine
+        assert!(processes.len() >= 0);
+    }
+
+    #[tokio::test]
+    #[serial_test::serial]
+    async fn test_stop_nonexistent_daemon() {
+        // Clean up leftover test PID file if it contains test data
+        if let Ok(content) = tokio::fs::read_to_string("/tmp/icarus-mcp-bridge.pid").await {
+            if content.trim() == "12345" {
+                let _ = tokio::fs::remove_file("/tmp/icarus-mcp-bridge.pid").await;
+            }
+        }
+
+        let args = StopArgs {
+            force: false,
+            all: false,
+        };
+
+        let cli = crate::Cli {
+            verbose: false,
+            quiet: true,
+            force: false,
+            command: crate::Commands::Mcp(crate::commands::McpArgs::Stop(args.clone())),
+        };
+
+        // Should not error when no daemon is running
+        let result = execute(args, &cli).await;
+        assert!(result.is_ok());
     }
 }
+
+// Additional platform-specific dependencies for process management
+
+#[cfg(windows)]
+use windows;

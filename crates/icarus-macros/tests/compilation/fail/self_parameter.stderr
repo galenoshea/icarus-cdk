@@ -1,0 +1,5 @@
+error: Invalid function signature: Tool functions cannot have self parameters
+ --> tests/compilation/fail/self_parameter.rs:8:20
+  |
+8 |     fn method_tool(&self, x: i32) -> i32 {
+  |                    ^

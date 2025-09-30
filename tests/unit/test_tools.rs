@@ -1,6 +1,6 @@
 //! Unit tests for the tools module
 
-use icarus_canister::tools::{ToolRegistration, ToolRegistry};
+use icarus_canister::core::tools::{ToolRegistration, ToolRegistry};
 use icarus_core::error::ToolError;
 use serde_json::json;
 

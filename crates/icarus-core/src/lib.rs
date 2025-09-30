@@ -1,103 +1,85 @@
-// Copyright (c) 2025 Icarus Team. All Rights Reserved.
-// Licensed under BSL-1.1. See LICENSE and NOTICE files.
-// Signature verification and telemetry must remain intact.
-
-// Missing docs warnings disabled during active development
-
-//! Core abstractions for building MCP servers on ICP
+//! # Icarus Core
 //!
-//! This crate provides the fundamental traits and types for creating
-//! Model Context Protocol servers that run as Internet Computer canisters.
+//! Core types and MCP protocol integration for the Icarus CDK.
+//!
+//! This crate provides the foundational types for building MCP (Model Context Protocol)
+//! servers on Internet Computer canisters, following the patterns from `rust_best_practices.md`:
+//!
+//! - **Type Safety**: Extensive use of newtype pattern for domain concepts
+//! - **Performance**: Zero-copy patterns, const functions, pre-allocation
+//! - **Error Handling**: Comprehensive error types with context using `thiserror`
+//! - **Testing**: Property-based tests for invariants
+//!
+//! # Examples
+//!
+//! ```rust
+//! use icarus_core::{IcarusError, Tool, ToolId};
+//! use std::sync::Arc;
+//!
+//! # fn main() -> Result<(), IcarusError> {
+//! // Type-safe tool identifiers
+//! let tool_id = ToolId::new("calculator_add")?;
+//!
+//! // RMCP-native tool definition
+//! let tool = Tool::new(
+//!     "calculator_add",
+//!     "Adds two numbers",
+//!     Arc::new(serde_json::Map::new()),
+//! );
+//! # Ok(())
+//! # }
+//! ```
 
-pub mod auth;
-pub mod compatibility;
-pub mod dual_protocol;
+#![warn(missing_docs)]
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![deny(unsafe_code)]
+
 pub mod error;
-pub mod macros;
-pub mod memory;
+pub mod newtypes;
 pub mod protocol;
-pub mod provider;
-pub mod response;
-pub mod server;
-pub mod stable_ext;
-pub mod storage;
+pub mod rmcp_types;
 pub mod tool;
-pub mod tools;
+pub mod version;
 
-// Canister-specific modules (feature-gated)
-#[cfg(feature = "canister")]
-pub mod http;
-#[cfg(feature = "canister")]
-pub mod timers;
+/// Authentication and authorization module with stable memory persistence
+pub mod auth;
 
-// MCP modules (feature-gated)
-#[cfg(feature = "mcp")]
-pub mod mcp;
-
-#[cfg(feature = "canister")]
-pub use auth::{is_authenticated, is_owner, AuthRole};
-pub use compatibility::{
-    IcarusParam, IcarusReturn, IcarusTool as IcarusToolCompatible, ToolResult,
-};
-pub use dual_protocol::{
-    detect_format, parse_input, serialize_output, CandidOrJson, MemoryStats, ProtocolError,
-    ProtocolFormat,
-};
-pub use error::{IcarusError, Result, ToolError};
-pub use provider::{
-    AuthConfig, ErrorConfig, GenerateServiceMetadata, IcarusToolMethod, IcarusToolProvider,
-    ServiceConfig, ServiceMetadata, ToolMethodMetadata,
-};
-pub use response::{tool_ok, tool_success, ToolStatus, ToolSuccess};
-pub use server::IcarusServer;
-#[cfg(feature = "canister")]
-pub use storage::IcarusStorable;
-pub use tool::IcarusTool;
-#[cfg(feature = "canister")]
-pub use tools::{create_schema_for, ToolInfo};
-
-// MCP re-exports (feature-gated)
-#[cfg(feature = "mcp")]
-pub use mcp::{
-    ConfigError, Connected, McpConfig, McpConfigBuilder, McpServer, McpServerBuilder, Serving,
-    Uninitialized,
-};
-
-// Re-export canister-specific types (feature-gated)
-#[cfg(feature = "canister")]
-pub use http::{HttpConfig, HttpError, HttpResult};
-#[cfg(feature = "canister")]
-pub use timers::{TimerError, TimerInfo, TimerType};
-
-/// Prelude module for convenient imports
+/// Legacy types for backward compatibility (deprecated in 0.9.0)
 ///
-/// Import everything you need with:
-/// ```
-/// use icarus_core::prelude::*;
-/// ```
-pub mod prelude {
-    pub use crate::{
-        error::{IcarusError, Result, ToolError},
-        provider::{
-            AuthConfig, ErrorConfig, GenerateServiceMetadata, IcarusToolMethod, IcarusToolProvider,
-            ServiceConfig, ServiceMetadata, ToolMethodMetadata,
-        },
-        response::{tool_ok, tool_success, ToolStatus, ToolSuccess},
-        server::IcarusServer,
-        tool::IcarusTool,
-    };
+/// All types in this module have RMCP-native replacements and will be removed
+/// in a future major version. See module documentation for migration guide.
+pub mod legacy;
 
-    // Canister-specific prelude (feature-gated)
-    #[cfg(feature = "canister")]
-    pub use crate::{
-        auth::{is_authenticated, is_owner, AuthRole},
-        tools::{create_schema_for, ToolInfo},
-    };
+// Re-export commonly used types for convenience
+pub use error::IcarusError;
+pub use newtypes::{SessionId, Timestamp, ToolId, UserId};
+pub use version::{Version, VersionReq};
 
-    // MCP prelude (feature-gated)
-    #[cfg(feature = "mcp")]
-    pub use crate::mcp::{
-        ConfigError, Connected, McpConfig, McpConfigBuilder, McpServer, McpServerBuilder, Serving,
-        Uninitialized,
-    };
-}
+// Re-export RMCP types for RMCP-native protocol support
+pub use rmcp_types::{
+    CallToolResult, CanisterId, Content, JsonRpcError, JsonRpcRequest, JsonRpcResponse, MethodName,
+    Tool, ToolAnnotations,
+};
+
+// Re-export legacy types with deprecation warnings for backward compatibility
+#[allow(deprecated)]
+pub use legacy::{
+    LegacyTool, LegacyToolCall, LegacyToolResult, SmallParameters, ToolBuilder, ToolParameter,
+    ToolSchema,
+};
+
+/// Type alias for convenience - follows `rust_best_practices.md`
+pub type Result<T> = std::result::Result<T, IcarusError>;
+
+/// Version information for the core library
+pub const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+/// Maximum tool name length for validation
+pub const MAX_TOOL_NAME_LENGTH: usize = 255;
+
+/// Maximum description length for validation
+pub const MAX_DESCRIPTION_LENGTH: usize = 1024;
+
+/// Maximum parameter count per tool
+pub const MAX_PARAMETER_COUNT: usize = 50;
