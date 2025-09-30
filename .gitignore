@@ -12,6 +12,8 @@ target/
 
 # Claude Desktop
 .claude/
+claudedocs/
+scratch/
 
 # OS
 .DS_Store
