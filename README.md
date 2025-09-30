@@ -74,7 +74,7 @@ icarus deploy
 ```toml
 [dependencies]
 # Recommended: Simple, includes everything for canister development
-icarus = "0.9.0"
+icarus = "1.0.0"
 
 # Or specify features explicitly
 icarus = { version = "0.7.0", features = ["canister"] }
@@ -260,12 +260,12 @@ Icarus CDK is organized into focused crates for modularity and flexibility:
 
 ```toml
 # Use the full SDK (recommended)
-icarus = "0.9.0"
+icarus = "1.0.0"
 
 # Or pick specific crates for specialized use cases
-icarus-core = "0.9.0"      # Core functionality and MCP protocol
-icarus-canister = "0.9.0"  # Canister-specific utilities
-icarus-wasi = "0.9.0"      # WASI optimization
+icarus-core = "1.0.0"      # Core functionality and MCP protocol
+icarus-macros = "1.0.0"    # Procedural macros
+icarus-runtime = "1.0.0"   # Runtime and tool execution
 ```
 
 ---
@@ -318,7 +318,7 @@ icarus logs <id>          # View canister logs
 - 🌉 **Native MCP**: Built-in MCP protocol support without translation layers
 
 ### To upgrade:
-1. Update your dependency: `icarus = "0.9.0"`
+1. Update your dependency: `icarus = "1.0.0"`
 2. Redeploy: `icarus deploy` (builds automatically)
 
 **No breaking changes** - existing code continues to work unchanged. The modular architecture is internal - your application code remains the same.

@@ -372,9 +372,9 @@ If you encounter issues during migration:
 
 ## Version Support Policy
 
-- **Current Version (0.9.0)**: Full support with modular architecture
-- **Previous Minor (0.5.8)**: Critical fixes only
-- **Previous Minor (0.4.x)**: Security updates only
+- **Current Version (1.0.0)**: Full support with production-ready stability
+- **Previous Minor (0.9.0)**: Critical fixes only
+- **Previous Minor (0.8.x)**: Security updates only
 - **Older Versions**: No support, upgrade recommended
 
 We recommend staying on the latest version for the best experience and security.
